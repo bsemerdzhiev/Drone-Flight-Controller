@@ -1,9 +1,9 @@
-use serial2::SerialPort;
 use std::env::args;
 use std::path::PathBuf;
 use std::process::{exit, Command};
 use std::time::Duration;
 use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
+use tudelft_serial_upload::serial2::SerialPort;
 
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
