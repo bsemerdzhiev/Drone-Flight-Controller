@@ -723,9 +723,9 @@ dependencies = [
 
 [[package]]
 name = "tudelft-quadrupel"
-version = "3.0.0"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aef110cbc928bdd72bba9d550cb36d19d73a2cc71e2b9f09a9fb1b6811ace657"
+checksum = "c21f737a8841b690a1d068b787c3b3b1f80c40689bbd2a125ab3b74500391999"
 dependencies = [
  "alloc-cortex-m",
  "cortex-m",
