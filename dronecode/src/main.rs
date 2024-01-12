@@ -9,6 +9,7 @@ use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
+use core::ptr::addr_of_mut;
 use tudelft_quadrupel::initialize::initialize;
 use tudelft_quadrupel::led::Led::{Green, Red};
 use tudelft_quadrupel::time::assembly_delay;
@@ -36,7 +37,9 @@ fn main() -> ! {
         // As soon as the first driver (led driver) is initialized, the yellow led turns on.
         // That's also the last thing that's turned off. If the yellow led stays on and your
         // program doesn't run, you know that the boot procedure has failed.
-        initialize(unsafe { &mut HEAP_MEMORY }, true);
+        unsafe {
+            initialize(addr_of_mut!(HEAP_MEMORY), true);
+        }
     }
 
     control_loop()
