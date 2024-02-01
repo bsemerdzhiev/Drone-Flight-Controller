@@ -15,6 +15,7 @@ use tudelft_quadrupel::led::Led::{Green, Red};
 use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
+use tudelft_quadrupel::motor::set_motors;
 
 mod control;
 mod yaw_pitch_roll;
@@ -52,6 +53,7 @@ fn panic(info: &PanicInfo) -> ! {
     // On panic:
     // * try and write the panic message on UART
     // * blink the red light
+    set_motors([0, 0, 0, 0]);
 
     if uart::is_initialized() {
         let msg = format!("{info}\n");
