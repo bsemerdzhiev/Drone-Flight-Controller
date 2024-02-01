@@ -38,7 +38,7 @@ pub fn control_loop() -> ! {
             send_bytes(format!("YPR {} {} {}\n", ypr.yaw, ypr.pitch, ypr.roll).as_bytes());
             send_bytes(format!("ACC {} {} {}\n", accel.x, accel.y, accel.z).as_bytes());
             send_bytes(format!("BAT {bat}\n").as_bytes());
-            send_bytes(format!("BAR {pres} \n").as_bytes());
+            send_bytes(format!("BAR {pres}\n").as_bytes());
             send_bytes("\n".as_bytes());
         }
 
