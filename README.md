@@ -5,9 +5,9 @@ Most of the code we provide you for the Embedded Systems Lab
 is not actually contained in this template. Instead, it's provided 
 as a library called [`tudelft_quadrupel`](https://docs.rs/tudelft_quadrupel)
 
-In your `Cargo.toml`, its version is set to version `1`. This means, that running 
+In your `Cargo.toml`, its version is set to version `3`. This means, that running 
 `cargo update` will automatically get you bugfixes if released by the course staff 
-(any version `1.x.x`).
+(any version `3.x.x`).
 
 You can find the assignment text on the [course website](https://cese.ewi.tudelft.nl)
 
