@@ -2,33 +2,35 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq)]
 #[repr(u8)]
-pub enum CommandLiterals {
-    Left,
-    Right,
-    Top,
-    Bottom,
-    GetSteps,
-    StepCount,
-    Path,
-    Reset,
+pub enum FSMState {
+    SafeMode,
+    PanicMode,
+    ManualMode,
+    CalibrationMode,
+    YawControl,
+    FullControlMode,
+    RawSensorsFullControlMode,
+    HeightControlMode,
+    WirelessMode,
+}
+
+#[derive(Serialize, Deserialize, PartialEq)]
+#[repr(u8)]
+pub enum CommandType {
+    ChangeMode,
 }
 
 #[derive(Serialize, Deserialize, PartialEq)]
 pub struct Command {
-    to_send: CommandLiterals,
-    payload: u8,
+    command_type: CommandType,
+    fsm_state: Option<FSMState>,
 }
 
 impl Command {
-    pub fn new(to_send: CommandLiterals, payload: u8) -> Self {
-        Self { to_send, payload }
-    }
-
-    pub fn get_command(&mut self) -> &CommandLiterals {
-        &self.to_send
-    }
-
-    pub fn get_payload(&mut self) -> u8 {
-        self.payload
+    pub fn new(command_type: CommandType, fsm_state: Option<FSMState>) -> Self {
+        Self {
+            command_type,
+            fsm_state,
+        }
     }
 }
