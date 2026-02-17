@@ -1,6 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 
+use crc::{Crc, CRC_32_ISCSI};
 use serde::{Deserialize, Serialize};
 
 /*
@@ -32,6 +33,7 @@ pub struct HdlcTransceiver {
     pub buff: [u8; BUFFER_SIZE],
     pub left_pointer: usize,
     pub right_pointer: usize,
+    pub crc: Crc::<u32>::new(&CRC_32_ISCI),
 
     /*
      * Since buff can be looped(start from 0 when overflowing),
@@ -71,9 +73,14 @@ impl HdlcTransceiver {
         let mut serialized_buff: [u8; MESSAGE_SIZE] = [0; MESSAGE_SIZE];
         postcard::to_slice(struc_to_serialize, &mut serialized_buff).unwrap();
 
-        serialized_buff = insert_crc8(serialized_buff, 0xD5);
+        let checksym: u32 = self.crc.checksum(serialized_buff);
 
         let mut stuffed_buff: [u8; STUFFED_MESSAGE_SIZE] = [0; STUFFED_MESSAGE_SIZE];
+
+        serialized_buff[MESSAGE_SIZE - 4] = stuffed_buff >> 24;
+        serialized_buff[MESSAGE_SIZE - 3] = (stuffed_buff >> 16) & 0xF;
+        serialized_buff[MESSAGE_SIZE - 2] = (stuffed_buff >> 8) & 0xF;
+        serialized_buff[MESSAGE_SIZE - 1] = (stuffed_buff) & 0xF;
 
         stuffed_buff[0] = FRAME_BOUNDARY;
         let mut k: usize = 1;
@@ -93,6 +100,23 @@ impl HdlcTransceiver {
         k += 1;
 
         (stuffed_buff, k)
+    }
+
+    fn check_crc(&self) -> bool {
+        let checksum: u32 = (self.removed_ctrl[MESSAGE_SIZE - 4] << 24) | 
+        (self.removed_ctrl[MESSAGE_SIZE - 3] << 16) | 
+        (self.removed_ctrl[MESSAGE_SIZE - 2] << 8) | 
+        (self.removed_ctrl[MESSAGE_SIZE - 1]);
+
+        // set the last 4 bytes to zero 
+        for i in (MESSAGE_SIZE-4)..MESSAGE_SIZE {
+            self.removed_ctrl[i] = 0;
+        }
+
+        // recalculate the checksum again
+        let new_checksum: u32 = self.crc.checksum(self.removed_ctrl);
+
+        return checksum == new_checksum;
     }
 
     /*
@@ -172,13 +196,13 @@ impl HdlcTransceiver {
         }
 
         // check the message crc
-        if new_ind != MESSAGE_SIZE || !has_valid_crc8(self.removed_ctrl, 0xD5) {
+        if new_ind != MESSAGE_SIZE || !self.check_crc() {
             return None;
         }
 
         // remove the last crc byte
         let deserialized_message =
-            postcard::take_from_bytes::<T>(&self.removed_ctrl[0..(new_ind - 1)]);
+            postcard::take_from_bytes::<T>(&self.removed_ctrl[0..(new_ind - 4)]);
 
         // check if the message can be deserialized
         if deserialized_message.is_err() {
