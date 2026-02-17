@@ -1,7 +1,7 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 
-use crc::{Crc, CRC_32_ISCSI};
+use crc::{CRC_32_ISCSI, Crc};
 use serde::{Deserialize, Serialize};
 
 /*
@@ -33,7 +33,7 @@ pub struct HdlcTransceiver {
     pub buff: [u8; BUFFER_SIZE],
     pub left_pointer: usize,
     pub right_pointer: usize,
-    pub crc: Crc::<u32>::new(&CRC_32_ISCI),
+    pub crc: Crc<u32>,
 
     /*
      * Since buff can be looped(start from 0 when overflowing),
@@ -57,6 +57,7 @@ impl HdlcTransceiver {
             right_pointer: 0,
             helper_arr: [0; BUFFER_SIZE],
             removed_ctrl: [0; MESSAGE_SIZE],
+            crc: Crc::<u32>::new(&CRC_32_ISCSI),
         }
     }
 
@@ -73,14 +74,14 @@ impl HdlcTransceiver {
         let mut serialized_buff: [u8; MESSAGE_SIZE] = [0; MESSAGE_SIZE];
         postcard::to_slice(struc_to_serialize, &mut serialized_buff).unwrap();
 
-        let checksym: u32 = self.crc.checksum(serialized_buff);
+        let checksum: u32 = self.crc.checksum(&serialized_buff);
 
         let mut stuffed_buff: [u8; STUFFED_MESSAGE_SIZE] = [0; STUFFED_MESSAGE_SIZE];
 
-        serialized_buff[MESSAGE_SIZE - 4] = stuffed_buff >> 24;
-        serialized_buff[MESSAGE_SIZE - 3] = (stuffed_buff >> 16) & 0xF;
-        serialized_buff[MESSAGE_SIZE - 2] = (stuffed_buff >> 8) & 0xF;
-        serialized_buff[MESSAGE_SIZE - 1] = (stuffed_buff) & 0xF;
+        serialized_buff[MESSAGE_SIZE - 4] = (checksum >> 24) as u8;
+        serialized_buff[MESSAGE_SIZE - 3] = ((checksum >> 16) & 0xF) as u8;
+        serialized_buff[MESSAGE_SIZE - 2] = ((checksum >> 8) & 0xF) as u8;
+        serialized_buff[MESSAGE_SIZE - 1] = ((checksum) & 0xF) as u8;
 
         stuffed_buff[0] = FRAME_BOUNDARY;
         let mut k: usize = 1;
@@ -102,21 +103,21 @@ impl HdlcTransceiver {
         (stuffed_buff, k)
     }
 
-    fn check_crc(&self) -> bool {
-        let checksum: u32 = (self.removed_ctrl[MESSAGE_SIZE - 4] << 24) | 
-        (self.removed_ctrl[MESSAGE_SIZE - 3] << 16) | 
-        (self.removed_ctrl[MESSAGE_SIZE - 2] << 8) | 
-        (self.removed_ctrl[MESSAGE_SIZE - 1]);
+    fn check_crc(&mut self) -> bool {
+        let checksum: u32 = ((self.removed_ctrl[MESSAGE_SIZE - 4] << 24)
+            | (self.removed_ctrl[MESSAGE_SIZE - 3] << 16)
+            | (self.removed_ctrl[MESSAGE_SIZE - 2] << 8)
+            | (self.removed_ctrl[MESSAGE_SIZE - 1])) as u32;
 
-        // set the last 4 bytes to zero 
-        for i in (MESSAGE_SIZE-4)..MESSAGE_SIZE {
+        // set the last 4 bytes to zero
+        for i in (MESSAGE_SIZE - 4)..MESSAGE_SIZE {
             self.removed_ctrl[i] = 0;
         }
 
         // recalculate the checksum again
-        let new_checksum: u32 = self.crc.checksum(self.removed_ctrl);
+        let new_checksum: u32 = self.crc.checksum(&self.removed_ctrl);
 
-        return checksum == new_checksum;
+        checksum == new_checksum
     }
 
     /*
