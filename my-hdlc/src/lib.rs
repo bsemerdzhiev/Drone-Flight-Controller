@@ -1,7 +1,6 @@
 #![cfg_attr(not(test), no_std)]
 #![cfg_attr(not(test), no_main)]
 
-use crc8_rs::{has_valid_crc8, insert_crc8};
 use serde::{Deserialize, Serialize};
 
 /*
@@ -71,6 +70,7 @@ impl HdlcTransceiver {
     {
         let mut serialized_buff: [u8; MESSAGE_SIZE] = [0; MESSAGE_SIZE];
         postcard::to_slice(struc_to_serialize, &mut serialized_buff).unwrap();
+
         serialized_buff = insert_crc8(serialized_buff, 0xD5);
 
         let mut stuffed_buff: [u8; STUFFED_MESSAGE_SIZE] = [0; STUFFED_MESSAGE_SIZE];
