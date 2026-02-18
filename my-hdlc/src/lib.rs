@@ -228,6 +228,12 @@ impl HdlcTransceiver {
     pub fn fifo_is_empty(&mut self) -> bool {
         self.left_pointer == self.right_pointer
     }
+
+    pub fn add_bytes(&mut self, bytes_to_add: &[u8]) {
+        for byte in bytes_to_add {
+            self.add_byte(*byte);
+        }
+    }
 }
 
 #[cfg(test)]

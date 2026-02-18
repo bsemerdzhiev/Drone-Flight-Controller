@@ -5,7 +5,7 @@
 extern crate alloc;
 
 use crate::communication_test::send_and_receive;
-use crate::control::control_loop;
+use crate::control::main_loop;
 use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
@@ -20,8 +20,8 @@ use tudelft_quadrupel::{entry, uart};
 
 mod communication_test;
 mod control;
+mod control_trait;
 mod yaw_pitch_roll;
-
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
 const HEAP_SIZE: usize = 4096;
@@ -45,8 +45,8 @@ fn main() -> ! {
         }
     }
 
-    send_and_receive();
-    // control_loop()
+    // send_and_receive();
+    main_loop()
 }
 
 #[inline(never)]
