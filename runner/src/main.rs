@@ -4,6 +4,26 @@ use std::process::{exit, Command};
 use std::time::Duration;
 use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 use tudelft_serial_upload::serial2::SerialPort;
+use crossterm::event::{self, Event, KeyCode};
+use gilrs::{Gilrs, Axis, EventType};
+
+struct ManualInput {
+    lift: f32,
+    roll: f32,
+    pitch: f32,
+    yaw: f32,
+}
+
+impl ManualInput {
+    fn zero() -> Self {
+        Self {
+            lift: 0.0,
+            roll: 0.0,
+            pitch: 0.0,
+            yaw: 0.0,
+        }
+    }
+}
 
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
@@ -30,14 +50,117 @@ fn main() {
     let mut serial = SerialPort::open(port, 115200).unwrap();
     serial.set_read_timeout(Duration::from_secs(1)).unwrap();
 
-    // infinitely print whatever the drone sends us
+
+    let mut keyboard_trim = ManualInput::zero();
+    let mut joystick_input = ManualInput::zero();
+    let mut gilrs = Gilrs::new().unwrap(); // for joystick
+
+    // for timing and sending inputs at fixed rate
+    let send_period = Duration::from_millis(20);
+    let mut last_send = Instant::now();
+
+    
     let mut buf = [0u8; 255];
+    crossterm::terminal::enable_raw_mode().unwrap(); // This is for non-blocking reading inputs from keyboard
     loop {
+        // ----------------------------------------------
+        // (1) Read joystick input
+        // ----------------------------------------------
+        read_joystick(&mut gilrs, &mut joystick_input);
+        // ----------------------------------------------
+        // (2) Read keyboard input 
+        // ----------------------------------------------
+        keyboard_trimming(&mut keyboard_trim);
+
+        // ----------------------------------------------
+        // (3) Combine inputs and send at fixed rate
+        // ----------------------------------------------
+        if last_send.elapsed() >= send_period {
+            last_send = Instant::now();
+
+            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+
+            println!(
+                "L {:.2} R {:.2} P {:.2} Y {:.2}",
+                cmd.lift, cmd.roll, cmd.pitch, cmd.yaw
+            );
+
+            // Later:
+            // serial.write_all(&encode_command(cmd)).unwrap();
+        }
+        
+        // ----------------------------------------------
+        // (4) Read from drone
+        // ----------------------------------------------
+        // infinitely print whatever the drone sends us
         if let Ok(num) = serial.read(&mut buf) {
             print!("{}", String::from_utf8_lossy(&buf[0..num]));
         }
     }
+    crossterm::terminal::disable_raw_mode().unwrap(); //Stop terminal behave strangely
 }
+
+fn read_joystick(gilrs: &mut Gilrs, joystick_input: &mut ManualInput) {
+    while let Some(ev) = gilrs.next_event() {
+        if let EventType::AxisChanged(axis, value, _) = ev.event {
+            match axis {
+                Axis::LeftStickY => joystick_input.lift = (-value).clamp(0.0, 1.0),
+                Axis::LeftStickX => joystick_input.roll = value.clamp(-1.0, 1.0),
+                Axis::RightStickY => joystick_input.pitch = (-value).clamp(-1.0, 1.0),
+                Axis::RightStickX => joystick_input.yaw = value.clamp(-1.0, 1.0),
+                _ => {}
+            }
+        }
+    }
+}
+
+fn keyboard_trimming(keyboard_trim: &mut ManualInput) {
+    while event::poll(Duration::from_millis(0)).unwrap() {
+        if let Event::Key(key) = event::read().unwrap() {
+            match key.code {
+                // Lift trim
+                KeyCode::Char('a') => keyboard_trim.lift += 0.01, //throttle up
+                KeyCode::Char('z') => keyboard_trim.lift -= 0.01, //throttle down
+
+                // Roll trim
+                KeyCode::Right => keyboard_trim.roll -= 0.02, //roll down  right arrow key
+                KeyCode::Left => keyboard_trim.roll += 0.02, //roll up     left arrow key
+
+                // Pitch trim
+                KeyCode::Char('i') => keyboard_trim.pitch += 0.02, // pitch up  down arrow key
+                KeyCode::Char('k') => keyboard_trim.pitch -= 0.02, // pitch down up arrow key
+
+                // Yaw trim
+                KeyCode::Char('q') => keyboard_trim.yaw -= 0.02, //yaw down
+                KeyCode::Char('w') => keyboard_trim.yaw += 0.02, //yaw up
+
+                _ => {}
+            }
+        }
+    }
+
+    // Clamp trim for safety
+    keyboard_trim.lift = keyboard_trim.lift.clamp(0.0, 1.0);
+    keyboard_trim.roll = keyboard_trim.roll.clamp(-0.5, 0.5);
+    keyboard_trim.pitch = keyboard_trim.pitch.clamp(-0.5, 0.5);
+    keyboard_trim.yaw = keyboard_trim.yaw.clamp(-0.5, 0.5);
+}
+
+fn combine_inputs(
+    trim: &ManualInput,
+    joy: &ManualInput,
+) -> ManualInput {
+    //Clamp to prevent values going outside range and crashing the drone
+    ManualInput {
+        lift: (trim.lift + joy.lift).clamp(0.0, 1.0),
+        roll: (trim.roll + joy.roll).clamp(-1.0, 1.0),
+        pitch: (trim.pitch + joy.pitch).clamp(-1.0, 1.0),
+        yaw: (trim.yaw + joy.yaw).clamp(-1.0, 1.0),
+    }
+}
+
+
+
 
 #[allow(unused)]
 fn start_interface(port: &PathBuf) {
@@ -48,6 +171,7 @@ fn start_interface(port: &PathBuf) {
         // pass the serial port as a command line parameter to the python program
         .arg(port.to_str().unwrap());
 
+    
     match cmd.output() {
         Err(e) => {
             eprintln!("{}", e);
