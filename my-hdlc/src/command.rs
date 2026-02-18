@@ -14,10 +14,11 @@ pub enum FSMState {
     WirelessMode,
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[repr(u8)]
 pub enum CommandType {
     ChangeMode,
+    OtherMode,
 }
 
 #[derive(Serialize, Deserialize, PartialEq)]
@@ -32,5 +33,12 @@ impl Command {
             command_type,
             fsm_state,
         }
+    }
+
+    pub fn get_command_type(&self) -> &CommandType {
+        return &self.command_type;
+    }
+    pub fn get_fsm_state(&self) -> &Option<FSMState> {
+        return &self.fsm_state;
     }
 }

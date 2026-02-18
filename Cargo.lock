@@ -623,6 +623,7 @@ checksum = "3df6368f71f205ff9c33c076d170dd56ebf68e8161c733c0caa07a7a5509ed53"
 name = "runner"
 version = "0.1.0"
 dependencies = [
+ "my-hdlc",
  "tudelft-serial-upload",
 ]
 
@@ -820,6 +821,7 @@ name = "template-project"
 version = "0.1.0"
 dependencies = [
  "micromath",
+ "my-hdlc",
  "tudelft-quadrupel",
 ]
 
