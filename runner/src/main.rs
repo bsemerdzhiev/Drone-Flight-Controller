@@ -1,8 +1,9 @@
+use my_hdlc::command::CommandType;
 use std::env::args;
 use std::path::PathBuf;
-use std::process::{exit, Command};
+use std::process::exit;
+use std::process::Command;
 use std::time::Duration;
-use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 use tudelft_serial_upload::serial2::SerialPort;
 use crossterm::event::{self, Event, KeyCode};
 use evdev::{Device, enumerate, AbsoluteAxisCode};
@@ -94,7 +95,21 @@ fn main() {
         // ----------------------------------------------
         // infinitely print whatever the drone sends us
         if let Ok(num) = serial.read(&mut buf) {
-            print!("{}", String::from_utf8_lossy(&buf[0..num]));
+            for x in &buf[0..num] {
+                rcv.add_byte(x.clone());
+            }
+        }
+
+        let read_msg = rcv.read_structure::<my_hdlc::command::Command>();
+        if let Some(x) = read_msg {
+            match x.get_command_type() {
+                CommandType::ChangeMode => {
+                    println!("YES");
+                }
+                _ => {
+                    println!("NO");
+                }
+            }
         }
     }
     crossterm::terminal::disable_raw_mode().unwrap(); //Stop terminal behave strangely
