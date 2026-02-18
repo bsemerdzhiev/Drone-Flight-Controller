@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[repr(u8)]
 pub enum FSMState {
     SafeMode,
@@ -21,7 +21,7 @@ pub enum CommandType {
     OtherMode,
 }
 
-#[derive(Serialize, Deserialize, PartialEq)]
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct Command {
     command_type: CommandType,
     fsm_state: Option<FSMState>,
