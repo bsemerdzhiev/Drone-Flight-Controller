@@ -48,14 +48,15 @@ fn main() {
 
         let read_msg = rcv.read_structure::<my_hdlc::command::Command>();
         if let Some(x) = read_msg {
-            match x.get_command_type() {
-                CommandType::ChangeMode => {
-                    println!("YES");
-                }
-                _ => {
-                    println!("NO");
-                }
-            }
+            println!("{:?}", x);
+            // match x.get_command_type() {
+            //     CommandType::ChangeMode => {
+            //         println!("YES");
+            //     }
+            //     _ => {
+            //         println!("NO");
+            //     }
+            // }
         }
     }
 }
