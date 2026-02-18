@@ -4,6 +4,7 @@
 
 extern crate alloc;
 
+use crate::communication_test::send_and_receive;
 use crate::control::control_loop;
 use alloc::format;
 use core::alloc::Layout;
@@ -12,11 +13,12 @@ use core::panic::PanicInfo;
 use core::ptr::addr_of_mut;
 use tudelft_quadrupel::initialize::initialize;
 use tudelft_quadrupel::led::Led::{Green, Red};
+use tudelft_quadrupel::motor::set_motors;
 use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
-use tudelft_quadrupel::motor::set_motors;
 
+mod communication_test;
 mod control;
 mod yaw_pitch_roll;
 
@@ -43,7 +45,8 @@ fn main() -> ! {
         }
     }
 
-    control_loop()
+    send_and_receive();
+    // control_loop()
 }
 
 #[inline(never)]

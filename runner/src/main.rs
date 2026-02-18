@@ -1,9 +1,14 @@
+use my_hdlc::command::CommandType;
 use std::env::args;
 use std::path::PathBuf;
-use std::process::{exit, Command};
+use std::process::exit;
+use std::process::Command;
 use std::time::Duration;
-use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 use tudelft_serial_upload::serial2::SerialPort;
+use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
+
+pub use my_hdlc::HdlcTransceiver;
+use my_hdlc::STUFFED_MESSAGE_SIZE;
 
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
@@ -30,11 +35,27 @@ fn main() {
     let mut serial = SerialPort::open(port, 115200).unwrap();
     serial.set_read_timeout(Duration::from_secs(1)).unwrap();
 
+    let mut rcv: HdlcTransceiver = HdlcTransceiver::new();
+
     // infinitely print whatever the drone sends us
     let mut buf = [0u8; 255];
     loop {
         if let Ok(num) = serial.read(&mut buf) {
-            print!("{}", String::from_utf8_lossy(&buf[0..num]));
+            for x in &buf[0..num] {
+                rcv.add_byte(x.clone());
+            }
+        }
+
+        let read_msg = rcv.read_structure::<my_hdlc::command::Command>();
+        if let Some(x) = read_msg {
+            match x.get_command_type() {
+                CommandType::ChangeMode => {
+                    println!("YES");
+                }
+                _ => {
+                    println!("NO");
+                }
+            }
         }
     }
 }

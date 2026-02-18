@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 tudelft-quadrupel = "3"
 micromath = "2"
+my-hdlc = {path = "../my-hdlc/"}
