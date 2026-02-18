@@ -1,5 +1,5 @@
 [workspace]
-members = ["dronecode", "runner"]
+members = ["dronecode", "runner", "my-hdlc"]
 default-members = ["dronecode"]
 resolver="2"
 

@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 tudelft-serial-upload = "2"
+my-hdlc = {path = "../my-hdlc/"}
