@@ -5,7 +5,7 @@ use std::time::Duration;
 use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 use tudelft_serial_upload::serial2::SerialPort;
 use crossterm::event::{self, Event, KeyCode};
-use gilrs::{Gilrs, Axis, EventType};
+use evdev::{Device, enumerate, AbsoluteAxisCode};
 
 struct ManualInput {
     lift: f32,
@@ -53,7 +53,7 @@ fn main() {
 
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
-    let mut gilrs = Gilrs::new().unwrap(); // for joystick
+    let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
 
     // for timing and sending inputs at fixed rate
     let send_period = Duration::from_millis(20);
@@ -66,7 +66,7 @@ fn main() {
         // ----------------------------------------------
         // (1) Read joystick input
         // ----------------------------------------------
-        read_joystick(&mut gilrs, &mut joystick_input);
+        read_joystick(&mut device, &mut joystick_input);
         // ----------------------------------------------
         // (2) Read keyboard input 
         // ----------------------------------------------
@@ -100,16 +100,41 @@ fn main() {
     crossterm::terminal::disable_raw_mode().unwrap(); //Stop terminal behave strangely
 }
 
-fn read_joystick(gilrs: &mut Gilrs, joystick_input: &mut ManualInput) {
-    while let Some(ev) = gilrs.next_event() {
-        if let EventType::AxisChanged(axis, value, _) = ev.event {
-            match axis {
-                Axis::LeftStickY => joystick_input.lift = (-value).clamp(0.0, 1.0),
-                Axis::LeftStickX => joystick_input.roll = value.clamp(-1.0, 1.0),
-                Axis::RightStickY => joystick_input.pitch = (-value).clamp(-1.0, 1.0),
-                Axis::RightStickX => joystick_input.yaw = value.clamp(-1.0, 1.0),
-                _ => {}
-            }
+fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
+    use evdev::*;
+    if let Ok(events) = device.fetch_events() {
+        for event in events {
+            match event.destructure(){
+                    //trigger button; this should activate panic mode
+                    EventSummary::Key(_, key_type, 1) => {
+                        match key_type {
+                            evdev::KeyCode::BTN_TRIGGER => {
+                                todo!()
+                            },
+                            _ => {}
+                        }
+                    },
+                    EventSummary::AbsoluteAxis(_, axis, value) => {
+                        let v = value as f32;
+                        match axis {
+                            AbsoluteAxisCode::ABS_THROTTLE => {
+                                joystick_input.lift = 1.0 - (v / 255.0);
+                            },
+                            AbsoluteAxisCode::ABS_X => {
+                                joystick_input.roll = (v - 128.0) / 128.0;
+                            },
+                            AbsoluteAxisCode::ABS_Y => {
+                                joystick_input.pitch = -(v - 128.0) / 128.0;
+                            },
+                            AbsoluteAxisCode::ABS_RY => {
+                                // have to check what the standard value for this axis is
+                                joystick_input.yaw = (v - 128.0) / 128.0;
+                            },
+                            _ => {}
+                        }
+                    },
+                    _ => {}
+                }
         }
     }
 }
@@ -158,6 +183,19 @@ fn combine_inputs(
         yaw: (trim.yaw + joy.yaw).clamp(-1.0, 1.0),
     }
 }
+
+fn find_flight_stick() -> Option<Device> {
+    for (path, _) in enumerate() {
+        if let Ok(dev) = Device::open(&path) {
+            let name = dev.name().unwrap_or("Unknown");
+            if name.contains("Logitech") {
+                return Some(dev);
+            }
+        }
+    }
+    None
+}
+
 
 
 
