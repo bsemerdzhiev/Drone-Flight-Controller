@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 tudelft-serial-upload = "2"
 crossterm = "0.29.0"
-gilrs = "0.10"
+evdev = "0.13.2"
