@@ -8,7 +8,7 @@ pub trait FSMControl {
 impl FSMControl for FSMState {
     fn run_control_loop(&mut self) {
         match self {
-            FSMState::SafeMode => todo!(),
+            FSMState::SafeMode => self.run_safe_mode_cl(),
             FSMState::CalibrationMode => todo!(),
             FSMState::FullControlMode => todo!(),
             FSMState::HeightControlMode => todo!(),
