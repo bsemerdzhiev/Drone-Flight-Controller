@@ -52,15 +52,15 @@ impl FSMControl for FSMManual {
 
         let Nb: i32 = input_from_controller.get_yaw() * THRUST_COEFFICIENT;
         let Md: i32 = input_from_controller.get_pitch() * DRAG_COEFFICIENT;
-        let Zd: i32 = input_from_controller.get_lift() * THRUST_COEFFICIENT;
+        let Zd: i32 = input_from_controller.get_lift() * DRAG_COEFFICIENT;
         let Ld: i32 = input_from_controller.get_roll() * DRAG_COEFFICIENT;
 
         let four_times_bd: i32 = 4 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
 
         let rpm_one: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
-        let rpm_two: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
-        let rpm_three: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
-        let rpm_four: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
+        let rpm_two: i32 = (Nb - (2 * Ld) - Zd) / (four_times_bd);
+        let rpm_three: i32 = (-Nb - (2 * Md) - Zd) / (four_times_bd);
+        let rpm_four: i32 = (-Nb + (2 * Ld) - Zd) / (four_times_bd);
 
         map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
     }
