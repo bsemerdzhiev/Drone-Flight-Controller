@@ -27,6 +27,18 @@ pub struct Command {
     fsm_state: Option<FSMState>,
 }
 
+pub struct DroneControl {
+    desired_lift: f32,
+    roll_rate: f32,
+    pitch_rate: f32,
+    yaw_rate: f32,
+}
+
+pub enum Command {
+    SendDroneControl(DroneControl),
+    ChangeFSMState(FSMState),
+}
+
 impl Command {
     pub fn new(command_type: CommandType, fsm_state: Option<FSMState>) -> Self {
         Self {
