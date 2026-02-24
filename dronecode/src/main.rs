@@ -18,11 +18,13 @@ use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
-mod communication_test;
-mod control;
-mod control_trait;
-mod fsm_safe_mode;
-mod yaw_pitch_roll;
+pub mod communication_test;
+pub mod control;
+pub mod control_trait;
+pub mod fsm_safe_mode;
+pub mod telemetry_data;
+pub mod yaw_pitch_roll;
+
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
 const HEAP_SIZE: usize = 4096;

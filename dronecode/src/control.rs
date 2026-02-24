@@ -1,6 +1,8 @@
-use crate::control_trait::FSMControl;
+use core::time::Duration;
+
 use crate::control_trait::FSMControl;
 use crate::fsm_safe_mode::FSMSafe;
+use crate::telemetry_data::Telemetry_Data;
 use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::format;
 use my_hdlc::command::{Command, CommandType, FSMState};
@@ -41,7 +43,7 @@ pub fn main_loop() -> ! {
         // control_loop(op_mode);
         op_mode.run_control_loop();
         if i % 100 == 0 {
-            // send_drone_data();
+            send_drone_data(&mut transceiver, dt);
         }
 
         // Control Loop:
@@ -60,12 +62,10 @@ fn run_command(command: CommandType) {
     todo!("Execute Commands!");
 }
 
-fn send_drone_data() {
-    let motors = get_motors();
-    let quaternion = block!(read_dmp_bytes()).unwrap();
-    let ypr = YawPitchRoll::from(quaternion);
-    let (accel, _) = read_raw().unwrap();
-    let bat = read_battery();
-    let pres = read_pressure();
-    todo!("Put the data in a struct and send it!");
+fn send_drone_data(transiver: &mut HdlcTransceiver, dt: Duration) {
+    let data = Telemetry_Data::read_telemetry_data(dt);
+    let cmd: Command = Command::Telemetry(data);
+    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transiver.write_structure(&cmd);
+    uart::send_bytes(&msg.0[0..msg.1]);
+    // todo!("Put the data in a struct and send it!");
 }
