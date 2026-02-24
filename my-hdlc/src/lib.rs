@@ -22,6 +22,7 @@ static CTRL_ESCAPE: u8 = 0x7D;
 static INV_BYTE: u8 = 1 << 5;
 
 pub mod command;
+pub mod pc_command;
 
 pub struct HdlcTransceiver {
     /*
@@ -225,6 +226,12 @@ impl HdlcTransceiver {
             self.left_pointer = (self.left_pointer + 1) % BUFFER_SIZE;
         }
     }
+    pub fn add_bytes(&mut self, bytes_to_add: &[u8]) {
+        for byte in bytes_to_add {
+            self.add_byte(*byte);
+        }
+    }
+
     pub fn fifo_is_empty(&mut self) -> bool {
         self.left_pointer == self.right_pointer
     }

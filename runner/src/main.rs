@@ -1,30 +1,25 @@
+use crate::read_joystick::combine_inputs;
+use crate::read_joystick::read_joystick;
+use crate::read_keyboard::keyboard_trimming;
+
+use my_hdlc::pc_command::ManualInput;
+
 use crossterm::event::{self, Event, KeyCode};
 use evdev::{enumerate, AbsoluteAxisCode, Device};
-use my_hdlc::command::CommandType;
+pub use my_hdlc::pc_command;
 use std::env::args;
+use tudelft_serial_upload::upload_file_or_stop;
+use tudelft_serial_upload::PortSelector;
+
 use std::path::PathBuf;
 use std::process::exit;
 use std::process::Command;
 use std::time::Duration;
+use std::time::Instant;
 use tudelft_serial_upload::serial2::SerialPort;
 
-struct ManualInput {
-    lift: f32,
-    roll: f32,
-    pitch: f32,
-    yaw: f32,
-}
-
-impl ManualInput {
-    fn zero() -> Self {
-        Self {
-            lift: 0.0,
-            roll: 0.0,
-            pitch: 0.0,
-            yaw: 0.0,
-        }
-    }
-}
+mod read_joystick;
+mod read_keyboard;
 
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
@@ -60,6 +55,9 @@ fn main() {
     let mut last_send = Instant::now();
 
     let mut buf = [0u8; 255];
+
+    let mut rcv = my_hdlc::HdlcTransceiver::new();
+
     crossterm::terminal::enable_raw_mode().unwrap(); // This is for non-blocking reading inputs from keyboard
     loop {
         // ----------------------------------------------
@@ -79,13 +77,9 @@ fn main() {
 
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
-            println!(
-                "L {:.2} R {:.2} P {:.2} Y {:.2}",
-                cmd.lift, cmd.roll, cmd.pitch, cmd.yaw
-            );
+            let send_buffer = rcv.write_structure::<pc_command::ManualInput>(&cmd);
 
-            // Later:
-            // serial.write_all(&encode_command(cmd)).unwrap();
+            serial.write(&send_buffer.0[0..send_buffer.1]);
         }
 
         // ----------------------------------------------
@@ -97,101 +91,8 @@ fn main() {
                 rcv.add_byte(x.clone());
             }
         }
-
-        let read_msg = rcv.read_structure::<my_hdlc::command::Command>();
-
-        if let Some(x) = read_msg {
-            println!("{:?}", x);
-            // match x.get_command_type() {
-            //     CommandType::ChangeMode => {
-            //         println!("YES");
-            //     }
-            //     _ => {
-            //         println!("NO");
-            //     }
-            // }
-        }
     }
     crossterm::terminal::disable_raw_mode().unwrap(); //Stop terminal behave strangely
-}
-
-fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
-    use evdev::*;
-    if let Ok(events) = device.fetch_events() {
-        for event in events {
-            match event.destructure() {
-                //trigger button; this should activate panic mode
-                EventSummary::Key(_, key_type, 1) => match key_type {
-                    evdev::KeyCode::BTN_TRIGGER => {
-                        todo!()
-                    }
-                    _ => {}
-                },
-                EventSummary::AbsoluteAxis(_, axis, value) => {
-                    let v = value as f32;
-                    match axis {
-                        AbsoluteAxisCode::ABS_THROTTLE => {
-                            joystick_input.lift = 1.0 - (v / 255.0);
-                        }
-                        AbsoluteAxisCode::ABS_X => {
-                            joystick_input.roll = (v - 128.0) / 128.0;
-                        }
-                        AbsoluteAxisCode::ABS_Y => {
-                            joystick_input.pitch = -(v - 128.0) / 128.0;
-                        }
-                        AbsoluteAxisCode::ABS_RY => {
-                            // have to check what the standard value for this axis is
-                            joystick_input.yaw = (v - 128.0) / 128.0;
-                        }
-                        _ => {}
-                    }
-                }
-                _ => {}
-            }
-        }
-    }
-}
-
-fn keyboard_trimming(keyboard_trim: &mut ManualInput) {
-    while event::poll(Duration::from_millis(0)).unwrap() {
-        if let Event::Key(key) = event::read().unwrap() {
-            match key.code {
-                // Lift trim
-                KeyCode::Char('a') => keyboard_trim.lift += 0.01, //throttle up
-                KeyCode::Char('z') => keyboard_trim.lift -= 0.01, //throttle down
-
-                // Roll trim
-                KeyCode::Right => keyboard_trim.roll -= 0.02, //roll down  right arrow key
-                KeyCode::Left => keyboard_trim.roll += 0.02,  //roll up     left arrow key
-
-                // Pitch trim
-                KeyCode::Char('i') => keyboard_trim.pitch += 0.02, // pitch up  down arrow key
-                KeyCode::Char('k') => keyboard_trim.pitch -= 0.02, // pitch down up arrow key
-
-                // Yaw trim
-                KeyCode::Char('q') => keyboard_trim.yaw -= 0.02, //yaw down
-                KeyCode::Char('w') => keyboard_trim.yaw += 0.02, //yaw up
-
-                _ => {}
-            }
-        }
-    }
-
-    // Clamp trim for safety
-    keyboard_trim.lift = keyboard_trim.lift.clamp(0.0, 1.0);
-    keyboard_trim.roll = keyboard_trim.roll.clamp(-0.5, 0.5);
-    keyboard_trim.pitch = keyboard_trim.pitch.clamp(-0.5, 0.5);
-    keyboard_trim.yaw = keyboard_trim.yaw.clamp(-0.5, 0.5);
-}
-
-fn combine_inputs(trim: &ManualInput, joy: &ManualInput) -> ManualInput {
-    //Clamp to prevent values going outside range and crashing the drone
-    ManualInput {
-        lift: (trim.lift + joy.lift).clamp(0.0, 1.0),
-        roll: (trim.roll + joy.roll).clamp(-1.0, 1.0),
-        pitch: (trim.pitch + joy.pitch).clamp(-1.0, 1.0),
-        yaw: (trim.yaw + joy.yaw).clamp(-1.0, 1.0),
-    }
 }
 
 fn find_flight_stick() -> Option<Device> {

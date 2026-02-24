@@ -5,12 +5,13 @@
 extern crate alloc;
 
 use crate::communication_test::send_and_receive;
-use crate::control::control_loop;
+
 use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
 use core::ptr::addr_of_mut;
+
 use tudelft_quadrupel::initialize::initialize;
 use tudelft_quadrupel::led::Led::{Green, Red};
 use tudelft_quadrupel::motor::set_motors;
@@ -21,7 +22,10 @@ use tudelft_quadrupel::{entry, uart};
 mod communication_test;
 mod control;
 mod control_trait;
+
+mod fsm_manual_mode;
 mod fsm_safe_mode;
+
 mod yaw_pitch_roll;
 
 /// The heap size of your drone code in bytes.
