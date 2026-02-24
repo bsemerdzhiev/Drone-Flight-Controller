@@ -48,7 +48,7 @@ fn main() {
 
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
-    let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
+    // let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
 
     // for timing and sending inputs at fixed rate
     let send_period = Duration::from_millis(20);
@@ -58,28 +58,30 @@ fn main() {
 
     let mut rcv = my_hdlc::HdlcTransceiver::new();
 
-    crossterm::terminal::enable_raw_mode().unwrap(); // This is for non-blocking reading inputs from keyboard
+    // crossterm::terminal::enable_raw_mode().unwrap(); // This is for non-blocking reading inputs from keyboard
     loop {
         // ----------------------------------------------
         // (1) Read joystick input
         // ----------------------------------------------
-        read_joystick(&mut device, &mut joystick_input);
+        // read_joystick(&mut device, &mut joystick_input);
         // ----------------------------------------------
         // (2) Read keyboard input
         // ----------------------------------------------
-        keyboard_trimming(&mut keyboard_trim);
+        // keyboard_trimming(&mut keyboard_trim);
 
         // ----------------------------------------------
         // (3) Combine inputs and send at fixed rate
         // ----------------------------------------------
         if last_send.elapsed() >= send_period {
-            last_send = Instant::now();
-
-            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
-
-            let send_buffer = rcv.write_structure::<pc_command::ManualInput>(&cmd);
-
-            serial.write(&send_buffer.0[0..send_buffer.1]);
+            // last_send = Instant::now();
+            //
+            // // let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+            //
+            // let send_buffer = rcv.write_structure::<my_hdlc::command::Command>(
+            //     &my_hdlc::command::Command::ManualInput(joystick_input.clone()),
+            // );
+            //
+            // serial.write(&send_buffer.0[0..send_buffer.1]);
         }
 
         // ----------------------------------------------
@@ -87,12 +89,19 @@ fn main() {
         // ----------------------------------------------
         // infinitely print whatever the drone sends us
         if let Ok(num) = serial.read(&mut buf) {
-            for x in &buf[0..num] {
-                rcv.add_byte(x.clone());
-            }
+            // for x in &buf[0..num] {
+            //     rcv.add_byte(x.clone());
+            // }
+
+            print!("{}", String::from_utf8_lossy(&buf[0..num]));
         }
+
+        // let mut buf = [0u8; 255];
+        // if let Ok(num) = serial.read(&mut buf) {
+        // print!("{}", String::from_utf8_lossy(&buf[0..num]));
+        // }
     }
-    crossterm::terminal::disable_raw_mode().unwrap(); //Stop terminal behave strangely
+    // crossterm::terminal::disable_raw_mode().unwrap(); //Stop terminal behave strangely
 }
 
 fn find_flight_stick() -> Option<Device> {

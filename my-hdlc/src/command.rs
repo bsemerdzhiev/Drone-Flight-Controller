@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::pc_command;
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[repr(u8)]
 pub enum FSMState {
@@ -22,15 +24,7 @@ pub enum CommandType {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct DroneControl {
-    desired_lift: f32,
-    roll_rate: f32,
-    pitch_rate: f32,
-    yaw_rate: f32,
-}
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum Command {
-    SendDroneControl(DroneControl),
+    ManualInput(pc_command::ManualInput),
     ChangeFSMState(FSMState),
 }
