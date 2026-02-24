@@ -1,3 +1,5 @@
+use std::{f128::consts::PI, f32::MAX_10_EXP};
+
 use my_hdlc::pc_command::ManualInput;
 
 use evdev::*;
@@ -5,9 +7,11 @@ use evdev::*;
 // defines the max rate values for each aerial maneuver
 // defined in degree per seconds
 
-const YAW_RATE: i16 = 200;
-const PITCH_RATE: i16 = 200;
-const ROLL_RATE: i16 = 200;
+const MAX_LIFT: i32 = 200;
+
+const YAW_RATE: i32 = 200;
+const PITCH_RATE: i32 = 200;
+const ROLL_RATE: i32 = 200;
 
 //------------------------------------------------------
 
@@ -26,17 +30,17 @@ pub fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
                     let v = value as f32;
                     match axis {
                         AbsoluteAxisCode::ABS_THROTTLE => {
-                            joystick_input.set_lift(v / 255.0);
+                            joystick_input.set_lift((v / 255.0) * MAX_LIFT);
                         }
                         AbsoluteAxisCode::ABS_X => {
-                            joystick_input.set_roll((v - 128.0) / 128.0);
+                            joystick_input.set_roll(((v / 128.0) - 1) * ROLL_RATE);
                         }
                         AbsoluteAxisCode::ABS_Y => {
-                            joystick_input.set_pitch(-(v - 128.0) / 128.0);
+                            joystick_input.set_pitch(-((v / 128.0) - 1) * PITCH_RATE);
                         }
                         AbsoluteAxisCode::ABS_RY => {
                             // have to check what the standard value for this axis is
-                            joystick_input.set_yaw((v - 128.0) / 128.0);
+                            joystick_input.set_yaw(((v / 128.0) - 1) * YAW_RATE);
                         }
                         _ => {}
                     }
@@ -50,9 +54,9 @@ pub fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
 pub fn combine_inputs(trim: &ManualInput, joy: &ManualInput) -> ManualInput {
     //Clamp to prevent values going outside range and crashing the drone
     ManualInput::new(
-        (trim.get_lift() + joy.get_lift()).clamp(0.0, 1.0),
-        (trim.get_roll() + joy.get_roll()).clamp(-1.0, 1.0),
-        (trim.get_pitch() + joy.get_pitch()).clamp(-1.0, 1.0),
-        (trim.get_yaw() + joy.get_yaw()).clamp(-1.0, 1.0),
+        (trim.get_lift() + joy.get_lift()).clamp(0, MAX_LIFt),
+        (trim.get_roll() + joy.get_roll()).clamp(-ROLL_RATE, ROLL_RATE),
+        (trim.get_pitch() + joy.get_pitch()).clamp(-PITCH_RATE, PITCH_RATE),
+        (trim.get_yaw() + joy.get_yaw()).clamp(-YAW_RATE, YAW_RATE),
     )
 }
