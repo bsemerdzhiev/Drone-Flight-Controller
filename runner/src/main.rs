@@ -1,3 +1,5 @@
+use crossterm::event::{self, Event, KeyCode};
+use evdev::{enumerate, AbsoluteAxisCode, Device};
 use my_hdlc::command::CommandType;
 use std::env::args;
 use std::path::PathBuf;
@@ -5,8 +7,6 @@ use std::process::exit;
 use std::process::Command;
 use std::time::Duration;
 use tudelft_serial_upload::serial2::SerialPort;
-use crossterm::event::{self, Event, KeyCode};
-use evdev::{Device, enumerate, AbsoluteAxisCode};
 
 struct ManualInput {
     lift: f32,
@@ -51,7 +51,6 @@ fn main() {
     let mut serial = SerialPort::open(port, 115200).unwrap();
     serial.set_read_timeout(Duration::from_secs(1)).unwrap();
 
-
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
     let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
@@ -60,7 +59,6 @@ fn main() {
     let send_period = Duration::from_millis(20);
     let mut last_send = Instant::now();
 
-    
     let mut buf = [0u8; 255];
     crossterm::terminal::enable_raw_mode().unwrap(); // This is for non-blocking reading inputs from keyboard
     loop {
@@ -69,7 +67,7 @@ fn main() {
         // ----------------------------------------------
         read_joystick(&mut device, &mut joystick_input);
         // ----------------------------------------------
-        // (2) Read keyboard input 
+        // (2) Read keyboard input
         // ----------------------------------------------
         keyboard_trimming(&mut keyboard_trim);
 
@@ -89,7 +87,7 @@ fn main() {
             // Later:
             // serial.write_all(&encode_command(cmd)).unwrap();
         }
-        
+
         // ----------------------------------------------
         // (4) Read from drone
         // ----------------------------------------------
@@ -101,6 +99,7 @@ fn main() {
         }
 
         let read_msg = rcv.read_structure::<my_hdlc::command::Command>();
+
         if let Some(x) = read_msg {
             println!("{:?}", x);
             // match x.get_command_type() {
@@ -120,37 +119,35 @@ fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
     use evdev::*;
     if let Ok(events) = device.fetch_events() {
         for event in events {
-            match event.destructure(){
-                    //trigger button; this should activate panic mode
-                    EventSummary::Key(_, key_type, 1) => {
-                        match key_type {
-                            evdev::KeyCode::BTN_TRIGGER => {
-                                todo!()
-                            },
-                            _ => {}
-                        }
-                    },
-                    EventSummary::AbsoluteAxis(_, axis, value) => {
-                        let v = value as f32;
-                        match axis {
-                            AbsoluteAxisCode::ABS_THROTTLE => {
-                                joystick_input.lift = 1.0 - (v / 255.0);
-                            },
-                            AbsoluteAxisCode::ABS_X => {
-                                joystick_input.roll = (v - 128.0) / 128.0;
-                            },
-                            AbsoluteAxisCode::ABS_Y => {
-                                joystick_input.pitch = -(v - 128.0) / 128.0;
-                            },
-                            AbsoluteAxisCode::ABS_RY => {
-                                // have to check what the standard value for this axis is
-                                joystick_input.yaw = (v - 128.0) / 128.0;
-                            },
-                            _ => {}
-                        }
-                    },
+            match event.destructure() {
+                //trigger button; this should activate panic mode
+                EventSummary::Key(_, key_type, 1) => match key_type {
+                    evdev::KeyCode::BTN_TRIGGER => {
+                        todo!()
+                    }
                     _ => {}
+                },
+                EventSummary::AbsoluteAxis(_, axis, value) => {
+                    let v = value as f32;
+                    match axis {
+                        AbsoluteAxisCode::ABS_THROTTLE => {
+                            joystick_input.lift = 1.0 - (v / 255.0);
+                        }
+                        AbsoluteAxisCode::ABS_X => {
+                            joystick_input.roll = (v - 128.0) / 128.0;
+                        }
+                        AbsoluteAxisCode::ABS_Y => {
+                            joystick_input.pitch = -(v - 128.0) / 128.0;
+                        }
+                        AbsoluteAxisCode::ABS_RY => {
+                            // have to check what the standard value for this axis is
+                            joystick_input.yaw = (v - 128.0) / 128.0;
+                        }
+                        _ => {}
+                    }
                 }
+                _ => {}
+            }
         }
     }
 }
@@ -165,7 +162,7 @@ fn keyboard_trimming(keyboard_trim: &mut ManualInput) {
 
                 // Roll trim
                 KeyCode::Right => keyboard_trim.roll -= 0.02, //roll down  right arrow key
-                KeyCode::Left => keyboard_trim.roll += 0.02, //roll up     left arrow key
+                KeyCode::Left => keyboard_trim.roll += 0.02,  //roll up     left arrow key
 
                 // Pitch trim
                 KeyCode::Char('i') => keyboard_trim.pitch += 0.02, // pitch up  down arrow key
@@ -187,10 +184,7 @@ fn keyboard_trimming(keyboard_trim: &mut ManualInput) {
     keyboard_trim.yaw = keyboard_trim.yaw.clamp(-0.5, 0.5);
 }
 
-fn combine_inputs(
-    trim: &ManualInput,
-    joy: &ManualInput,
-) -> ManualInput {
+fn combine_inputs(trim: &ManualInput, joy: &ManualInput) -> ManualInput {
     //Clamp to prevent values going outside range and crashing the drone
     ManualInput {
         lift: (trim.lift + joy.lift).clamp(0.0, 1.0),
@@ -212,10 +206,6 @@ fn find_flight_stick() -> Option<Device> {
     None
 }
 
-
-
-
-
 #[allow(unused)]
 fn start_interface(port: &PathBuf) {
     let mut cmd = Command::new("python");
@@ -225,7 +215,6 @@ fn start_interface(port: &PathBuf) {
         // pass the serial port as a command line parameter to the python program
         .arg(port.to_str().unwrap());
 
-    
     match cmd.output() {
         Err(e) => {
             eprintln!("{}", e);
