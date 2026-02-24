@@ -1,10 +1,10 @@
 use crate::control_trait::FSMControl;
-use my_hdlc::command::FSMState;
+use my_hdlc::command::{Command, FSMState};
 use tudelft_quadrupel::motor::*;
 pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
-    fn run_control_loop(&self, transceiver: &mut my_hdlc::HdlcTransceiver) {
+    fn run_control_loop(&self, command: &Option<Command>) {
         set_motor_max(0);
     }
     fn step(&self, next_state: my_hdlc::command::FSMState) -> &dyn FSMControl {

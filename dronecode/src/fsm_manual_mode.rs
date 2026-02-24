@@ -1,3 +1,4 @@
+use my_hdlc::{command::Command, pc_command::ManualInput};
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};
 
 use crate::control_trait::FSMControl;
@@ -34,35 +35,22 @@ fn map_rpm_square_to_pwm(rpms_square: &mut [i32]) {
 }
 
 impl FSMControl for FSMManual {
-    fn run_control_loop(&self, transceiver: &mut my_hdlc::HdlcTransceiver) {
-        let mut receive_buffer = [0u8; my_hdlc::BUFFER_SIZE];
-
-        let mut input_from_controller;
-        //read controller command from pc
-        loop {
-            uart::receive_bytes(&mut receive_buffer);
-
-            transceiver.add_bytes(&receive_buffer);
-
-            if let Some(x) = transceiver.read_structure::<my_hdlc::pc_command::ManualInput>() {
-                input_from_controller = x;
-                break;
-            }
-        }
-
-        let Nb: i32 = input_from_controller.get_yaw() * THRUST_COEFFICIENT;
-        let Md: i32 = input_from_controller.get_pitch() * DRAG_COEFFICIENT;
-        let Zd: i32 = input_from_controller.get_lift() * DRAG_COEFFICIENT;
-        let Ld: i32 = input_from_controller.get_roll() * DRAG_COEFFICIENT;
-
-        let four_times_bd: i32 = 4 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
-
-        let rpm_one: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
-        let rpm_two: i32 = (Nb - (2 * Ld) - Zd) / (four_times_bd);
-        let rpm_three: i32 = (-Nb - (2 * Md) - Zd) / (four_times_bd);
-        let rpm_four: i32 = (-Nb + (2 * Ld) - Zd) / (four_times_bd);
-
-        map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
+    fn run_control_loop(&self, command: &Option<Command>) {
+        uart::send_bytes("Test\n".as_bytes());
+        return;
+        // let Nb: i32 = input_from_controller.get_yaw() * THRUST_COEFFICIENT;
+        // let Md: i32 = input_from_controller.get_pitch() * DRAG_COEFFICIENT;
+        // let Zd: i32 = input_from_controller.get_lift() * DRAG_COEFFICIENT;
+        // let Ld: i32 = input_from_controller.get_roll() * DRAG_COEFFICIENT;
+        //
+        // let four_times_bd: i32 = 4 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
+        //
+        // let rpm_one: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
+        // let rpm_two: i32 = (Nb - (2 * Ld) - Zd) / (four_times_bd);
+        // let rpm_three: i32 = (-Nb - (2 * Md) - Zd) / (four_times_bd);
+        // let rpm_four: i32 = (-Nb + (2 * Ld) - Zd) / (four_times_bd);
+        //
+        // map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
     }
 
     fn step(&self, next_state: my_hdlc::command::FSMState) -> &dyn FSMControl {

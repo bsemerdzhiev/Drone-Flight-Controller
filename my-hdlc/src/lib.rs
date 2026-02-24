@@ -12,10 +12,10 @@ use serde::{Deserialize, Serialize};
 * payload, and adding the two framing bytes, we can end up with at most (2*3 + 2)8 bytes. In total,
 * we can fit 128/8 ~ 16 messages in the buffer.
 */
-pub static BUFFER_SIZE: usize = 1 << 7;
-pub static MESSAGE_SIZE: usize = 1 << 3;
+pub static BUFFER_SIZE: usize = 1 << 10;
+pub static MESSAGE_SIZE: usize = 1 << 5;
 // used as return size when serializing a structure
-pub static STUFFED_MESSAGE_SIZE: usize = (1 << 3) * 3;
+pub static STUFFED_MESSAGE_SIZE: usize = MESSAGE_SIZE * 3;
 
 static FRAME_BOUNDARY: u8 = 0x7E;
 static CTRL_ESCAPE: u8 = 0x7D;
