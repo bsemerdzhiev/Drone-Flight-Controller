@@ -22,6 +22,7 @@ mod communication_test;
 mod control;
 mod control_trait;
 mod fsm_safe_mode;
+mod fsm_panic_mode;
 mod yaw_pitch_roll;
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
