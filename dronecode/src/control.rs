@@ -1,5 +1,4 @@
 use crate::control_trait::FSMControl;
-use crate::control_trait::FSMControl;
 use crate::fsm_safe_mode::FSMSafe;
 use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::format;
@@ -11,6 +10,9 @@ use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw};
 use tudelft_quadrupel::time::{set_tick_frequency, wait_for_next_tick, Instant};
 use tudelft_quadrupel::uart::{receive_bytes, send_bytes};
+
+use my_hdlc::HdlcTransceiver;
+
 const UART_BUF_SIZE: usize = 255usize;
 
 pub fn main_loop() -> ! {
@@ -19,6 +21,7 @@ pub fn main_loop() -> ! {
     let mut op_mode: &dyn FSMControl = &FSMSafe;
     let mut uart_buf = [0u8; UART_BUF_SIZE];
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
+
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
@@ -32,20 +35,10 @@ pub fn main_loop() -> ! {
         let bat = read_battery();
         let pres = read_pressure();
 
+        op_mode.run_control_loop(&mut transceiver);
+
         if i % 100 == 0 {
-            send_bytes(format!("DTT: {:?}ms\n", dt.as_millis()).as_bytes());
-            send_bytes(
-                format!(
-                    "MTR: {} {} {} {}\n",
-                    motors[0], motors[1], motors[2], motors[3]
-                )
-                .as_bytes(),
-            );
-            send_bytes(format!("YPR {} {} {}\n", ypr.yaw, ypr.pitch, ypr.roll).as_bytes());
-            send_bytes(format!("ACC {} {} {}\n", accel.x, accel.y, accel.z).as_bytes());
-            send_bytes(format!("BAT {bat}\n").as_bytes());
-            send_bytes(format!("BAR {pres}\n").as_bytes());
-            send_bytes("\n".as_bytes());
+            // log data
         }
 
         // wait until the timer interrupt goes off again

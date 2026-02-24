@@ -22,11 +22,6 @@ pub enum CommandType {
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub struct Command {
-    command_type: CommandType,
-    fsm_state: Option<FSMState>,
-}
-
 pub struct DroneControl {
     desired_lift: f32,
     roll_rate: f32,
@@ -34,23 +29,8 @@ pub struct DroneControl {
     yaw_rate: f32,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum Command {
     SendDroneControl(DroneControl),
     ChangeFSMState(FSMState),
-}
-
-impl Command {
-    pub fn new(command_type: CommandType, fsm_state: Option<FSMState>) -> Self {
-        Self {
-            command_type,
-            fsm_state,
-        }
-    }
-
-    pub fn get_command_type(&self) -> &CommandType {
-        return &self.command_type;
-    }
-    pub fn get_fsm_state(&self) -> &Option<FSMState> {
-        return &self.fsm_state;
-    }
 }
