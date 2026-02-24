@@ -2,8 +2,9 @@ use core::time::Duration;
 
 use crate::control_trait::FSMControl;
 use crate::fsm_safe_mode::FSMSafe;
-use crate::telemetry_data::Telemetry_Data;
+use crate::sensor_state::SensorState;
 use crate::yaw_pitch_roll::YawPitchRoll;
+use crate::TelemetryData::TelemetryData;
 use alloc::format;
 use my_hdlc::command::{Command, CommandType, FSMState};
 use my_hdlc::HdlcTransceiver;
@@ -23,6 +24,7 @@ pub fn main_loop() -> ! {
     let mut op_mode: &dyn FSMControl = &FSMSafe;
     let mut uart_buf = [0u8; UART_BUF_SIZE];
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
+    let mut zero_states: SensorState = SensorState::new();
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
@@ -41,7 +43,7 @@ pub fn main_loop() -> ! {
         }
 
         // control_loop(op_mode);
-        op_mode.run_control_loop();
+        op_mode.run_control_loop(&mut zero_states);
         if i % 100 == 0 {
             send_drone_data(&mut transceiver, dt);
         }
@@ -63,7 +65,7 @@ fn run_command(command: CommandType) {
 }
 
 fn send_drone_data(transiver: &mut HdlcTransceiver, dt: Duration) {
-    let data = Telemetry_Data::read_telemetry_data(dt);
+    let data = TelemetryData::read_TelemetryData(dt);
     let cmd: Command = Command::Telemetry(data);
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transiver.write_structure(&cmd);
     uart::send_bytes(&msg.0[0..msg.1]);

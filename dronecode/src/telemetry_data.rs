@@ -13,7 +13,7 @@ use tudelft_quadrupel::{
 
 use crate::yaw_pitch_roll::YawPitchRoll;
 
-pub struct Telemetry_Data {
+pub struct TelemetryData {
     dt: Duration,
     motors: [u16; 4],
     quaternion: Quaternion,
@@ -24,15 +24,15 @@ pub struct Telemetry_Data {
     pres: u32,
 }
 
-impl Telemetry_Data {
-    pub fn read_telemetry_data(dt: Duration) -> Self {
+impl TelemetryData {
+    pub fn read_TelemetryData(dt: Duration) -> Self {
         let motors = get_motors();
         let quaternion = block!(read_dmp_bytes()).unwrap();
         let ypr = YawPitchRoll::from(quaternion);
         let (accel, gyro) = read_raw().unwrap();
         let bat = read_battery();
         let pres = read_pressure();
-        return Telemetry_Data {
+        return TelemetryData {
             dt,
             motors,
             quaternion,
@@ -45,7 +45,7 @@ impl Telemetry_Data {
     }
 }
 
-impl fmt::Display for Telemetry_Data {
+impl fmt::Display for TelemetryData {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // write!(
         //     f,

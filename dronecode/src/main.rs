@@ -20,8 +20,8 @@ use tudelft_quadrupel::{entry, uart};
 
 pub mod communication_test;
 pub mod control;
-pub mod control_trait;
-pub mod fsm_safe_mode;
+pub mod sensor_state;
+pub mod states;
 pub mod telemetry_data;
 pub mod yaw_pitch_roll;
 

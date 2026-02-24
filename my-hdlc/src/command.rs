@@ -18,7 +18,7 @@ pub enum FSMState {
 #[repr(u8)]
 pub enum Command {
     ChangeMode(FSMState),
-    Telemetry(Telemetry_Data),
+    Telemetry(TelemetryData),
 }
 
 // #[derive(Serialize, Deserialize, PartialEq, Debug)]
