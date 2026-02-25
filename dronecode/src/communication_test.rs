@@ -9,7 +9,7 @@ use tudelft_quadrupel::uart;
 pub fn send_and_receive() -> ! {
     let mut rscv = HdlcTransceiver::new();
 
-    while (true) {
+    loop {
         // let msg_to_rcv: Option<Command> = rscv.read_structure::<Command>();
 
         let cmd: Command = Command::ChangeFSMState(FSMState::PanicMode);

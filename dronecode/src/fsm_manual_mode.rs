@@ -1,5 +1,5 @@
 use my_hdlc::{
-    command::{self, Command},
+    command::{self, Command, DebugRpms},
     pc_command::ManualInput,
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};
@@ -12,22 +12,31 @@ const DRAG_COEFFICIENT: i32 = 1000;
 const MAX_BATTERY_VOLTAGE: i32 = 22;
 const MOTOR_K_V: i32 = 980;
 
-const PWM_MAX_VALUE: i32 = 1000;
 const MAX_RPM: i32 = MOTOR_K_V * MAX_BATTERY_VOLTAGE;
-
-const MAX_RATIO: i32 = (PWM_MAX_VALUE / MAX_RPM) * (PWM_MAX_VALUE / MAX_RPM);
 
 pub struct FSMManual;
 
+fn my_sqrt(x: i32) -> i32 {
+    for i in 0.. {
+        if (i * i >= x) {
+            return i;
+        }
+    }
+    return 0;
+}
+
 fn map_rpm_square_to_pwm(rpms_square: &mut [i32]) {
+    let max_allowed_pwm: i32 = motor::get_motor_max() as i32;
+
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
 
     let mut k = 0;
     for x in rpms_square {
         let mut wanted_pwm = 0;
         loop {
-            if (wanted_pwm * wanted_pwm > (*x * MAX_RATIO)) {
-                pwm_to_set[k] = (wanted_pwm - 1) as u16;
+            let rhs: i32 = my_sqrt(*x) * max_allowed_pwm / MAX_RPM;
+            if (wanted_pwm >= rhs) {
+                pwm_to_set[k] = wanted_pwm as u16;
                 break;
             }
             wanted_pwm += 1;
@@ -38,15 +47,22 @@ fn map_rpm_square_to_pwm(rpms_square: &mut [i32]) {
 }
 
 impl FSMControl for FSMManual {
-    fn run_control_loop(&self, command: &Option<Command>) {
-        if command.is_none() {
-            return;
-        }
-        let input_from_controller: ManualInput;
+    fn run_control_loop(
+        &self,
+        command: Option<Command>,
+        transceiver: &mut my_hdlc::HdlcTransceiver,
+    ) {
+        let mut input_from_controller: ManualInput = ManualInput::zero();
 
-        match command.unwrap() {
-            command::Command::ManualInput(manual_input) => {}
-            _ => {}
+        if let Some(x) = command {
+            match x {
+                command::Command::ManualInput(manual_input) => input_from_controller = manual_input,
+                _ => {
+                    return;
+                }
+            }
+        } else {
+            return;
         }
 
         let Nb: i32 = input_from_controller.get_yaw() * THRUST_COEFFICIENT;
@@ -61,8 +77,18 @@ impl FSMControl for FSMManual {
         let rpm_three: i32 = (-Nb - (2 * Md) - Zd) / (four_times_bd);
         let rpm_four: i32 = (-Nb + (2 * Ld) - Zd) / (four_times_bd);
 
+        let dbg_to_send = Command::DebugRpms(DebugRpms::new(&[
+            input_from_controller.get_lift(),
+            12,
+            0,
+            0,
+        ]));
+
+        let to_write = transceiver.write_structure(&dbg_to_send);
+
+        uart::send_bytes(&to_write.0[0..to_write.1]);
+
         map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
-        return;
     }
 
     fn step(&self, next_state: my_hdlc::command::FSMState) -> &dyn FSMControl {

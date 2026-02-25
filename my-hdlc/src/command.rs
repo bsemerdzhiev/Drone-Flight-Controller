@@ -23,8 +23,22 @@ pub enum CommandType {
     OtherMode,
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct DebugRpms {
+    rpms: [i32; 4],
+}
+
+impl DebugRpms {
+    pub fn new(rpms: &[i32; 4]) -> Self {
+        return Self {
+            rpms: [rpms[0], rpms[1], rpms[2], rpms[3]],
+        };
+    }
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub enum Command {
     ManualInput(pc_command::ManualInput),
     ChangeFSMState(FSMState),
+    DebugRpms(DebugRpms),
 }
