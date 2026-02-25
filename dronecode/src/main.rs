@@ -18,9 +18,9 @@ use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
+pub mod calibration_state;
 pub mod communication_test;
 pub mod control;
-pub mod sensor_state;
 pub mod states;
 pub mod telemetry_read;
 pub mod yaw_pitch_roll;

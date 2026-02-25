@@ -1,6 +1,6 @@
 use core::time::Duration;
 
-use crate::sensor_state::SensorState;
+use crate::calibration_state::CalibrationState;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::FSM_control_trait::FSMControl;
 use crate::telemetry_read::TelemetryRead;
@@ -24,7 +24,7 @@ pub fn main_loop() -> ! {
     let mut op_mode: &dyn FSMControl = &FSMSafe;
     let mut uart_buf = [0u8; UART_BUF_SIZE];
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
-    let mut zero_states: SensorState = SensorState::new();
+    let mut calibration_state: CalibrationState = CalibrationState::new();
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
@@ -39,7 +39,7 @@ pub fn main_loop() -> ! {
             if let Some(command) = deserialized_command {
                 match command {
                     DeviceCommand::ChangeMode(new_mode) => {
-                        op_mode = op_mode.step(new_mode);
+                        op_mode = op_mode.step(new_mode, &mut calibration_state);
                         send_ack(&mut transceiver);
                     }
                     _ => continue,
@@ -48,7 +48,7 @@ pub fn main_loop() -> ! {
         }
 
         // control_loop(op_mode);
-        op_mode = op_mode.run_control_loop(&mut zero_states);
+        op_mode = op_mode.run_control_loop(&mut calibration_state);
         if i % 100 == 0 {
             send_drone_data(&mut transceiver, dt);
         }
