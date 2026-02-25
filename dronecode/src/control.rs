@@ -36,8 +36,14 @@ pub fn main_loop() -> ! {
         if num_received != 0usize {
             transceiver.add_bytes(&uart_buf[..num_received]);
             let deserialized_command = transceiver.read_structure::<DeviceCommand>();
-            if let Some(DeviceCommand) = deserialized_command {
-                run_command(DeviceCommand);
+            if let Some(command) = deserialized_command {
+                match command {
+                    DeviceCommand::ChangeMode(new_mode) => {
+                        op_mode = op_mode.step(new_mode);
+                        send_ack(&mut transceiver);
+                    }
+                    _ => continue,
+                }
             }
         }
 
@@ -59,14 +65,16 @@ pub fn main_loop() -> ! {
     unreachable!();
 }
 
-fn run_command(command: DeviceCommand) {
-    todo!("Execute Commands!");
-}
-
-fn send_drone_data(transiver: &mut HdlcTransceiver, dt: Duration) {
+fn send_drone_data(transceiver: &mut HdlcTransceiver, dt: Duration) {
     let data = TelemetryRead::read_telemetry(dt);
     let cmd: DeviceCommand = DeviceCommand::Telemetry(data);
-    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transiver.write_structure(&cmd);
+    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&cmd);
     send_bytes(&msg.0[0..msg.1]);
     // todo!("Put the data in a struct and send it!");
+}
+
+fn send_ack(transceiver: &mut HdlcTransceiver) {
+    let ack_cmd = DeviceCommand::Ack;
+    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
+    uart::send_bytes(&msg.0[0..msg.1]);
 }

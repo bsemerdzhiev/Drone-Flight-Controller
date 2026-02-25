@@ -49,7 +49,7 @@ fn main() -> ! {
     }
 
     // send_and_receive();
-    main_loop()
+    main_loop();
 }
 
 #[inline(never)]
