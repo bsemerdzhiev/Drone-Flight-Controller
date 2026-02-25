@@ -20,7 +20,6 @@ const UART_BUF_SIZE: usize = 255usize;
 
 pub fn main_loop() -> ! {
     set_tick_frequency(100);
-    // send_bytes("Test\n".as_bytes());
     let mut last = Instant::now();
     let mut op_mode: &dyn FSMControl = &FSMManual;
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
@@ -28,6 +27,7 @@ pub fn main_loop() -> ! {
     let mut command: Option<Command> = None;
 
     let mut receive_buffer = [0u8; my_hdlc::BUFFER_SIZE];
+    let mut write_buff = [0u8; my_hdlc::BUFFER_SIZE];
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
@@ -48,7 +48,7 @@ pub fn main_loop() -> ! {
 
         command = transceiver.read_structure::<Command>();
 
-        // op_mode.run_control_loop(&command);
+        op_mode.run_control_loop(&command);
 
         if i % 100 == 0 {
             // send_bytes(format!("DTT: {:?}ms\n", dt.as_millis()).as_bytes());
