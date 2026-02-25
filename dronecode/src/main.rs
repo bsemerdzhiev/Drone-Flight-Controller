@@ -22,7 +22,6 @@ pub mod communication_test;
 pub mod control;
 pub mod sensor_state;
 pub mod states;
-pub mod telemetry_data;
 pub mod telemetry_read;
 pub mod yaw_pitch_roll;
 

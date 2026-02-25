@@ -1,8 +1,8 @@
+use tudelft_quadrupel::block;
 use tudelft_quadrupel::mpu::{
     read_dmp_bytes, read_raw,
     structs::{Accel, Gyro, Quaternion},
 };
-
 pub struct SensorState {
     quaternion: Quaternion,
     accel: Accel,
