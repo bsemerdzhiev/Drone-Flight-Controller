@@ -42,7 +42,7 @@ pub fn main_loop() -> ! {
         }
 
         // control_loop(op_mode);
-        op_mode.run_control_loop(&mut zero_states);
+        op_mode = op_mode.run_control_loop(&mut zero_states);
         if i % 100 == 0 {
             send_drone_data(&mut transceiver, dt);
         }
