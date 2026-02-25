@@ -16,18 +16,18 @@ pub enum FSMState {
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[repr(u8)]
-pub enum Command {
+pub enum DeviceCommand {
     ChangeMode(FSMState),
     Telemetry(TelemetryData),
 }
 
 // #[derive(Serialize, Deserialize, PartialEq, Debug)]
-// pub struct Command {
+// pub struct DeviceCommand {
 //     command_type: CommandType,
 //     fsm_state: Option<FSMState>,
 // }
 
-// impl Command {
+// impl DeviceCommand {
 //     pub fn new(command_type: CommandType, fsm_state: Option<FSMState>) -> Self {
 //         Self {
 //             command_type,

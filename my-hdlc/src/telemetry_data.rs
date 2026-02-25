@@ -1,9 +1,8 @@
-use core::{fmt, time::Duration};
-
+use core::fmt;
 use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 pub struct TelemetryData {
-    pub dt: Duration,
+    pub dt: u128,
     pub motors: [u16; 4],
     pub yaw: f32,
     pub pitch: f32,
@@ -35,7 +34,7 @@ impl fmt::Display for TelemetryData {
         ACC {} {} {}\n
         BAT {}\n
         BAR {}\n",
-            self.dt.as_millis(),
+            self.dt,
             self.motors[0],
             self.motors[1],
             self.motors[2],

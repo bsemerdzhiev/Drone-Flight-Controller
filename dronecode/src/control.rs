@@ -3,14 +3,14 @@ use core::time::Duration;
 use crate::sensor_state::SensorState;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::FSM_control_trait::FSMControl;
+use crate::telemetry_read::TelemetryRead;
 use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::format;
-use my_hdlc::command::{Command, FSMState};
+use my_hdlc::command::{DeviceCommand, FSMState};
 use my_hdlc::telemetry_data::TelemetryData;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
-
 use tudelft_quadrupel::led::Led::Blue;
 use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw};
@@ -35,9 +35,9 @@ pub fn main_loop() -> ! {
         let num_received = receive_bytes(&mut uart_buf);
         if num_received != 0usize {
             transceiver.add_bytes(&uart_buf[..num_received]);
-            let deserialized_command = transceiver.read_structure::<Command>();
-            if let Some(command) = deserialized_command {
-                run_command(command);
+            let deserialized_command = transceiver.read_structure::<DeviceCommand>();
+            if let Some(DeviceCommand) = deserialized_command {
+                run_command(DeviceCommand);
             }
         }
 
@@ -48,7 +48,7 @@ pub fn main_loop() -> ! {
         }
 
         // Control Loop:
-        // Read Command and Execute, (if available).
+        // Read DeviceCommand and Execute, (if available).
         // Run the current mode's control loop
         // send data if i%100 == 0
         // wait until the timer interrupt goes off again
@@ -59,13 +59,13 @@ pub fn main_loop() -> ! {
     unreachable!();
 }
 
-fn run_command(command: Command) {
+fn run_command(command: DeviceCommand) {
     todo!("Execute Commands!");
 }
 
 fn send_drone_data(transiver: &mut HdlcTransceiver, dt: Duration) {
-    let data = TelemetryData::read_TelemetryData(dt);
-    let cmd: Command = Command::Telemetry(data);
+    let data = TelemetryRead::read_telemetry(dt);
+    let cmd: DeviceCommand = DeviceCommand::Telemetry(data);
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transiver.write_structure(&cmd);
     send_bytes(&msg.0[0..msg.1]);
     // todo!("Put the data in a struct and send it!");

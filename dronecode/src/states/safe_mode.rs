@@ -1,4 +1,5 @@
 use crate::sensor_state::SensorState;
+use crate::states::calibration_mode::FSMCalibration;
 use crate::states::FSM_control_trait::FSMControl;
 use my_hdlc::command::FSMState;
 use tudelft_quadrupel::motor::*;
@@ -8,9 +9,9 @@ impl FSMControl for FSMSafe {
     fn run_control_loop(&self, zero_state: &mut SensorState) {
         set_motor_max(0);
     }
-    fn step(&self, next_state: my_hdlc::command::FSMState) -> &dyn FSMControl {
+    fn step(&self, next_state: FSMState) -> &dyn FSMControl {
         match next_state {
-            FSMState::SafeMode => return &FSMSafe,
+            FSMState::SafeMode => return self,
             FSMState::CalibrationMode => return &FSMCalibration,
             FSMState::FullControlMode => todo!(),
             FSMState::HeightControlMode => todo!(),
