@@ -62,7 +62,7 @@ fn main() {
         // ----------------------------------------------
         // (1) Read joystick input
         // ----------------------------------------------
-        // read_joystick(&mut device, &mut joystick_input);
+        read_joystick(&mut device, &mut joystick_input);
         // ----------------------------------------------
         // (2) Read keyboard input
         // ----------------------------------------------
@@ -104,6 +104,7 @@ fn find_flight_stick() -> Option<Device> {
         if let Ok(dev) = Device::open(&path) {
             let name = dev.name().unwrap_or("Unknown");
             if name.contains("Logitech") {
+                dev.set_nonblocking(true).expect("Failed to set joystick to nonblocking");
                 return Some(dev);
             }
         }
