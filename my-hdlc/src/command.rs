@@ -19,6 +19,7 @@ pub enum FSMState {
 pub enum DeviceCommand {
     ChangeMode(FSMState),
     Telemetry(TelemetryData),
+    Ack,
 }
 
 // #[derive(Serialize, Deserialize, PartialEq, Debug)]
