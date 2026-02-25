@@ -39,9 +39,9 @@ pub fn main_loop() -> ! {
         let pres = read_pressure();
 
         // read input
-        receive_bytes(&mut receive_buffer);
+        let read_bytes: usize = receive_bytes(&mut receive_buffer[0..transceiver.remaining_bytes]);
 
-        transceiver.add_bytes(&receive_buffer);
+        transceiver.add_bytes(&receive_buffer[0..read_bytes]);
 
         command = transceiver.read_structure::<Command>();
 

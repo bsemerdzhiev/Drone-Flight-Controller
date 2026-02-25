@@ -84,8 +84,9 @@ fn main() {
             new_joystick.set_lift(rng.random::<i32>() % 200);
             new_joystick.set_pitch(rng.random::<i32>() % 200);
             new_joystick.set_yaw(rng.random::<i32>() % 200);
-            new_joystick.set_lift(rng.random::<i32>() % 200);
+            new_joystick.set_roll(rng.random::<i32>() % 200);
 
+            // println!("{:?}", new_joystick);
             let send_buffer = rcv.write_structure::<my_hdlc::command::Command>(
                 &my_hdlc::command::Command::ManualInput(new_joystick.clone()),
             );
@@ -97,13 +98,12 @@ fn main() {
         // (4) Read from drone
         // ----------------------------------------------
         // infinitely print whatever the drone sends us
-        if let Ok(num) = serial.read(&mut buf) {
-            for x in &buf[0..num] {
-                rcv.add_byte(x.clone());
+        if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
+            rcv.add_bytes(&buf[0..num]);
+
+            if let Some(x) = rcv.read_structure::<my_hdlc::command::Command>() {
+                println!("{:?}\n", x);
             }
-        }
-        if let Some(x) = rcv.read_structure::<my_hdlc::command::Command>() {
-            println!("{:?}\n", x);
         }
     }
 }

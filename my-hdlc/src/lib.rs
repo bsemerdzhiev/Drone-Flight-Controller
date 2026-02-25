@@ -12,10 +12,10 @@ use serde::{Deserialize, Serialize};
 * payload, and adding the two framing bytes, we can end up with at most (2*3 + 2)8 bytes. In total,
 * we can fit 128/8 ~ 16 messages in the buffer.
 */
-pub static BUFFER_SIZE: usize = 1 << 6;
+pub static BUFFER_SIZE: usize = 1 << 9;
 pub static MESSAGE_SIZE: usize = 1 << 4;
 // used as return size when serializing a structure
-pub static STUFFED_MESSAGE_SIZE: usize = MESSAGE_SIZE * 3;
+pub static STUFFED_MESSAGE_SIZE: usize = MESSAGE_SIZE * 2 + 2;
 
 static FRAME_BOUNDARY: u8 = 0x7E;
 static CTRL_ESCAPE: u8 = 0x7D;
@@ -37,6 +37,7 @@ pub struct HdlcTransceiver {
     pub left_pointer: usize,
     pub right_pointer: usize,
     pub crc: Crc<u32>,
+    pub remaining_bytes: usize,
 
     /*
      * Since buff can be looped(start from 0 when overflowing),
@@ -61,6 +62,7 @@ impl HdlcTransceiver {
             helper_arr: [0; BUFFER_SIZE],
             removed_ctrl: [0; MESSAGE_SIZE],
             crc: Crc::<u32>::new(&CRC_32_ISCSI),
+            remaining_bytes: BUFFER_SIZE,
         }
     }
 
@@ -140,12 +142,14 @@ impl HdlcTransceiver {
             if self.buff[self.left_pointer] == FRAME_BOUNDARY {
                 // remove the frame boundary left from the corrupted message
                 if removed_bytes {
+                    self.remaining_bytes += 1;
                     self.left_pointer = (self.left_pointer + 1) % BUFFER_SIZE;
                 }
                 break;
             }
             removed_bytes = true;
 
+            self.remaining_bytes += 1;
             self.left_pointer = (self.left_pointer + 1) % BUFFER_SIZE;
         }
 
@@ -172,7 +176,11 @@ impl HdlcTransceiver {
 
         // since we have found another frame boundary byte, remove all those bytes from the fifo
         // and try to deserialize
+
         self.left_pointer = start_pnt;
+
+        self.remaining_bytes =
+            BUFFER_SIZE - ((BUFFER_SIZE + self.right_pointer - self.left_pointer) % BUFFER_SIZE);
 
         //helper_arr should countain one whole frame
         let mut escape_next_byte: bool = false;
@@ -216,7 +224,10 @@ impl HdlcTransceiver {
         return Some(deserialized_message.unwrap().0);
     }
 
-    pub fn add_byte(&mut self, byte_to_add: u8) {
+    pub fn add_byte(&mut self, byte_to_add: u8) -> bool {
+        if self.remaining_bytes == 0 {
+            return false;
+        }
         self.buff[self.right_pointer] = byte_to_add;
 
         self.right_pointer = (self.right_pointer + 1) % BUFFER_SIZE;
@@ -225,15 +236,23 @@ impl HdlcTransceiver {
         if self.right_pointer == self.left_pointer {
             self.left_pointer = (self.left_pointer + 1) % BUFFER_SIZE;
         }
+
+        self.remaining_bytes -= 1;
+
+        return true;
     }
-    pub fn add_bytes(&mut self, bytes_to_add: &[u8]) {
+    pub fn add_bytes(&mut self, bytes_to_add: &[u8]) -> bool {
+        if (self.remaining_bytes < bytes_to_add.len()) {
+            return false;
+        }
         for byte in bytes_to_add {
             self.add_byte(*byte);
         }
+        return true;
     }
 
     pub fn fifo_is_empty(&mut self) -> bool {
-        self.left_pointer == self.right_pointer
+        return self.remaining_bytes == BUFFER_SIZE;
     }
 }
 
