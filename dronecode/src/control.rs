@@ -16,8 +16,6 @@ use tudelft_quadrupel::uart::{receive_bytes, send_bytes};
 
 use my_hdlc::HdlcTransceiver;
 
-const UART_BUF_SIZE: usize = 255usize;
-
 pub fn main_loop() -> ! {
     set_tick_frequency(100);
     let mut last = Instant::now();
