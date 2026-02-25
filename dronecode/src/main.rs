@@ -23,6 +23,7 @@ pub mod control;
 pub mod sensor_state;
 pub mod states;
 pub mod telemetry_data;
+pub mod telemetry_read;
 pub mod yaw_pitch_roll;
 
 /// The heap size of your drone code in bytes.
