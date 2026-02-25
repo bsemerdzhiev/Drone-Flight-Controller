@@ -451,6 +451,7 @@ dependencies = [
  "crc",
  "postcard",
  "serde",
+ "tudelft-quadrupel",
 ]
 
 [[package]]

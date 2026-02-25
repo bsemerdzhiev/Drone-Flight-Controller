@@ -22,6 +22,7 @@ static CTRL_ESCAPE: u8 = 0x7D;
 static INV_BYTE: u8 = 1 << 5;
 
 pub mod command;
+pub mod telemetry_data;
 pub struct HdlcTransceiver {
     /*
      * Buff keeps the bytes sent over uart and they are removed once a frame(two FRAME_BOUNDARY

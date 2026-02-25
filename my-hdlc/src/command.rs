@@ -1,5 +1,5 @@
+use crate::telemetry_data::TelemetryData;
 use serde::{Deserialize, Serialize};
-
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[repr(u8)]
 pub enum FSMState {
