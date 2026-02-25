@@ -7,7 +7,7 @@ pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
     fn run_control_loop(&self, zero_state: &mut CalibrationState) -> &dyn FSMControl {
-        set_motor_max(0);
+        set_motors([0, 0, 0, 0]);
         return self;
     }
     fn step(
