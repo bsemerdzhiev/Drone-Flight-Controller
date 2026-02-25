@@ -1,11 +1,15 @@
 use my_hdlc::command::FSMState;
 
-use crate::sensor_state::SensorState;
+use crate::calibration_state::CalibrationState;
 
 pub trait FSMControl {
-    fn run_control_loop(&self, zero_state: &mut SensorState) -> &dyn FSMControl;
+    fn run_control_loop(&self, calibration_state: &mut CalibrationState) -> &dyn FSMControl;
     // fn run_safe_mode_cl(& self);
-    fn step(&self, next_state: FSMState) -> &dyn FSMControl;
+    fn step(
+        &self,
+        next_state: FSMState,
+        calibration_state: &mut CalibrationState,
+    ) -> &dyn FSMControl;
 }
 
 // impl FSMControl for FSMState {
