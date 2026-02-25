@@ -6,8 +6,9 @@ use tudelft_quadrupel::motor::*;
 pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
-    fn run_control_loop(&self, zero_state: &mut SensorState) {
+    fn run_control_loop(&self, zero_state: &mut SensorState) -> &dyn FSMControl {
         set_motor_max(0);
+        return self;
     }
     fn step(&self, next_state: FSMState) -> &dyn FSMControl {
         match next_state {

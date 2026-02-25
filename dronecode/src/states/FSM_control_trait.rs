@@ -3,7 +3,7 @@ use my_hdlc::command::FSMState;
 use crate::sensor_state::SensorState;
 
 pub trait FSMControl {
-    fn run_control_loop(&self, zero_state: &mut SensorState);
+    fn run_control_loop(&self, zero_state: &mut SensorState) -> &dyn FSMControl;
     // fn run_safe_mode_cl(& self);
     fn step(&self, next_state: FSMState) -> &dyn FSMControl;
 }

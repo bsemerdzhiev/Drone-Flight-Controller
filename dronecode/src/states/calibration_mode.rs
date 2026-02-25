@@ -6,9 +6,10 @@ use tudelft_quadrupel::motor::*;
 pub struct FSMCalibration;
 
 impl FSMControl for FSMCalibration {
-    fn run_control_loop(&self, zero_state: &mut SensorState) {
+    fn run_control_loop(&self, zero_state: &mut SensorState) -> &dyn FSMControl {
         zero_state.update_quaternion();
         zero_state.update_raw_data();
+        return self;
     }
     fn step(&self, next_state: FSMState) -> &dyn FSMControl {
         match next_state {
