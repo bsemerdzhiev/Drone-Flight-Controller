@@ -46,14 +46,14 @@ fn main() {
     // as the upload occurred on, so we know that we can communicate with the drone over
     // this port.
     let mut serial = SerialPort::open(port, 115200).unwrap();
-    serial.set_read_timeout(Duration::from_secs(1)).unwrap();
+    serial.set_read_timeout(Duration::from_millis(400)).unwrap();
 
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
     // let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
 
     // for timing and sending inputs at fixed rate
-    let send_period = Duration::from_millis(20);
+    let send_period = Duration::from_micros(400);
     let mut last_send = Instant::now();
 
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
@@ -79,12 +79,11 @@ fn main() {
 
             let mut new_joystick = ManualInput::zero();
 
-            new_joystick.set_lift(rng.random::<i32>() % 200);
-            new_joystick.set_pitch(rng.random::<i32>() % 200);
-            new_joystick.set_yaw(rng.random::<i32>() % 200);
-            new_joystick.set_roll(rng.random::<i32>() % 200);
+            new_joystick.set_lift(-read_joystick::MAX_LIFT as i32);
+            // new_joystick.set_pitch(rng.random::<i32>() % 200);
+            // new_joystick.set_yaw(rng.random::<i32>() % 200);
+            // new_joystick.set_roll(rng.random::<i32>() % 200);
 
-            // println!("{:?}", new_joystick);
             let send_buffer = rcv.write_structure::<my_hdlc::command::Command>(
                 &my_hdlc::command::Command::ManualInput(new_joystick.clone()),
             );
@@ -97,12 +96,12 @@ fn main() {
         // (4) Read from drone
         // ----------------------------------------------
         // infinitely print whatever the drone sends us
+
         if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
             rcv.add_bytes(&buf[0..num]);
-
-            if let Some(x) = rcv.read_structure::<my_hdlc::command::Command>() {
-                println!("{:?}\n", x);
-            }
+        }
+        if let Some(x) = rcv.read_structure::<my_hdlc::command::Command>() {
+            println!("{:?}\n", x);
         }
     }
 }

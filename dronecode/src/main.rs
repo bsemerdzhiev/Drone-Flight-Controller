@@ -4,7 +4,6 @@
 
 extern crate alloc;
 
-use crate::communication_test::send_and_receive;
 use crate::control::main_loop;
 
 use alloc::format;
@@ -20,7 +19,6 @@ use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
-mod communication_test;
 mod control;
 mod control_trait;
 

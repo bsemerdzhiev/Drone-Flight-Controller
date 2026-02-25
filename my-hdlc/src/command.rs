@@ -25,11 +25,11 @@ pub enum CommandType {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct DebugRpms {
-    rpms: [i32; 4],
+    rpms: [u16; 4],
 }
 
 impl DebugRpms {
-    pub fn new(rpms: &[i32; 4]) -> Self {
+    pub fn new(rpms: &[u16; 4]) -> Self {
         return Self {
             rpms: [rpms[0], rpms[1], rpms[2], rpms[3]],
         };
