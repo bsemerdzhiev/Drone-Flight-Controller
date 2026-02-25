@@ -58,36 +58,38 @@ impl FSMControl for FSMManual {
             return;
         }
 
-        // if let Some(x) = command {
-        //     match x {
-        //         command::Command::ManualInput(manual_input) => {
-        //             input_from_controller = manual_input;
-        //         }
-        //         _ => {
-        //             return;
-        //         }
-        //     }
-        // } else {
-        //     return;
-        // }
+        if let Some(x) = command {
+            match x {
+                command::Command::ManualInput(manual_input) => {
+                    input_from_controller = manual_input;
+                }
+                _ => {
+                    return;
+                }
+            }
+        } else {
+            return;
+        }
 
-        // let Nb: i32 = input_from_controller.get_yaw() * THRUST_COEFFICIENT;
-        // let Md: i32 = input_from_controller.get_pitch() * DRAG_COEFFICIENT;
-        // let Zd: i32 = input_from_controller.get_lift() * DRAG_COEFFICIENT;
-        // let Ld: i32 = input_from_controller.get_roll() * DRAG_COEFFICIENT;
+        let Nb: i32 = input_from_controller.get_yaw() * THRUST_COEFFICIENT;
+        let Md: i32 = input_from_controller.get_pitch() * DRAG_COEFFICIENT;
+        let Zd: i32 = input_from_controller.get_lift() * DRAG_COEFFICIENT;
+        let Ld: i32 = input_from_controller.get_roll() * DRAG_COEFFICIENT;
+
+        let four_times_bd: i32 = 4 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
+
+        let rpm_one: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
+        let rpm_two: i32 = (Nb - (2 * Ld) - Zd) / (four_times_bd);
+        let rpm_three: i32 = (-Nb - (2 * Md) - Zd) / (four_times_bd);
+        let rpm_four: i32 = (-Nb + (2 * Ld) - Zd) / (four_times_bd);
+
+        // let to_write = transceiver.write_structure(&Command::DebugRpms(DebugRpms::new(&[
+        //     rpm_one, rpm_two, rpm_three, rpm_four,
+        // ])));
         //
-        // let four_times_bd: i32 = 4 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
-        //
-        // let rpm_one: i32 = (-Nb + (2 * Md) - Zd) / (four_times_bd);
-        // let rpm_two: i32 = (Nb - (2 * Ld) - Zd) / (four_times_bd);
-        // let rpm_three: i32 = (-Nb - (2 * Md) - Zd) / (four_times_bd);
-        // let rpm_four: i32 = (-Nb + (2 * Ld) - Zd) / (four_times_bd);
+        // uart::send_bytes(&to_write.0[0..to_write.1]);
 
-        let to_write = transceiver.write_structure(&command.unwrap());
-
-        uart::send_bytes(&to_write.0[0..to_write.1]);
-
-        // map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
+        map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
     }
 
     fn step(&self, next_state: my_hdlc::command::FSMState) -> &dyn FSMControl {
