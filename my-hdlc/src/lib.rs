@@ -7,8 +7,8 @@ use crc::{CRC_32_ISCSI, Crc};
 use serde::{Deserialize, Serialize};
 
 /*
-* A serialized Command struct consists of 2 bytes + 1 byte for the CRC. Therefore, the MESSAGE_SIZE used for
-* serializing the Command struct is set to be 8 bytes. After escaping the control bytes inside the
+* A serialized DeviceCommand struct consists of 2 bytes + 1 byte for the CRC. Therefore, the MESSAGE_SIZE used for
+* serializing the DeviceCommand struct is set to be 8 bytes. After escaping the control bytes inside the
 * payload, and adding the two framing bytes, we can end up with at most (2*3 + 2)8 bytes. In total,
 * we can fit 128/8 ~ 16 messages in the buffer.
 */
@@ -238,38 +238,44 @@ impl HdlcTransceiver {
 
 #[cfg(test)]
 mod tests {
-    use crate::command::FSMState;
+    use crate::DeviceCommand::FSMState;
 
     use super::*;
 
-    use command::Command;
+    use DeviceCommand::DeviceCommand;
 
     #[test]
     fn test_correctly_received() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::ManualMode));
+        let first_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
+            Some(FSMState::ManualMode),
+        );
 
         let (arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&first_command);
+            transceiver.write_structure::<DeviceCommand>(&first_command);
 
         for k in 0..arr_size {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::YawControl));
+        let second_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
+            Some(FSMState::YawControl),
+        );
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&second_command);
+            transceiver.write_structure::<DeviceCommand>(&second_command);
 
         for k in 0..arr2_size {
             transceiver.add_byte(arr2[k]);
         }
 
-        let received_command_one: Option<Command> = transceiver.read_structure::<Command>();
-        let received_command_two: Option<Command> = transceiver.read_structure::<Command>();
+        let received_command_one: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
+        let received_command_two: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
 
         assert!(received_command_one.is_some() && received_command_one.unwrap().eq(&first_command));
         assert!(
@@ -281,11 +287,13 @@ mod tests {
     fn test_corrupted_data_byte_in_first_message() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::ManualMode));
+        let first_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
+            Some(FSMState::ManualMode),
+        );
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&first_command);
+            transceiver.write_structure::<DeviceCommand>(&first_command);
 
         // corrupt a random byte in the message
         arr[4] ^= 0xFA;
@@ -294,18 +302,22 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::YawControl));
+        let second_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
+            Some(FSMState::YawControl),
+        );
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&second_command);
+            transceiver.write_structure::<DeviceCommand>(&second_command);
 
         for k in 0..arr2_size {
             transceiver.add_byte(arr2[k]);
         }
 
-        let received_command_one: Option<Command> = transceiver.read_structure::<Command>();
-        let received_command_two: Option<Command> = transceiver.read_structure::<Command>();
+        let received_command_one: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
+        let received_command_two: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
 
         // the incorrect message is discarded, and the rest of the messages are correctly received
         assert!(received_command_one.is_none());
@@ -318,13 +330,13 @@ mod tests {
     fn test_corrupted_message_no_first_frame_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command = Command::new(
-            command::CommandType::ChangeMode,
+        let first_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
             Some(FSMState::RawSensorsFullControlMode),
         );
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&first_command);
+            transceiver.write_structure::<DeviceCommand>(&first_command);
 
         //remove the frame boundary byte
         arr[0] ^= (1 << 4);
@@ -333,19 +345,20 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::new(
-            command::CommandType::ChangeMode,
+        let second_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
             Some(FSMState::WirelessMode),
         );
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&second_command);
+            transceiver.write_structure::<DeviceCommand>(&second_command);
 
         for k in 0..arr2_size {
             transceiver.add_byte(arr2[k]);
         }
 
-        let received_command_one: Option<Command> = transceiver.read_structure::<Command>();
+        let received_command_one: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
 
         // the first message is completely ignored and we only expect the second message to be
         // received correctly
@@ -360,11 +373,13 @@ mod tests {
     fn test_corrupted_message_no_last_frame_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::PanicMode));
+        let first_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
+            Some(FSMState::PanicMode),
+        );
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&first_command);
+            transceiver.write_structure::<DeviceCommand>(&first_command);
 
         //remove the frame boundary byte on the right
         arr[arr_size - 1] ^= 1 << 4;
@@ -373,25 +388,25 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::new(
-            command::CommandType::ChangeMode,
+        let second_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
             Some(FSMState::HeightControlMode),
         );
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&second_command);
+            transceiver.write_structure::<DeviceCommand>(&second_command);
 
         for k in 0..arr2_size {
             transceiver.add_byte(arr2[k]);
         }
 
-        let third_command: Command = Command::new(
-            command::CommandType::ChangeMode,
+        let third_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
             Some(FSMState::FullControlMode),
         );
 
         let (arr3, arr3_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&third_command);
+            transceiver.write_structure::<DeviceCommand>(&third_command);
 
         for k in 0..arr3_size {
             transceiver.add_byte(arr3[k]);
@@ -402,8 +417,10 @@ mod tests {
         // |------(|)|------||-------|
 
         // one will be received non-matching crc
-        let received_command_one: Option<Command> = transceiver.read_structure::<Command>();
-        let received_command_three: Option<Command> = transceiver.read_structure::<Command>();
+        let received_command_one: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
+        let received_command_three: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
 
         // the first message is completely ignored, the second messages' bytes are discarded
         // and we expect the third message to be received correctly
@@ -419,11 +436,13 @@ mod tests {
     fn test_corrupted_message_inserted_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::ManualMode));
+        let first_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
+            Some(FSMState::ManualMode),
+        );
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&first_command);
+            transceiver.write_structure::<DeviceCommand>(&first_command);
 
         //add a frame boundary byte incorrectly inside a message
         arr[3] = FRAME_BOUNDARY;
@@ -432,13 +451,13 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::new(
-            command::CommandType::ChangeMode,
+        let second_command: DeviceCommand = DeviceCommand::new(
+            DeviceCommand::CommandType::ChangeMode,
             Some(FSMState::HeightControlMode),
         );
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
-            transceiver.write_structure::<Command>(&second_command);
+            transceiver.write_structure::<DeviceCommand>(&second_command);
 
         for k in 0..arr2_size {
             transceiver.add_byte(arr2[k]);
@@ -450,8 +469,10 @@ mod tests {
         // |-(|)---||------|
 
         // one will be received non-matching crc
-        let received_command_one: Option<Command> = transceiver.read_structure::<Command>();
-        let received_command_two: Option<Command> = transceiver.read_structure::<Command>();
+        let received_command_one: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
+        let received_command_two: Option<DeviceCommand> =
+            transceiver.read_structure::<DeviceCommand>();
 
         // a smaller message is first read and discarded since message size is incorrect and
         // furthermore the crc would not match

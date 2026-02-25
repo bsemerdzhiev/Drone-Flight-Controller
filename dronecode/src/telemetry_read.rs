@@ -19,8 +19,9 @@ impl TelemetryRead for TelemetryData {
         let (accel_raw, gyro_raw) = read_raw().unwrap();
         let bat = read_battery();
         let pres = read_pressure();
+
         return TelemetryData {
-            dt,
+            dt: dt.as_millis() as u128,
             motors,
             yaw: ypr.yaw,
             pitch: ypr.pitch,
