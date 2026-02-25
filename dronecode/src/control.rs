@@ -27,7 +27,6 @@ pub fn main_loop() -> ! {
     let mut command: Option<Command> = None;
 
     let mut receive_buffer = [0u8; my_hdlc::BUFFER_SIZE];
-    let mut write_buff = [0u8; my_hdlc::BUFFER_SIZE];
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
@@ -48,7 +47,7 @@ pub fn main_loop() -> ! {
 
         command = transceiver.read_structure::<Command>();
 
-        op_mode.run_control_loop(&command);
+        op_mode.run_control_loop(command, &mut transceiver);
 
         if i % 100 == 0 {
             // send_bytes(format!("DTT: {:?}ms\n", dt.as_millis()).as_bytes());

@@ -5,11 +5,11 @@ use evdev::*;
 // defines the max rate values for each aerial maneuver
 // defined in degree per seconds
 
-const MAX_LIFT: i32 = 200;
+const MAX_LIFT: f32 = 200.0;
 
-const YAW_RATE: i32 = 200;
-const PITCH_RATE: i32 = 200;
-const ROLL_RATE: i32 = 200;
+const YAW_RATE: f32 = 200.0;
+const PITCH_RATE: f32 = 200.0;
+const ROLL_RATE: f32 = 200.0;
 
 //------------------------------------------------------
 
@@ -28,17 +28,19 @@ pub fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
                     let v = value as f32;
                     match axis {
                         AbsoluteAxisCode::ABS_THROTTLE => {
-                            joystick_input.set_lift((v / 255.0) as i32 * MAX_LIFT);
+                            joystick_input.set_lift(((v / 255.0) as f32 * MAX_LIFT) as i32);
                         }
                         AbsoluteAxisCode::ABS_X => {
-                            joystick_input.set_roll(((v / 128.0) as i32 - 1) * ROLL_RATE);
+                            joystick_input
+                                .set_roll((((v / 512.0) as f32 - 1.0) * ROLL_RATE) as i32);
                         }
                         AbsoluteAxisCode::ABS_Y => {
-                            joystick_input.set_pitch(-((v / 128.0) as i32 - 1) * PITCH_RATE);
+                            joystick_input
+                                .set_pitch((((v / 512.0) as f32 - 1.0) * PITCH_RATE) as i32);
                         }
                         AbsoluteAxisCode::ABS_RY => {
                             // have to check what the standard value for this axis is
-                            joystick_input.set_yaw(((v / 128.0) as i32 - 1) * YAW_RATE);
+                            joystick_input.set_yaw((((v / 128.0) as f32 - 1.0) * YAW_RATE) as i32);
                         }
                         _ => {}
                     }
@@ -47,14 +49,15 @@ pub fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
             }
         }
     }
+    // println!("{:?}", joystick_input.clone());
 }
 
 pub fn combine_inputs(trim: &ManualInput, joy: &ManualInput) -> ManualInput {
     //Clamp to prevent values going outside range and crashing the drone
     ManualInput::new(
-        (trim.get_lift() + joy.get_lift()).clamp(0, MAX_LIFT),
-        (trim.get_roll() + joy.get_roll()).clamp(-ROLL_RATE, ROLL_RATE),
-        (trim.get_pitch() + joy.get_pitch()).clamp(-PITCH_RATE, PITCH_RATE),
-        (trim.get_yaw() + joy.get_yaw()).clamp(-YAW_RATE, YAW_RATE),
+        (trim.get_lift() + joy.get_lift()).clamp(0, MAX_LIFT as i32),
+        (trim.get_roll() + joy.get_roll()).clamp(-ROLL_RATE as i32, ROLL_RATE as i32),
+        (trim.get_pitch() + joy.get_pitch()).clamp(-PITCH_RATE as i32, PITCH_RATE as i32),
+        (trim.get_yaw() + joy.get_yaw()).clamp(-YAW_RATE as i32, YAW_RATE as i32),
     )
 }
