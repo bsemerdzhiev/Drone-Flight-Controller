@@ -6,8 +6,8 @@ use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uar
 
 use crate::control_trait::FSMControl;
 
-const THRUST_COEFFICIENT: i32 = 100;
-const DRAG_COEFFICIENT: i32 = 1000;
+const THRUST_COEFFICIENT: i32 = 1;
+const DRAG_COEFFICIENT: i32 = 10;
 
 const MAX_BATTERY_VOLTAGE: i32 = 22;
 const MOTOR_K_V: i32 = 980;
@@ -56,7 +56,9 @@ impl FSMControl for FSMManual {
 
         if let Some(x) = command {
             match x {
-                command::Command::ManualInput(manual_input) => input_from_controller = manual_input,
+                command::Command::ManualInput(manual_input) => {
+                    input_from_controller = manual_input;
+                }
                 _ => {
                     return;
                 }
@@ -77,12 +79,8 @@ impl FSMControl for FSMManual {
         let rpm_three: i32 = (-Nb - (2 * Md) - Zd) / (four_times_bd);
         let rpm_four: i32 = (-Nb + (2 * Ld) - Zd) / (four_times_bd);
 
-        let dbg_to_send = Command::DebugRpms(DebugRpms::new(&[
-            input_from_controller.get_lift(),
-            12,
-            0,
-            0,
-        ]));
+        let dbg_to_send =
+            Command::DebugRpms(DebugRpms::new(&[rpm_one, rpm_two, rpm_three, rpm_four]));
 
         let to_write = transceiver.write_structure(&dbg_to_send);
 
