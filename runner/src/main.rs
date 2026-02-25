@@ -54,7 +54,7 @@ fn main() {
     let send_period = Duration::from_millis(20);
     let mut last_send = Instant::now();
 
-    let mut buf = [0u8; 255];
+    let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
 
     let mut rcv = my_hdlc::HdlcTransceiver::new();
 
@@ -73,15 +73,15 @@ fn main() {
         // (3) Combine inputs and send at fixed rate
         // ----------------------------------------------
         if last_send.elapsed() >= send_period {
-            // last_send = Instant::now();
-            //
-            // // let cmd = combine_inputs(&keyboard_trim, &joystick_input);
-            //
-            // let send_buffer = rcv.write_structure::<my_hdlc::command::Command>(
-            //     &my_hdlc::command::Command::ManualInput(joystick_input.clone()),
-            // );
-            //
-            // serial.write(&send_buffer.0[0..send_buffer.1]);
+            last_send = Instant::now();
+
+            // let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+
+            let send_buffer = rcv.write_structure::<my_hdlc::command::Command>(
+                &my_hdlc::command::Command::ManualInput(joystick_input.clone()),
+            );
+
+            serial.write(&send_buffer.0[0..send_buffer.1]);
         }
 
         // ----------------------------------------------
@@ -89,17 +89,13 @@ fn main() {
         // ----------------------------------------------
         // infinitely print whatever the drone sends us
         if let Ok(num) = serial.read(&mut buf) {
-            // for x in &buf[0..num] {
-            //     rcv.add_byte(x.clone());
-            // }
-
-            print!("{}", String::from_utf8_lossy(&buf[0..num]));
+            for x in &buf[0..num] {
+                rcv.add_byte(x.clone());
+            }
         }
-
-        // let mut buf = [0u8; 255];
-        // if let Ok(num) = serial.read(&mut buf) {
-        // print!("{}", String::from_utf8_lossy(&buf[0..num]));
-        // }
+        if let Some(x) = rcv.read_structure::<my_hdlc::command::Command>() {
+            println!("{:?}\n", x);
+        }
     }
     // crossterm::terminal::disable_raw_mode().unwrap(); //Stop terminal behave strangely
 }
