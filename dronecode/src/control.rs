@@ -38,7 +38,7 @@ pub fn main_loop() -> ! {
         }
 
         // control_loop(op_mode);
-        op_mode.run_control_loop();
+        op_mode = op_mode.run_control_loop();
         if i % 100 == 0 {
             // send_drone_data();
         }

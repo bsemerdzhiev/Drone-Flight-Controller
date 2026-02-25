@@ -4,8 +4,9 @@ use tudelft_quadrupel::motor::*;
 pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
-    fn run_control_loop(&self) {
+    fn run_control_loop(&self) -> &dyn FSMControl {
         set_motor_max(0);
+        return self 
     }
     fn step(&self, next_state: my_hdlc::command::FSMState) -> &dyn FSMControl {
         match next_state {
