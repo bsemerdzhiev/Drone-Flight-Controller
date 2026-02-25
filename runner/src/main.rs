@@ -75,8 +75,6 @@ fn main() {
         // (3) Combine inputs and send at fixed rate
         // ----------------------------------------------
         if last_send.elapsed() >= send_period {
-            last_send = Instant::now();
-
             // let cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
             let mut new_joystick = ManualInput::zero();
@@ -92,6 +90,7 @@ fn main() {
             );
 
             serial.write(&send_buffer.0[0..send_buffer.1]);
+            last_send += send_period;
         }
 
         // ----------------------------------------------

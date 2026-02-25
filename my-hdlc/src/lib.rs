@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 * payload, and adding the two framing bytes, we can end up with at most (2*3 + 2)8 bytes. In total,
 * we can fit 128/8 ~ 16 messages in the buffer.
 */
-pub static BUFFER_SIZE: usize = 1 << 9;
+pub static BUFFER_SIZE: usize = 1 << 7;
 pub static MESSAGE_SIZE: usize = 1 << 4;
 // used as return size when serializing a structure
 pub static STUFFED_MESSAGE_SIZE: usize = MESSAGE_SIZE * 2 + 2;
@@ -77,21 +77,28 @@ impl HdlcTransceiver {
         T: Serialize,
     {
         let mut serialized_buff: [u8; MESSAGE_SIZE] = [0; MESSAGE_SIZE];
-        postcard::to_slice(struc_to_serialize, &mut serialized_buff).unwrap();
+        let ret_serialized_buff =
+            postcard::to_slice(struc_to_serialize, &mut serialized_buff).unwrap();
 
-        let checksum: u32 = self.crc.checksum(&serialized_buff);
+        let checksum: u32 = self.crc.checksum(&ret_serialized_buff);
 
         let mut stuffed_buff: [u8; STUFFED_MESSAGE_SIZE] = [0; STUFFED_MESSAGE_SIZE];
 
-        serialized_buff[MESSAGE_SIZE - 4] = (checksum >> 24) as u8;
-        serialized_buff[MESSAGE_SIZE - 3] = ((checksum >> 16) & 0xFF) as u8;
-        serialized_buff[MESSAGE_SIZE - 2] = ((checksum >> 8) & 0xFF) as u8;
-        serialized_buff[MESSAGE_SIZE - 1] = ((checksum) & 0xFF) as u8;
+        let used_size: usize = ret_serialized_buff.len();
+
+        if used_size + 4 >= MESSAGE_SIZE {
+            return (stuffed_buff, 0);
+        }
+
+        serialized_buff[used_size + 3] = (checksum >> 24) as u8;
+        serialized_buff[used_size + 2] = ((checksum >> 16) & 0xFF) as u8;
+        serialized_buff[used_size + 1] = ((checksum >> 8) & 0xFF) as u8;
+        serialized_buff[used_size + 0] = ((checksum) & 0xFF) as u8;
 
         stuffed_buff[0] = FRAME_BOUNDARY;
         let mut k: usize = 1;
 
-        for i in 0..serialized_buff.len() {
+        for i in 0..(used_size + 4) {
             if serialized_buff[i] == CTRL_ESCAPE || serialized_buff[i] == FRAME_BOUNDARY {
                 stuffed_buff[k] = CTRL_ESCAPE;
                 k += 1;
@@ -108,19 +115,17 @@ impl HdlcTransceiver {
         (stuffed_buff, k)
     }
 
-    fn check_crc(&mut self) -> bool {
-        let checksum: u32 = ((self.removed_ctrl[MESSAGE_SIZE - 4] as u32) << 24)
-            | ((self.removed_ctrl[MESSAGE_SIZE - 3] as u32) << 16)
-            | ((self.removed_ctrl[MESSAGE_SIZE - 2] as u32) << 8)
-            | (self.removed_ctrl[MESSAGE_SIZE - 1] as u32);
-
-        // set the last 4 bytes to zero
-        for i in (MESSAGE_SIZE - 4)..MESSAGE_SIZE {
-            self.removed_ctrl[i] = 0;
+    fn check_crc(&mut self, msg_size: usize) -> bool {
+        if (msg_size < 4) {
+            return false;
         }
+        let checksum: u32 = ((self.removed_ctrl[msg_size - 1] as u32) << 24)
+            | ((self.removed_ctrl[msg_size - 2] as u32) << 16)
+            | ((self.removed_ctrl[msg_size - 3] as u32) << 8)
+            | (self.removed_ctrl[msg_size - 4] as u32);
 
         // recalculate the checksum again
-        let new_checksum: u32 = self.crc.checksum(&self.removed_ctrl);
+        let new_checksum: u32 = self.crc.checksum(&self.removed_ctrl[0..msg_size - 4]);
 
         checksum == new_checksum
     }
@@ -208,7 +213,7 @@ impl HdlcTransceiver {
         }
 
         // check the message crc
-        if new_ind != MESSAGE_SIZE || !self.check_crc() {
+        if !self.check_crc(new_ind) {
             return None;
         }
 
@@ -258,7 +263,7 @@ impl HdlcTransceiver {
 
 #[cfg(test)]
 mod tests {
-    use crate::command::FSMState;
+    use crate::{command::FSMState, pc_command::ManualInput};
 
     use super::*;
 
@@ -268,8 +273,7 @@ mod tests {
     fn test_correctly_received() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::ManualMode));
+        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -278,8 +282,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::YawControl));
+        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -301,8 +304,7 @@ mod tests {
     fn test_corrupted_data_byte_in_first_message() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::ManualMode));
+        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -314,8 +316,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::YawControl));
+        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -338,10 +339,7 @@ mod tests {
     fn test_corrupted_message_no_first_frame_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command = Command::new(
-            command::CommandType::ChangeMode,
-            Some(FSMState::RawSensorsFullControlMode),
-        );
+        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -353,10 +351,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::new(
-            command::CommandType::ChangeMode,
-            Some(FSMState::WirelessMode),
-        );
+        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -380,8 +375,7 @@ mod tests {
     fn test_corrupted_message_no_last_frame_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::PanicMode));
+        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -393,10 +387,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::new(
-            command::CommandType::ChangeMode,
-            Some(FSMState::HeightControlMode),
-        );
+        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -405,10 +396,7 @@ mod tests {
             transceiver.add_byte(arr2[k]);
         }
 
-        let third_command: Command = Command::new(
-            command::CommandType::ChangeMode,
-            Some(FSMState::FullControlMode),
-        );
+        let third_command: Command = Command::ManualInput(ManualInput::new(13, 12, 15, 20));
 
         let (arr3, arr3_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&third_command);
@@ -439,8 +427,7 @@ mod tests {
     fn test_corrupted_message_inserted_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command =
-            Command::new(command::CommandType::ChangeMode, Some(FSMState::ManualMode));
+        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -452,10 +439,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::new(
-            command::CommandType::ChangeMode,
-            Some(FSMState::HeightControlMode),
-        );
+        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
