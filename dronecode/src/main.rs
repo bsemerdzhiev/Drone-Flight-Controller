@@ -1,3 +1,4 @@
+#![cfg(target_arch = "arm")]
 #![no_std]
 #![no_main]
 #![feature(alloc_error_handler)]
@@ -19,10 +20,16 @@ use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
 pub mod calibration_state;
+
+#[cfg(target_arch = "arm")]
 pub mod communication_test;
+#[cfg(target_arch = "arm")]
 pub mod control;
+#[cfg(target_arch = "arm")]
 pub mod states;
+#[cfg(target_arch = "arm")]
 pub mod telemetry_read;
+#[cfg(target_arch = "arm")]
 pub mod yaw_pitch_roll;
 
 /// The heap size of your drone code in bytes.
