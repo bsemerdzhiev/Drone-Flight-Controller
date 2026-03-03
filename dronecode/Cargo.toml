@@ -6,6 +6,7 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+[target.'cfg(target_arch = "arm")'.dependencies]
 tudelft-quadrupel = "3"
 micromath = "2"
 my-hdlc = {path = "../my-hdlc/"}
