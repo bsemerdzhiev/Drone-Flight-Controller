@@ -13,25 +13,25 @@ pub trait TelemetryRead {
 
 impl TelemetryRead for TelemetryData {
     fn read_telemetry(dt: Duration) -> Self {
-        let motors = get_motors();
-        let quaternion = read_dmp_bytes().unwrap();
-        let ypr = YawPitchRoll::from(quaternion);
-        let (accel_raw, gyro_raw) = read_raw().unwrap();
+        // let motors = get_motors();
+        // let quaternion = read_dmp_bytes().unwrap();
+        // let ypr = YawPitchRoll::from(quaternion);
+        // let (accel_raw, gyro_raw) = read_raw().unwrap();
         let bat = read_battery();
         let pres = read_pressure();
 
         return TelemetryData {
             dt: dt.as_millis() as u128,
-            motors,
-            yaw: ypr.yaw,
-            pitch: ypr.pitch,
-            roll: ypr.roll,
-            accel_x: accel_raw.x,
-            accel_y: accel_raw.y,
-            accel_z: accel_raw.z,
-            gyro_x: gyro_raw.x,
-            gyro_y: gyro_raw.y,
-            gyro_z: gyro_raw.z,
+            // motors,
+            // yaw: ypr.yaw,
+            // pitch: ypr.pitch,
+            // roll: ypr.roll,
+            // accel_x: accel_raw.x,
+            // accel_y: accel_raw.y,
+            // accel_z: accel_raw.z,
+            // gyro_x: gyro_raw.x,
+            // gyro_y: gyro_raw.y,
+            // gyro_z: gyro_raw.z,
             bat,
             pres,
         };
