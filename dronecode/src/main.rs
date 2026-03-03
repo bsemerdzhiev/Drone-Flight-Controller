@@ -1,3 +1,4 @@
+#![cfg(target_arch = "arm")]
 #![no_std]
 #![no_main]
 #![feature(alloc_error_handler)]
@@ -5,7 +6,7 @@
 extern crate alloc;
 
 use crate::communication_test::send_and_receive;
-use crate::control::control_loop;
+use crate::control::main_loop;
 use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
@@ -18,9 +19,18 @@ use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
-mod communication_test;
-mod control;
-mod yaw_pitch_roll;
+pub mod calibration_state;
+
+#[cfg(target_arch = "arm")]
+pub mod communication_test;
+#[cfg(target_arch = "arm")]
+pub mod control;
+#[cfg(target_arch = "arm")]
+pub mod states;
+#[cfg(target_arch = "arm")]
+pub mod telemetry_read;
+#[cfg(target_arch = "arm")]
+pub mod yaw_pitch_roll;
 
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
@@ -45,8 +55,8 @@ fn main() -> ! {
         }
     }
 
-    send_and_receive();
-    // control_loop()
+    // send_and_receive();
+    main_loop();
 }
 
 #[inline(never)]

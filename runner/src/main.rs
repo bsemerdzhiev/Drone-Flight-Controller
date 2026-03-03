@@ -1,4 +1,4 @@
-use my_hdlc::command::CommandType;
+use my_hdlc::command::DeviceCommand;
 use std::env::args;
 use std::path::PathBuf;
 use std::process::exit;
@@ -46,7 +46,7 @@ fn main() {
             }
         }
 
-        let read_msg = rcv.read_structure::<my_hdlc::command::Command>();
+        let read_msg = rcv.read_structure::<DeviceCommand>();
         if let Some(x) = read_msg {
             println!("{:?}", x);
             // match x.get_command_type() {

@@ -1,50 +1,80 @@
+use core::time::Duration;
+
+use crate::calibration_state::CalibrationState;
+use crate::states::safe_mode::FSMSafe;
+use crate::states::FSM_control_trait::FSMControl;
+use crate::telemetry_read::TelemetryRead;
 use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::format;
+use my_hdlc::command::{DeviceCommand, FSMState};
+use my_hdlc::telemetry_data::TelemetryData;
+use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
-use tudelft_quadrupel::block;
 use tudelft_quadrupel::led::Led::Blue;
 use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw};
 use tudelft_quadrupel::time::{set_tick_frequency, wait_for_next_tick, Instant};
-use tudelft_quadrupel::uart::send_bytes;
+use tudelft_quadrupel::uart::{self, receive_bytes, send_bytes};
+const UART_BUF_SIZE: usize = 255usize;
 
-pub fn control_loop() -> ! {
+pub fn main_loop() -> ! {
     set_tick_frequency(100);
     let mut last = Instant::now();
-
+    let mut op_mode: &dyn FSMControl = &FSMSafe;
+    let mut uart_buf = [0u8; UART_BUF_SIZE];
+    let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
+    let mut calibration_state: CalibrationState = CalibrationState::new();
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
         let dt = now.duration_since(last);
         last = now;
 
-        let motors = get_motors();
-        let quaternion = block!(read_dmp_bytes()).unwrap();
-        let ypr = YawPitchRoll::from(quaternion);
-        let (accel, _) = read_raw().unwrap();
-        let bat = read_battery();
-        let pres = read_pressure();
-
-        if i % 100 == 0 {
-            send_bytes(format!("DTT: {:?}ms\n", dt.as_millis()).as_bytes());
-            send_bytes(
-                format!(
-                    "MTR: {} {} {} {}\n",
-                    motors[0], motors[1], motors[2], motors[3]
-                )
-                .as_bytes(),
-            );
-            send_bytes(format!("YPR {} {} {}\n", ypr.yaw, ypr.pitch, ypr.roll).as_bytes());
-            send_bytes(format!("ACC {} {} {}\n", accel.x, accel.y, accel.z).as_bytes());
-            send_bytes(format!("BAT {bat}\n").as_bytes());
-            send_bytes(format!("BAR {pres}\n").as_bytes());
-            send_bytes("\n".as_bytes());
+        // Read Uart Buff
+        let num_received = receive_bytes(&mut uart_buf);
+        if num_received != 0usize {
+            transceiver.add_bytes(&uart_buf[..num_received]);
+            let deserialized_command = transceiver.read_structure::<DeviceCommand>();
+            if let Some(command) = deserialized_command {
+                match command {
+                    DeviceCommand::ChangeMode(new_mode) => {
+                        op_mode = op_mode.step(new_mode, &mut calibration_state);
+                        send_ack(&mut transceiver);
+                    }
+                    _ => continue,
+                }
+            }
         }
 
+        // control_loop(op_mode);
+        op_mode = op_mode.run_control_loop(&mut calibration_state);
+        if i % 100 == 0 {
+            send_drone_data(&mut transceiver, dt);
+        }
+
+        // Control Loop:
+        // Read DeviceCommand and Execute, (if available).
+        // Run the current mode's control loop
+        // send data if i%100 == 0
         // wait until the timer interrupt goes off again
         // based on the frequency set above
+
         wait_for_next_tick();
     }
     unreachable!();
+}
+
+fn send_drone_data(transceiver: &mut HdlcTransceiver, dt: Duration) {
+    let data = TelemetryRead::read_telemetry(dt);
+    let cmd: DeviceCommand = DeviceCommand::Telemetry(data);
+    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&cmd);
+    send_bytes(&msg.0[0..msg.1]);
+    // todo!("Put the data in a struct and send it!");
+}
+
+fn send_ack(transceiver: &mut HdlcTransceiver) {
+    let ack_cmd = DeviceCommand::Ack;
+    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
+    uart::send_bytes(&msg.0[0..msg.1]);
 }
