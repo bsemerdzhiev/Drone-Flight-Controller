@@ -6,7 +6,7 @@ pub trait FSMControl {
     fn run_control_loop(
         &self,
         calibration_state: &mut CalibrationState,
-        command: ManualInput,
+        command: &ManualInput,
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl;

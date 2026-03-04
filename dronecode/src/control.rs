@@ -74,7 +74,7 @@ pub fn main_loop() -> ! {
         }
         op_mode = op_mode.run_control_loop(
             &mut calibration_state,
-            received_manual_input,
+            &received_manual_input,
             &mut has_received_input,
             &mut transceiver,
         );
