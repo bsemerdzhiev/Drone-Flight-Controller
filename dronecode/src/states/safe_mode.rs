@@ -1,8 +1,9 @@
 use crate::calibration_state::CalibrationState;
 use crate::states::calibration_mode::FSMCalibration;
+use crate::states::panic_mode::FSMPanic;
 use crate::states::FSM_control_trait::FSMControl;
 use my_hdlc::command::FSMState;
-use tudelft_quadrupel::motor::*;
+use tudelft_quadrupel::motor::{self, *};
 pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
@@ -18,16 +19,24 @@ impl FSMControl for FSMSafe {
         match next_state {
             FSMState::SafeMode => return self,
             FSMState::CalibrationMode => {
-                calibration_state.start_calibration();
-                return &FSMCalibration;
+                if is_throttle_zero() {
+                    calibration_state.start_calibration();
+                    return &FSMCalibration;
+                }
+                return self;
             }
             FSMState::FullControlMode => todo!(),
             FSMState::HeightControlMode => todo!(),
             FSMState::ManualMode => todo!(),
-            FSMState::PanicMode => todo!(),
+            FSMState::PanicMode => return &FSMPanic,
             FSMState::RawSensorsFullControlMode => todo!(),
             FSMState::WirelessMode => todo!(),
             FSMState::YawControl => todo!(),
         }
     }
+}
+
+fn is_throttle_zero() -> bool {
+    let speed = get_motors();
+    return speed[0] == 0 && speed[1] == 0 && speed[2] == 0 && speed[3] == 0;
 }
