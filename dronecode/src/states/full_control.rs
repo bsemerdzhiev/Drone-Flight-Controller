@@ -8,6 +8,7 @@ impl FSMControl for FSMFullControl {
         &self,
         calibration_state: &mut crate::calibration_state::CalibrationState,
         command: ManualInput,
+        has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
         todo!();

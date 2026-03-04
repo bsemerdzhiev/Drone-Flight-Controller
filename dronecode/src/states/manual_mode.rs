@@ -59,8 +59,12 @@ impl FSMControl for FSMManual {
         &self,
         calibration_state: &mut crate::calibration_state::CalibrationState,
         input_from_controller: ManualInput,
+        has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
+        if !*has_received_input {
+            return self;
+        }
         let Nb: f32 = input_from_controller.get_yaw() as f32 * THRUST_COEFFICIENT;
         let Md: f32 = input_from_controller.get_pitch() as f32 * DRAG_COEFFICIENT;
         let Zd: f32 = -input_from_controller.get_lift() as f32 * DRAG_COEFFICIENT;
@@ -83,6 +87,7 @@ impl FSMControl for FSMManual {
 
         // uart::send_bytes(&to_write.0[0..to_write.1]);
         map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four], my_hdlc);
+        *has_received_input = false;
         self
     }
 
