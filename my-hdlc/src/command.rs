@@ -1,6 +1,6 @@
 use crate::telemetry_data::TelemetryData;
 use serde::{Deserialize, Serialize};
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum FSMState {
     SafeMode,

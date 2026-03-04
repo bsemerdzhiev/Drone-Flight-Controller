@@ -11,7 +11,7 @@ use my_hdlc::telemetry_data::TelemetryData;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
-use tudelft_quadrupel::led::Led::Blue;
+use tudelft_quadrupel::led::Led::{Blue, Green};
 use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw};
 use tudelft_quadrupel::time::{set_tick_frequency, wait_for_next_tick, Instant};
@@ -51,6 +51,7 @@ pub fn main_loop() -> ! {
         op_mode = op_mode.run_control_loop(&mut calibration_state);
         if i % 100 == 0 {
             send_drone_data(&mut transceiver, dt);
+            Green.off();
         }
 
         // Control Loop:
@@ -68,6 +69,7 @@ pub fn main_loop() -> ! {
 fn send_drone_data(transceiver: &mut HdlcTransceiver, dt: Duration) {
     let data = TelemetryRead::read_telemetry(dt);
     let cmd: DeviceCommand = DeviceCommand::Telemetry(data);
+    Green.on();
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&cmd);
     send_bytes(&msg.0[0..msg.1]);
     // todo!("Put the data in a struct and send it!");
