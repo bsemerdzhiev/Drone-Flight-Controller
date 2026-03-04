@@ -46,4 +46,7 @@ impl FSMControl for FSMPanic {
             _ => return self, // can only stay in panic or go to safe
         }
     }
+    fn get_state(&self) -> FSMState {
+        return FSMState::PanicMode;
+    }
 }

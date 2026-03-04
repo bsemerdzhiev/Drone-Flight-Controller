@@ -63,4 +63,8 @@ impl FSMControl for FSMCalibration {
             FSMState::YawControl => todo!(),
         }
     }
+
+    fn get_state(&self) -> FSMState {
+        return FSMState::CalibrationMode;
+    }
 }

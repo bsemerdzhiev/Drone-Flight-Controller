@@ -68,9 +68,10 @@ fn main() {
     let mut rcv: HdlcTransceiver = HdlcTransceiver::new();
 
     // infinitely print whatever the drone sends us
+
     loop {
         read_joystick(&mut device, &mut joystick_input);
-        keyboard_trimming(&mut keyboard_trim);
+        keyboard_trimming(&mut keyboard_trim, &mut rcv, &mut serial);
 
         if last_send.elapsed() >= send_period {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
@@ -87,7 +88,7 @@ fn main() {
             rcv.add_bytes(&buf[0..num]);
         }
         if let Some(x) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
-            println!("{:?}\n", x);
+            // println!("{:?}\n", x);
         }
     }
 }

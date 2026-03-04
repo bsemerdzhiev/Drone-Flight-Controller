@@ -43,9 +43,21 @@ pub enum FSMState {
     WirelessMode,
 }
 
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct DroneInfo {
+    state: FSMState,
+}
+
+impl DroneInfo {
+    pub fn new(state: FSMState) -> Self {
+        DroneInfo { state }
+    }
+}
+
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[repr(u8)]
 pub enum DeviceCommand {
+    DroneInfo(DroneInfo),
     ChangeMode(FSMState),
     ManualInput(pc_command::ManualInput),
     Telemetry(TelemetryData),
