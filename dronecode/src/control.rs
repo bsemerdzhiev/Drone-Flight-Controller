@@ -43,7 +43,7 @@ pub fn main_loop() -> ! {
 
         // Check battery level and switch to panic
         let bat_level = read_battery();
-        if bat_level < 300 {
+        if bat_level < 300 && bat_level != 0 {
             op_mode = op_mode.step(command::FSMState::PanicMode, &mut calibration_state);
             bat_panic = true;
         }
