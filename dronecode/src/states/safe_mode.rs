@@ -10,7 +10,7 @@ impl FSMControl for FSMSafe {
     fn run_control_loop(
         &self,
         zero_state: &mut CalibrationState,
-        command: ManualInput,
+        command: &ManualInput,
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {

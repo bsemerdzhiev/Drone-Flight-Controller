@@ -57,7 +57,7 @@ impl FSMControl for FSMManual {
     fn run_control_loop(
         &self,
         calibration_state: &mut crate::calibration_state::CalibrationState,
-        input_from_controller: ManualInput,
+        input_from_controller: &ManualInput,
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
