@@ -5,6 +5,7 @@ use crate::states::panic_mode::FSMPanic;
 use crate::states::{safe_mode::FSMSafe, FSM_control_trait::FSMControl};
 use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
+use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::mpu::{
     read_raw,
     structs::{Accel, Gyro},
@@ -36,6 +37,7 @@ impl FSMControl for FSMCalibration {
         &self,
         calibration_state: &mut CalibrationState,
         command: ManualInput,
+        my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
         let (accel, gyro) = read_raw().unwrap();
         calibration_state.accumulate_calibration(Axis::from(accel), Axis::from(gyro));

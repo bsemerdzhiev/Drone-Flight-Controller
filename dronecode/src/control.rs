@@ -20,7 +20,7 @@ use tudelft_quadrupel::uart::{receive_bytes, send_bytes};
 
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 
-const UART_BUF_SIZE: usize = 256;
+const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 
 pub fn main_loop() -> ! {
     set_tick_frequency(100);
@@ -28,10 +28,9 @@ pub fn main_loop() -> ! {
     let mut op_mode: &dyn FSMControl = &FSMManual;
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
 
-    let mut op_mode: &dyn FSMControl = &FSMSafe;
     let mut uart_buf = [0u8; UART_BUF_SIZE];
-    let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
     let mut calibration_state: CalibrationState = CalibrationState::new();
+
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
@@ -39,21 +38,25 @@ pub fn main_loop() -> ! {
         last = now;
 
         // Read Uart Buff
-        let num_received = receive_bytes(&mut uart_buf);
-        if num_received != 0usize {
-            transceiver.add_bytes(&uart_buf[..num_received]);
-            let deserialized_command = transceiver.read_structure::<DeviceCommand>();
-            if let Some(command) = deserialized_command {
-                match command {
-                    DeviceCommand::ChangeMode(new_mode) => {
-                        op_mode = op_mode.step(new_mode, &mut calibration_state);
-                        send_ack(&mut transceiver);
-                    }
-                    DeviceCommand::ManualInput(manual_input) => {
-                        op_mode.run_control_loop(&mut calibration_state, manual_input);
-                    }
-                    _ => continue,
+        let num_received = receive_bytes(&mut uart_buf[0..transceiver.remaining_bytes]);
+
+        transceiver.add_bytes(&uart_buf[0..num_received]);
+        let deserialized_command = transceiver.read_structure::<DeviceCommand>();
+
+        if let Some(command) = deserialized_command {
+            match command {
+                DeviceCommand::ChangeMode(new_mode) => {
+                    op_mode = op_mode.step(new_mode, &mut calibration_state);
+                    send_ack(&mut transceiver);
                 }
+                DeviceCommand::ManualInput(manual_input) => {
+                    op_mode.run_control_loop(
+                        &mut calibration_state,
+                        manual_input,
+                        &mut transceiver,
+                    );
+                }
+                _ => continue,
             }
         }
 

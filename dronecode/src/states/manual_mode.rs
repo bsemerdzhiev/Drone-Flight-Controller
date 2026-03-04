@@ -1,6 +1,7 @@
 use my_hdlc::{
     command::{self, DebugRpms, DeviceCommand},
     pc_command::ManualInput,
+    HdlcTransceiver,
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};
 
@@ -31,7 +32,7 @@ fn my_sqrt(x: i32) -> i32 {
     return to_return;
 }
 
-fn map_rpm_square_to_pwm(rpms_square: &mut [i32]) {
+fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::HdlcTransceiver) {
     let max_allowed_pwm: i32 = MAX_POSSIBLE_PWM; //motor::get_motor_max() as i32;
 
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
@@ -45,9 +46,10 @@ fn map_rpm_square_to_pwm(rpms_square: &mut [i32]) {
 
         k += 1;
     }
-    // let to_write = transceiver.write_structure(&Command::DebugRpms(DebugRpms::new(&pwm_to_set)));
+    let to_write =
+        transceiver.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&pwm_to_set)));
 
-    // uart::send_bytes(&to_write.0[0..to_write.1]);
+    uart::send_bytes(&to_write.0[0..to_write.1]);
 
     motor::set_motors(pwm_to_set);
 }
@@ -57,6 +59,7 @@ impl FSMControl for FSMManual {
         &self,
         calibration_state: &mut crate::calibration_state::CalibrationState,
         input_from_controller: ManualInput,
+        my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
         let Nb: f32 = input_from_controller.get_yaw() as f32 * THRUST_COEFFICIENT;
         let Md: f32 = input_from_controller.get_pitch() as f32 * DRAG_COEFFICIENT;
@@ -79,7 +82,7 @@ impl FSMControl for FSMManual {
         // ])));
 
         // uart::send_bytes(&to_write.0[0..to_write.1]);
-        map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
+        map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four], my_hdlc);
         self
     }
 

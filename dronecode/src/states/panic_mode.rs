@@ -3,6 +3,7 @@ use crate::states::safe_mode::*;
 use crate::states::FSM_control_trait::FSMControl;
 use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
+use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::led::Led::Green;
 use tudelft_quadrupel::motor::*;
 
@@ -14,6 +15,7 @@ impl FSMControl for FSMPanic {
         &self,
         calibration_state: &mut CalibrationState,
         command: ManualInput,
+        my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
         let initial_speed = 100; // change as needed
         let current_speed = get_motors();

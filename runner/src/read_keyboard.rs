@@ -3,10 +3,16 @@ use std::time::Duration;
 use crossterm::event::{self, Event};
 use my_hdlc::pc_command::ManualInput;
 
-pub fn keyboard_trimming(keyboard_trim: &mut ManualInput) {
+fn send_transition(state: my_hdlc::command::FSMState) {}
+
+pub fn keyboard_trimming(keyboard_trim: &mut ManualInput, rcv: &mut my_hdlc::HdlcTransceiver) {
     while event::poll(Duration::from_millis(0)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
+                KeyCode::Char('0') => {}
+                KeyCode::Char('1') => {}
+                KeyCode::Char('2') => {}
+                KeyCode::Char('3') => {}
                 // Lift trim
                 // KeyCode::Char('a') => keyboard_trim.get_lift() += 0.01, //throttle up
                 // KeyCode::Char('z') => keyboard_trim.get_lift() -= 0.01, //throttle down

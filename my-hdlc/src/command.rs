@@ -50,13 +50,8 @@ pub enum DeviceCommand {
     ManualInput(pc_command::ManualInput),
     Telemetry(TelemetryData),
     Ack,
+    DebugRpms(DebugRpms),
 }
-
-// #[derive(Serialize, Deserialize, PartialEq, Debug)]
-// pub struct DeviceCommand {
-//     command_type: CommandType,
-//     fsm_state: Option<FSMState>,
-// }
 
 // impl DeviceCommand {
 //     pub fn new(command_type: CommandType, fsm_state: Option<FSMState>) -> Self {
