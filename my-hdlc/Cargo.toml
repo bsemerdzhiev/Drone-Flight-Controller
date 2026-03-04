@@ -3,6 +3,9 @@ name = "my-hdlc"
 version = "0.1.0"
 edition = "2024"
 
+[build]
+target = "thumbv6m-none-eabi"
+
 [dependencies]
 crc = "3.4.0"
 postcard = "1.1.3"

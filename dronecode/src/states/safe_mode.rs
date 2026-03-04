@@ -1,13 +1,19 @@
-use crate::calibration_state::CalibrationState;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::FSM_control_trait::FSMControl;
-use my_hdlc::command::FSMState;
+use crate::{calibration_state::CalibrationState, states::manual_mode::FSMManual};
+use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 use tudelft_quadrupel::motor::{self, *};
 pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
-    fn run_control_loop(&self, zero_state: &mut CalibrationState) -> &dyn FSMControl {
+    fn run_control_loop(
+        &self,
+        zero_state: &mut CalibrationState,
+        command: &ManualInput,
+        has_received_input: &mut bool,
+        my_hdlc: &mut HdlcTransceiver,
+    ) -> &dyn FSMControl {
         set_motors([0, 0, 0, 0]);
         return self;
     }
@@ -27,7 +33,7 @@ impl FSMControl for FSMSafe {
             }
             FSMState::FullControlMode => todo!(),
             FSMState::HeightControlMode => todo!(),
-            FSMState::ManualMode => todo!(),
+            FSMState::ManualMode => return &FSMManual,
             FSMState::PanicMode => return &FSMPanic,
             FSMState::RawSensorsFullControlMode => todo!(),
             FSMState::WirelessMode => todo!(),

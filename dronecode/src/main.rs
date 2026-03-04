@@ -5,13 +5,15 @@
 
 extern crate alloc;
 
-use crate::communication_test::send_and_receive;
 use crate::control::main_loop;
+
+use crate::communication_test::send_and_receive;
 use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
 use core::ptr::addr_of_mut;
+
 use tudelft_quadrupel::initialize::initialize;
 use tudelft_quadrupel::led::Led::{Green, Red};
 use tudelft_quadrupel::motor::set_motors;

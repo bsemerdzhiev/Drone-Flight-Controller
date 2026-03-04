@@ -5,6 +5,10 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+
 [dependencies]
 tudelft-serial-upload = "2"
+crossterm = "0.29.0"
+evdev = "0.13.2"
+rand = "0.10.0"
 my-hdlc = {path = "../my-hdlc/"}
