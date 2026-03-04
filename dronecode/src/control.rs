@@ -28,7 +28,7 @@ pub fn main_loop() -> ! {
     let mut last = Instant::now();
     let mut op_mode: &dyn FSMControl = &FSMManual;
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
-
+    let mut num_unreceived = 0u32;
     let mut bat_panic = false;
     let mut op_mode: &dyn FSMControl = &FSMSafe;
     let mut uart_buf = [0u8; UART_BUF_SIZE];
@@ -70,8 +70,15 @@ pub fn main_loop() -> ! {
                     }
                     _ => continue,
                 }
+                num_unreceived = 0;
+            }
+        } else if !bat_panic {
+            num_unreceived += 1;
+            if num_unreceived == 50 {
+                op_mode = op_mode.step(command::FSMState::PanicMode, &mut calibration_state);
             }
         }
+
         op_mode = op_mode.run_control_loop(
             &mut calibration_state,
             &received_manual_input,
