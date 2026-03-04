@@ -46,9 +46,9 @@ fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::Hdl
         }
         k += 1;
     }
-    let to_write = transceiver.write_structure(&Command::DebugRpms(DebugRpms::new(&pwm_to_set)));
+    // let to_write = transceiver.write_structure(&Command::DebugRpms(DebugRpms::new(&pwm_to_set)));
 
-    uart::send_bytes(&to_write.0[0..to_write.1]);
+    // uart::send_bytes(&to_write.0[0..to_write.1]);
 
     motor::set_motors(pwm_to_set);
 }
