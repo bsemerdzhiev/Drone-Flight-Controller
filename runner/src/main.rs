@@ -50,7 +50,7 @@ fn main() {
 
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
-    // let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
+    let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
 
     // for timing and sending inputs at fixed rate
     let send_period = Duration::from_micros(400);
@@ -65,27 +65,27 @@ fn main() {
         // ----------------------------------------------
         // (1) Read joystick input
         // ----------------------------------------------
-        // read_joystick(&mut device, &mut joystick_input);
+        read_joystick(&mut device, &mut joystick_input);
         // ----------------------------------------------
         // (2) Read keyboard input
         // ----------------------------------------------
-        // keyboard_trimming(&mut keyboard_trim);
+        keyboard_trimming(&mut keyboard_trim);
 
         // ----------------------------------------------
         // (3) Combine inputs and send at fixed rate
         // ----------------------------------------------
         if last_send.elapsed() >= send_period {
-            // let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
-            let mut new_joystick = ManualInput::zero();
+            // let mut new_joystick = ManualInput::zero();
 
-            new_joystick.set_lift(-read_joystick::MAX_LIFT as i32);
+            // new_joystick.set_lift(-read_joystick::MAX_LIFT as i32);
             // new_joystick.set_pitch(rng.random::<i32>() % 200);
             // new_joystick.set_yaw(rng.random::<i32>() % 200);
             // new_joystick.set_roll(rng.random::<i32>() % 200);
 
             let send_buffer = rcv.write_structure::<my_hdlc::command::Command>(
-                &my_hdlc::command::Command::ManualInput(new_joystick.clone()),
+                &my_hdlc::command::Command::ManualInput(cmd),
             );
 
             serial.write(&send_buffer.0[0..send_buffer.1]);
