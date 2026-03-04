@@ -101,10 +101,11 @@ impl FSMControl for FSMManual {
             FSMState::FullControlMode => todo!(),
             FSMState::HeightControlMode => todo!(),
             FSMState::ManualMode => &FSMManual,
-            FSMState::PanicMode => return &FSMPanic,
             FSMState::RawSensorsFullControlMode => todo!(),
             FSMState::WirelessMode => todo!(),
             FSMState::YawControl => todo!(),
+            FSMState::PanicMode => return &FSMPanic,
+            _ => return self,
         }
     }
 
