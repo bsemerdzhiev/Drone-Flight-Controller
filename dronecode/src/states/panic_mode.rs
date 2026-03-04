@@ -2,6 +2,7 @@ use crate::calibration_state::CalibrationState;
 use crate::states::safe_mode::*;
 use crate::states::FSM_control_trait::FSMControl;
 use my_hdlc::command::FSMState;
+use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::led::Led::Green;
 use tudelft_quadrupel::motor::*;
 
@@ -9,7 +10,11 @@ pub struct FSMPanic;
 
 impl FSMControl for FSMPanic {
     // loop is called every tick
-    fn run_control_loop(&self, calibration_state: &mut CalibrationState) -> &dyn FSMControl {
+    fn run_control_loop(
+        &self,
+        calibration_state: &mut CalibrationState,
+        command: ManualInput,
+    ) -> &dyn FSMControl {
         let initial_speed = 100; // change as needed
         let current_speed = get_motors();
         if current_speed.iter().any(|&v| v > initial_speed) {

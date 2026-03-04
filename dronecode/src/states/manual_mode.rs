@@ -1,10 +1,10 @@
 use my_hdlc::{
-    command::{self, Command, DebugRpms},
+    command::{self, DebugRpms, DeviceCommand},
     pc_command::ManualInput,
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};
 
-use crate::control_trait::FSMControl;
+use crate::{calibration_state::CalibrationState, states::FSM_control_trait::FSMControl};
 
 const THRUST_COEFFICIENT: f32 = 1e-2;
 const DRAG_COEFFICIENT: f32 = 1e-3;
@@ -31,7 +31,7 @@ fn my_sqrt(x: i32) -> i32 {
     return to_return;
 }
 
-fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::HdlcTransceiver) {
+fn map_rpm_square_to_pwm(rpms_square: &mut [i32]) {
     let max_allowed_pwm: i32 = MAX_POSSIBLE_PWM; //motor::get_motor_max() as i32;
 
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
@@ -55,28 +55,9 @@ fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::Hdl
 impl FSMControl for FSMManual {
     fn run_control_loop(
         &self,
-        command: Option<Command>,
-        transceiver: &mut my_hdlc::HdlcTransceiver,
-    ) {
-        let mut input_from_controller: ManualInput = ManualInput::zero();
-
-        if command.is_none() {
-            return;
-        }
-
-        if let Some(x) = command {
-            match x {
-                command::Command::ManualInput(manual_input) => {
-                    input_from_controller = manual_input;
-                }
-                _ => {
-                    return;
-                }
-            }
-        } else {
-            return;
-        }
-
+        calibration_state: &mut crate::calibration_state::CalibrationState,
+        input_from_controller: ManualInput,
+    ) -> &dyn FSMControl {
         let Nb: f32 = input_from_controller.get_yaw() as f32 * THRUST_COEFFICIENT;
         let Md: f32 = input_from_controller.get_pitch() as f32 * DRAG_COEFFICIENT;
         let Zd: f32 = -input_from_controller.get_lift() as f32 * DRAG_COEFFICIENT;
@@ -98,10 +79,15 @@ impl FSMControl for FSMManual {
         // ])));
 
         // uart::send_bytes(&to_write.0[0..to_write.1]);
-        map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four], transceiver);
+        map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four]);
+        self
     }
 
-    fn step(&self, next_state: my_hdlc::command::FSMState) -> &dyn FSMControl {
+    fn step(
+        &self,
+        next_state: my_hdlc::command::FSMState,
+        calibration_state: &mut CalibrationState,
+    ) -> &dyn FSMControl {
         //TODO:
         match next_state {
             _ => self,

@@ -2,6 +2,7 @@ use crate::read_joystick::combine_inputs;
 use crate::read_joystick::read_joystick;
 use crate::read_keyboard::keyboard_trimming;
 
+use my_hdlc::command::DeviceCommand;
 use my_hdlc::pc_command::ManualInput;
 use rand;
 
@@ -10,15 +11,12 @@ use evdev::{enumerate, AbsoluteAxisCode, Device};
 pub use my_hdlc::pc_command;
 use rand::RngExt;
 use std::env::args;
-use tudelft_serial_upload::upload_file_or_stop;
-use tudelft_serial_upload::PortSelector;
 
 use std::path::PathBuf;
 use std::process::exit;
 use std::process::Command;
 use std::time::Duration;
 use std::time::Instant;
-use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 use tudelft_serial_upload::serial2::SerialPort;
 use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 
@@ -67,7 +65,6 @@ fn main() {
 
     let mut rng = rand::rng();
     // infinitely print whatever the drone sends us
-    let mut buf = [0u8; 255];
     let mut rcv: HdlcTransceiver = HdlcTransceiver::new();
 
     // infinitely print whatever the drone sends us
@@ -82,14 +79,6 @@ fn main() {
         let read_msg = rcv.read_structure::<DeviceCommand>();
         if let Some(x) = read_msg {
             println!("{:?}", x);
-            // match x.get_command_type() {
-            //     CommandType::ChangeMode => {
-            //         println!("YES");
-            //     }
-            //     _ => {
-            //         println!("NO");
-            //     }
-            // }
         }
     }
 }

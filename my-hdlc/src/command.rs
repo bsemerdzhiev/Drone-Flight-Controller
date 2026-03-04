@@ -1,20 +1,6 @@
-use serde::{Deserialize, Serialize};
-
 use crate::pc_command;
-
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-#[repr(u8)]
-pub enum FSMState {
-    SafeMode,
-    PanicMode,
-    ManualMode,
-    CalibrationMode,
-    YawControl,
-    FullControlMode,
-    RawSensorsFullControlMode,
-    HeightControlMode,
-    WirelessMode,
-}
+use crate::telemetry_data::TelemetryData;
+use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]
 #[repr(u8)]
@@ -36,14 +22,13 @@ impl DebugRpms {
     }
 }
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
-pub enum Command {
-    ManualInput(pc_command::ManualInput),
-    ChangeFSMState(FSMState),
-    DebugRpms(DebugRpms),
-}
-use crate::telemetry_data::TelemetryData;
-use serde::{Deserialize, Serialize};
+// #[derive(Serialize, Deserialize, PartialEq, Debug)]
+// pub enum Command {
+// ManualInput(pc_command::ManualInput),
+// ChangeFSMState(FSMState),
+// DebugRpms(DebugRpms),
+// }
+
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
 #[repr(u8)]
 pub enum FSMState {
@@ -62,6 +47,7 @@ pub enum FSMState {
 #[repr(u8)]
 pub enum DeviceCommand {
     ChangeMode(FSMState),
+    ManualInput(pc_command::ManualInput),
     Telemetry(TelemetryData),
     Ack,
 }
