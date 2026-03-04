@@ -1,4 +1,4 @@
-use my_hdlc::{pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 
 use crate::states::FSM_control_trait::FSMControl;
 pub struct FSMFullControl;
@@ -18,5 +18,8 @@ impl FSMControl for FSMFullControl {
         calibration_state: &mut crate::calibration_state::CalibrationState,
     ) -> &dyn FSMControl {
         todo!();
+    }
+    fn get_state(&self) -> FSMState {
+        return FSMState::CalibrationMode;
     }
 }

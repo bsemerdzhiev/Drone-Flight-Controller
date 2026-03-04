@@ -15,6 +15,7 @@ pub trait FSMControl {
         next_state: FSMState,
         calibration_state: &mut CalibrationState,
     ) -> &dyn FSMControl;
+    fn get_state(&self) -> FSMState;
 }
 
 // impl FSMControl for FSMState {

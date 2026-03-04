@@ -39,6 +39,9 @@ impl FSMControl for FSMSafe {
             FSMState::YawControl => todo!(),
         }
     }
+    fn get_state(&self) -> FSMState {
+        return FSMState::SafeMode;
+    }
 }
 
 fn is_throttle_zero() -> bool {

@@ -8,7 +8,7 @@ use crate::telemetry_read::TelemetryRead;
 use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::format;
 
-use my_hdlc::command::{self, DeviceCommand};
+use my_hdlc::command::{self, DeviceCommand, DroneInfo};
 
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
@@ -61,7 +61,7 @@ pub fn main_loop() -> ! {
         }
 
         if i % 100 == 0 {
-            send_drone_data(&mut transceiver, dt);
+            // send_drone_data(&mut transceiver, dt);
             Green.off();
         }
 
@@ -71,6 +71,12 @@ pub fn main_loop() -> ! {
         // send data if i%100 == 0
         // wait until the timer interrupt goes off again
         // based on the frequency set above
+
+        let to_write = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
+            op_mode.get_state(),
+        )));
+
+        // send_bytes(&to_write.0[0..to_write.1]);
 
         wait_for_next_tick();
     }

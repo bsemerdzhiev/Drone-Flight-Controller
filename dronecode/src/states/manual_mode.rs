@@ -1,11 +1,14 @@
 use my_hdlc::{
-    command::{self, DebugRpms, DeviceCommand},
+    command::{self, DebugRpms, DeviceCommand, FSMState},
     pc_command::ManualInput,
     HdlcTransceiver,
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};
 
-use crate::{calibration_state::CalibrationState, states::FSM_control_trait::FSMControl};
+use crate::{
+    calibration_state::CalibrationState,
+    states::{panic_mode::FSMPanic, safe_mode::FSMSafe, FSM_control_trait::FSMControl},
+};
 
 const THRUST_COEFFICIENT: f32 = 1e-2;
 const DRAG_COEFFICIENT: f32 = 1e-3;
@@ -46,10 +49,6 @@ fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::Hdl
 
         k += 1;
     }
-    let to_write =
-        transceiver.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&pwm_to_set)));
-
-    uart::send_bytes(&to_write.0[0..to_write.1]);
 
     motor::set_motors(pwm_to_set);
 }
@@ -91,9 +90,20 @@ impl FSMControl for FSMManual {
         next_state: my_hdlc::command::FSMState,
         calibration_state: &mut CalibrationState,
     ) -> &dyn FSMControl {
-        //TODO:
         match next_state {
-            _ => self,
+            FSMState::SafeMode => return &FSMSafe,
+            FSMState::CalibrationMode => todo!(),
+            FSMState::FullControlMode => todo!(),
+            FSMState::HeightControlMode => todo!(),
+            FSMState::ManualMode => &FSMManual,
+            FSMState::PanicMode => return &FSMPanic,
+            FSMState::RawSensorsFullControlMode => todo!(),
+            FSMState::WirelessMode => todo!(),
+            FSMState::YawControl => todo!(),
         }
+    }
+
+    fn get_state(&self) -> FSMState {
+        return FSMState::ManualMode;
     }
 }
