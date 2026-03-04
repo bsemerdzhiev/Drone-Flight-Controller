@@ -23,6 +23,7 @@ static INV_BYTE: u8 = 1 << 5;
 
 pub mod command;
 pub mod pc_command;
+pub mod telemetry_data;
 
 pub struct HdlcTransceiver {
     /*

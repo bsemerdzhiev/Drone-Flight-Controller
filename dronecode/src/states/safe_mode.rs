@@ -2,12 +2,16 @@ use crate::calibration_state::CalibrationState;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::FSM_control_trait::FSMControl;
-use my_hdlc::command::FSMState;
+use my_hdlc::{command::FSMState, pc_command::ManualInput};
 use tudelft_quadrupel::motor::{self, *};
 pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
-    fn run_control_loop(&self, zero_state: &mut CalibrationState) -> &dyn FSMControl {
+    fn run_control_loop(
+        &self,
+        zero_state: &mut CalibrationState,
+        command: ManualInput,
+    ) -> &dyn FSMControl {
         set_motors([0, 0, 0, 0]);
         return self;
     }

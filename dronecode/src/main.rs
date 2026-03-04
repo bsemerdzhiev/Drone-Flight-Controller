@@ -7,9 +7,7 @@ extern crate alloc;
 
 use crate::control::main_loop;
 
-use crate::control::control_loop;
 use crate::communication_test::send_and_receive;
-use crate::control::main_loop;
 use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
