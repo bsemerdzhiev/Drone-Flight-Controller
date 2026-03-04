@@ -5,6 +5,9 @@ edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[build]
+target = "thumbv6m-none-eabi"
+
 [dependencies]
 [target.'cfg(target_arch = "arm")'.dependencies]
 tudelft-quadrupel = "3"
