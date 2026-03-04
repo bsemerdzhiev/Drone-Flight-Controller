@@ -1,11 +1,14 @@
 use my_hdlc::{
-    command::{self, DebugRpms, DeviceCommand},
+    command::{self, DebugRpms, DeviceCommand, FSMState},
     pc_command::ManualInput,
     HdlcTransceiver,
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};
 
-use crate::{calibration_state::CalibrationState, states::FSM_control_trait::FSMControl};
+use crate::{
+    calibration_state::CalibrationState,
+    states::{panic_mode::FSMPanic, safe_mode::FSMSafe, FSM_control_trait::FSMControl},
+};
 
 const THRUST_COEFFICIENT: f32 = 1e-2;
 const DRAG_COEFFICIENT: f32 = 1e-3;
@@ -98,7 +101,9 @@ impl FSMControl for FSMManual {
     ) -> &dyn FSMControl {
         //TODO:
         match next_state {
-            _ => self,
+            FSMState::SafeMode => return &FSMSafe,
+            FSMState::PanicMode => return &FSMPanic,
+            _ => return self,
         }
     }
 }
