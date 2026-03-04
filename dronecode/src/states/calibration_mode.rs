@@ -37,6 +37,7 @@ impl FSMControl for FSMCalibration {
         &self,
         calibration_state: &mut CalibrationState,
         command: ManualInput,
+        has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
         let (accel, gyro) = read_raw().unwrap();
