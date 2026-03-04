@@ -39,7 +39,7 @@ impl FSMFullControl {
         KP_PITCH * (desired - measured)
     }
 
-    fn motor_mixing(z_lift: f32,n_yaw: f32,m_pitch: f32,l_roll: f32){
+    fn compute_motor_speeds(z_lift: f32,n_yaw: f32,m_pitch: f32,l_roll: f32,) -> [u16; 4]{
         
         let m0 = z_lift - m_pitch + n_yaw; // Front motor
         let m2 = z_lift + m_pitch + n_yaw; // Back motor
@@ -48,12 +48,13 @@ impl FSMFullControl {
         let m3 = z_lift + l_roll - n_yaw;  // Left motor
 
         // Clamp motor speeds just in case, 800 as reasonable max cap defined in quadrupel library
-        let m0 = m0.clamp(0.0, 800.0) as u16;
-        let m1 = m1.clamp(0.0, 800.0) as u16;
-        let m2 = m2.clamp(0.0, 800.0) as u16;
-        let m3 = m3.clamp(0.0, 800.0) as u16;
+        [
+            m0.clamp(0.0, 800.0) as u16,
+            m1.clamp(0.0, 800.0) as u16,
+            m2.clamp(0.0, 800.0) as u16,
+            m3.clamp(0.0, 800.0) as u16,
+        ]
 
-        set_motors([m0,m1,m2,m3]); //Apply correction motor speeds
     }
 }
 
@@ -95,12 +96,12 @@ impl FSMControl for FSMFullControl {
             let l_roll = Self::roll_controller(desired_roll, roll);
             let m_pitch = Self::pitch_controller(desired_pitch, pitch);
 
-
             // Send torques to motor mixer
             // -------------------------------------------------------------
             let z_lift: f32 = 200.0; // no lift value yet so use predefined for now
             let n_yaw: f32 = 0.0;    // no yaw control yet
-            Self::motor_mixing(z_lift,n_yaw,m_pitch,l_roll);
+            motors = Self::compute_motor_speeds(z_lift,n_yaw,m_pitch,l_roll);
+            set_motors(motors);
 
             // Stay in full control
         }
