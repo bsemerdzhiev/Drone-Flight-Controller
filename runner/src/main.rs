@@ -18,7 +18,12 @@ use std::process::exit;
 use std::process::Command;
 use std::time::Duration;
 use std::time::Instant;
+use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 use tudelft_serial_upload::serial2::SerialPort;
+use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
+
+pub use my_hdlc::HdlcTransceiver;
+use my_hdlc::STUFFED_MESSAGE_SIZE;
 
 mod read_joystick;
 mod read_keyboard;
@@ -61,47 +66,30 @@ fn main() {
     let mut rcv = my_hdlc::HdlcTransceiver::new();
 
     let mut rng = rand::rng();
+    // infinitely print whatever the drone sends us
+    let mut buf = [0u8; 255];
+    let mut rcv: HdlcTransceiver = HdlcTransceiver::new();
+
+    // infinitely print whatever the drone sends us
+    let mut buf = [0u8; 255];
     loop {
-        // ----------------------------------------------
-        // (1) Read joystick input
-        // ----------------------------------------------
-        read_joystick(&mut device, &mut joystick_input);
-        // ----------------------------------------------
-        // (2) Read keyboard input
-        // ----------------------------------------------
-        keyboard_trimming(&mut keyboard_trim);
-
-        // ----------------------------------------------
-        // (3) Combine inputs and send at fixed rate
-        // ----------------------------------------------
-        if last_send.elapsed() >= send_period {
-            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
-
-            // let mut new_joystick = ManualInput::zero();
-
-            // new_joystick.set_lift(-read_joystick::MAX_LIFT as i32);
-            // new_joystick.set_pitch(rng.random::<i32>() % 200);
-            // new_joystick.set_yaw(rng.random::<i32>() % 200);
-            // new_joystick.set_roll(rng.random::<i32>() % 200);
-
-            let send_buffer = rcv.write_structure::<my_hdlc::command::Command>(
-                &my_hdlc::command::Command::ManualInput(cmd),
-            );
-
-            serial.write(&send_buffer.0[0..send_buffer.1]);
-            last_send += send_period;
+        if let Ok(num) = serial.read(&mut buf) {
+            for x in &buf[0..num] {
+                rcv.add_byte(x.clone());
+            }
         }
 
-        // ----------------------------------------------
-        // (4) Read from drone
-        // ----------------------------------------------
-        // infinitely print whatever the drone sends us
-
-        if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
-            rcv.add_bytes(&buf[0..num]);
-        }
-        if let Some(x) = rcv.read_structure::<my_hdlc::command::Command>() {
-            println!("{:?}\n", x);
+        let read_msg = rcv.read_structure::<DeviceCommand>();
+        if let Some(x) = read_msg {
+            println!("{:?}", x);
+            // match x.get_command_type() {
+            //     CommandType::ChangeMode => {
+            //         println!("YES");
+            //     }
+            //     _ => {
+            //         println!("NO");
+            //     }
+            // }
         }
     }
 }
