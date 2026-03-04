@@ -17,9 +17,9 @@ pub const MAX_LIFT: f32 = HOVER_FORCE * 6.0;
 
 //------------------------------------------------------
 
-const YAW_RATE: f32 = 200.0;
-const PITCH_RATE: f32 = 200.0;
-const ROLL_RATE: f32 = 200.0;
+const YAW_RATE: f32 = 2000.0;
+const PITCH_RATE: f32 = 2000.0;
+const ROLL_RATE: f32 = 2000.0;
 
 //------------------------------------------------------
 
@@ -38,7 +38,7 @@ pub fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
                     let v = value as f32;
                     match axis {
                         AbsoluteAxisCode::ABS_THROTTLE => {
-                            joystick_input.set_lift(((v / 255.0) as f32 * MAX_LIFT) as i32);
+                            joystick_input.set_lift(((v / 255.0) * MAX_LIFT) as i32);
                         }
                         AbsoluteAxisCode::ABS_X => {
                             joystick_input
