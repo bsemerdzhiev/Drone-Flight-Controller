@@ -15,6 +15,7 @@ impl FSMControl for FSMPanic {
         &self,
         calibration_state: &mut CalibrationState,
         command: ManualInput,
+        has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
         let initial_speed = 100; // change as needed

@@ -7,6 +7,7 @@ pub trait FSMControl {
         &self,
         calibration_state: &mut CalibrationState,
         command: ManualInput,
+        has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl;
     // fn run_safe_mode_cl(& self);
