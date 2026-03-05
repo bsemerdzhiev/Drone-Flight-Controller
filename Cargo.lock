@@ -217,6 +217,7 @@ checksum = "70858629a458fdfd39f9675c4dc309411f2a3f83bede76988d81bf1a0ecee9e0"
 dependencies = [
  "bare-metal",
  "bitfield",
+ "critical-section",
  "embedded-hal 0.2.7",
  "volatile-register",
 ]
@@ -1130,6 +1131,7 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 name = "template-project"
 version = "0.1.0"
 dependencies = [
+ "cortex-m",
  "micromath",
  "my-hdlc",
  "tudelft-quadrupel",
