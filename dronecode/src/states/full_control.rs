@@ -27,25 +27,7 @@ impl FSMControl for FSMFullControl {
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl {
-        todo!();
-    }
-    fn step(
-        &self,
-        next_state: FSMState,
-        _calibration_state: &mut CalibrationState,
-    ) -> &dyn FSMControl {
-        match next_state {
-            FSMState::FullControlMode => self,
-            _ => self, // transition to a different state
-        }
-    }
-
-    fn run_control_loop(
-        &self,
-        _calibration_state: &mut CalibrationState,
-    ) -> &dyn FSMControl {
-
-         // Get quaternion from DMP
+        // Get quaternion from DMP
         // -------------------------------------------------------------
         if let Ok(q) = mpu::read_dmp_bytes(){ //Control loops only updates when DMP data arrives
             //let count = self.print_counter.fetch_add(1, Ordering::Relaxed);
@@ -92,6 +74,17 @@ impl FSMControl for FSMFullControl {
         }
         self
     }
+    fn step(
+        &self,
+        next_state: FSMState,
+        _calibration_state: &mut CalibrationState,
+    ) -> &dyn FSMControl {
+        match next_state {
+            FSMState::FullControlMode => self,
+            _ => self, // transition to a different state
+        }
+    }
+
 }
 
 
