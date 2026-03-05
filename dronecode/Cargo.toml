@@ -9,7 +9,11 @@ edition = "2021"
 target = "thumbv6m-none-eabi"
 
 [dependencies]
+# portable-atomic = { version = "1", features = ["fallback", "critical-section"] }
+# rtt-target = "0.6.2"
+micromath = "2"
 [target.'cfg(target_arch = "arm")'.dependencies]
 tudelft-quadrupel = "3"
 micromath = "2"
 my-hdlc = {path = "../my-hdlc/"}
+cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
