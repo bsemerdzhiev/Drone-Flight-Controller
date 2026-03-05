@@ -22,7 +22,7 @@ use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
 pub mod calibration_state;
-
+pub mod full_control_logic;
 #[cfg(target_arch = "arm")]
 pub mod communication_test;
 #[cfg(target_arch = "arm")]
