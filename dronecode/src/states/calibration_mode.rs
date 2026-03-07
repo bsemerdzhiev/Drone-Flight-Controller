@@ -56,12 +56,12 @@ impl FSMControl for FSMCalibration {
                 calibration_state.finish_calibration();
                 return &FSMFullControl;
             }
-            FSMState::HeightControlMode => todo!(),
-            FSMState::ManualMode => todo!(),
+            FSMState::HeightControlMode => return self,
+            FSMState::ManualMode => return self,
             FSMState::PanicMode => return &FSMPanic,
-            FSMState::RawSensorsFullControlMode => todo!(),
-            FSMState::WirelessMode => todo!(),
-            FSMState::YawControl => todo!(),
+            FSMState::RawSensorsFullControlMode => return self,
+            FSMState::WirelessMode => return self,
+            FSMState::YawControl => return self,
         }
     }
 
