@@ -14,7 +14,6 @@ fn send_transition(
 ) {
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
     loop {
-        println!("Entered\r");
         let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
 
         serial.write(&send_buffer.0[0..send_buffer.1]);
@@ -26,6 +25,7 @@ fn send_transition(
             rcv.add_bytes(&buf[0..num]);
         }
 
+        // the number of loop iterations below is chosen at random
         for _ in 0..100 {
             if let Some(x) = rcv.read_structure::<DeviceCommand>() {
                 match x {
@@ -41,7 +41,6 @@ fn send_transition(
             break;
         }
     }
-    println!("Exited\r");
 }
 
 pub fn keyboard_trimming(
@@ -64,6 +63,33 @@ pub fn keyboard_trimming(
                 KeyCode::Char('3') => {
                     send_transition(my_hdlc::command::FSMState::CalibrationMode, rcv, serial);
                 }
+                KeyCode::Char('4') => {
+                    send_transition(my_hdlc::command::FSMState::YawControl, rcv, serial);
+                }
+                KeyCode::Char('5') => {
+                    send_transition(my_hdlc::command::FSMState::FullControlMode, rcv, serial);
+                }
+                KeyCode::Char('6') => {
+                    send_transition(
+                        my_hdlc::command::FSMState::RawSensorsFullControlMode,
+                        rcv,
+                        serial,
+                    );
+                }
+                KeyCode::Char('7') => {
+                    send_transition(my_hdlc::command::FSMState::HeightControlMode, rcv, serial);
+                }
+                KeyCode::Char('8') => {
+                    send_transition(my_hdlc::command::FSMState::WirelessMode, rcv, serial);
+                }
+                KeyCode::Char('a') => {
+                    //TODO: trim
+                }
+                KeyCode::Char('z') => {
+                    //TODO: trim
+                }
+                //TODO: missing the reset of the maps of page
+                // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
                 _ => {}
             }
         }
