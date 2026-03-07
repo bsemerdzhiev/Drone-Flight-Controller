@@ -23,6 +23,8 @@ use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 
 const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 
+const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
+
 pub fn main_loop() -> ! {
     set_tick_frequency(100);
 
@@ -50,10 +52,10 @@ pub fn main_loop() -> ! {
 
         // Check battery level and switch to panic
         let bat_level = read_battery();
-        if bat_level < 300 && bat_level != 0 {
-            // current_state =
-            // current_state.step(command::FSMState::PanicMode, &mut calibration_state);
-            // battery_panic = true;
+        if SHOULD_CHECK_BATTERY_LEVEL && bat_level < 300 && bat_level != 0 {
+            current_state =
+                current_state.step(command::FSMState::PanicMode, &mut calibration_state);
+            battery_panic = true;
         }
 
         // Read Uart Buff
@@ -80,17 +82,17 @@ pub fn main_loop() -> ! {
         } else if !battery_panic {
             iterations_without_message += 1;
             if iterations_without_message == 50 {
-                // current_state =
-                // current_state.step(command::FSMState::PanicMode, &mut calibration_state);
+                current_state =
+                    current_state.step(command::FSMState::PanicMode, &mut calibration_state);
             }
         }
 
-        // current_state = current_state.run_control_loop(
-        //     &mut calibration_state,
-        //     &received_manual_input,
-        //     &mut has_received_input,
-        //     &mut transceiver,
-        // );
+        current_state = current_state.run_control_loop(
+            &mut calibration_state,
+            &received_manual_input,
+            &mut has_received_input,
+            &mut transceiver,
+        );
         if i % 100 == 0 {
             Green.off();
             send_drone_data(&mut transceiver, dt);
@@ -99,7 +101,6 @@ pub fn main_loop() -> ! {
         let to_write = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
             current_state.get_state(),
         )));
-        // let to_write = transceiver.write_structure(&DeviceCommand::Ack);
 
         send_bytes(&to_write.0[0..to_write.1]);
 

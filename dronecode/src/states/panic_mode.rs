@@ -20,6 +20,7 @@ impl FSMControl for FSMPanic {
     ) -> &dyn FSMControl {
         let initial_speed = 100; // change as needed
         let current_speed = get_motors();
+
         if current_speed.iter().any(|&v| v > initial_speed) {
             set_motors([initial_speed; 4]);
             Green.on();

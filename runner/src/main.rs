@@ -77,16 +77,16 @@ fn main() {
         // read_joystick(&mut device, &mut joystick_input);
         keyboard_trimming(&mut keyboard_trim, &mut rcv, &mut serial);
 
-        // if last_send.elapsed() >= send_period {
-        //     let cmd = combine_inputs(&keyboard_trim, &joystick_input);
-        //
-        //     let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
-        //         &my_hdlc::command::DeviceCommand::ManualInput(cmd),
-        //     );
-        //
-        //     serial.write(&send_buffer.0[0..send_buffer.1]);
-        //     last_send += send_period;
-        // }
+        if last_send.elapsed() >= send_period {
+            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+
+            let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
+                &my_hdlc::command::DeviceCommand::ManualInput(cmd),
+            );
+
+            serial.write(&send_buffer.0[0..send_buffer.1]);
+            last_send += send_period;
+        }
 
         if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
             rcv.add_bytes(&buf[0..num]);
