@@ -2,6 +2,8 @@ use crate::read_joystick::combine_inputs;
 use crate::read_joystick::read_joystick;
 use crate::read_keyboard::keyboard_trimming;
 
+use crossterm::terminal::disable_raw_mode;
+use crossterm::terminal::enable_raw_mode;
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::pc_command::ManualInput;
 use rand;
@@ -53,7 +55,8 @@ fn main() {
 
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
-    let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
+
+    // let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
 
     // for timing and sending inputs at fixed rate
     let send_period = Duration::from_micros(400);
@@ -69,28 +72,30 @@ fn main() {
 
     // infinitely print whatever the drone sends us
 
+    enable_raw_mode().unwrap();
     loop {
-        read_joystick(&mut device, &mut joystick_input);
+        // read_joystick(&mut device, &mut joystick_input);
         keyboard_trimming(&mut keyboard_trim, &mut rcv, &mut serial);
 
-        if last_send.elapsed() >= send_period {
-            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
-
-            let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
-                &my_hdlc::command::DeviceCommand::ManualInput(cmd),
-            );
-
-            serial.write(&send_buffer.0[0..send_buffer.1]);
-            last_send += send_period;
-        }
+        // if last_send.elapsed() >= send_period {
+        //     let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+        //
+        //     let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
+        //         &my_hdlc::command::DeviceCommand::ManualInput(cmd),
+        //     );
+        //
+        //     serial.write(&send_buffer.0[0..send_buffer.1]);
+        //     last_send += send_period;
+        // }
 
         if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
             rcv.add_bytes(&buf[0..num]);
         }
         if let Some(x) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
-            // println!("{:?}\n", x);
+            println!("{:?}\r", x);
         }
     }
+    disable_raw_mode().unwrap();
 }
 
 fn find_flight_stick() -> Option<Device> {

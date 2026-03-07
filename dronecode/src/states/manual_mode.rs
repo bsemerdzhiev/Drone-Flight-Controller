@@ -97,13 +97,13 @@ impl FSMControl for FSMManual {
     ) -> &dyn FSMControl {
         match next_state {
             FSMState::SafeMode => return &FSMSafe,
-            FSMState::CalibrationMode => todo!(),
-            FSMState::FullControlMode => todo!(),
-            FSMState::HeightControlMode => todo!(),
+            FSMState::CalibrationMode => return self,
+            FSMState::FullControlMode => return self,
+            FSMState::HeightControlMode => return self,
             FSMState::ManualMode => &FSMManual,
-            FSMState::RawSensorsFullControlMode => todo!(),
-            FSMState::WirelessMode => todo!(),
-            FSMState::YawControl => todo!(),
+            FSMState::RawSensorsFullControlMode => return self,
+            FSMState::WirelessMode => return self,
+            FSMState::YawControl => return self,
             FSMState::PanicMode => return &FSMPanic,
             _ => return self,
         }

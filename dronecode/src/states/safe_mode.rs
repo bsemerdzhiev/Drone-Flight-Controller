@@ -31,13 +31,13 @@ impl FSMControl for FSMSafe {
                 }
                 return self;
             }
-            FSMState::FullControlMode => todo!(),
-            FSMState::HeightControlMode => todo!(),
+            FSMState::FullControlMode => return self,
+            FSMState::HeightControlMode => return self,
             FSMState::ManualMode => return &FSMManual,
             FSMState::PanicMode => return &FSMPanic,
-            FSMState::RawSensorsFullControlMode => todo!(),
-            FSMState::WirelessMode => todo!(),
-            FSMState::YawControl => todo!(),
+            FSMState::RawSensorsFullControlMode => return self,
+            FSMState::WirelessMode => return self,
+            FSMState::YawControl => return self,
         }
     }
     fn get_state(&self) -> FSMState {

@@ -14,6 +14,7 @@ fn send_transition(
 ) {
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
     loop {
+        println!("Entered\r");
         let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
 
         serial.write(&send_buffer.0[0..send_buffer.1]);
@@ -25,15 +26,14 @@ fn send_transition(
             rcv.add_bytes(&buf[0..num]);
         }
 
-        while !rcv.fifo_is_empty() {
-            if let Some(x) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
+        for _ in 0..100 {
+            if let Some(x) = rcv.read_structure::<DeviceCommand>() {
                 match x {
-                    my_hdlc::command::DeviceCommand::Ack => {
+                    DeviceCommand::Ack => {
                         to_break = true;
                     }
                     _ => {}
                 }
-                println!("{:?}\n", x);
             }
         }
 
@@ -41,6 +41,7 @@ fn send_transition(
             break;
         }
     }
+    println!("Exited\r");
 }
 
 pub fn keyboard_trimming(
@@ -48,7 +49,7 @@ pub fn keyboard_trimming(
     rcv: &mut my_hdlc::HdlcTransceiver,
     serial: &mut SerialPort,
 ) {
-    while event::poll(Duration::from_millis(20)).unwrap() {
+    while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
                 KeyCode::Char('0') => {
