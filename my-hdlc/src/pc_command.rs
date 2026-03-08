@@ -1,3 +1,5 @@
+use core::mem::type_info::Slice;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
@@ -6,6 +8,7 @@ pub struct ManualInput {
     roll: i32,
     pitch: i32,
     yaw: i32,
+    enter_panic: bool,
 }
 
 impl ManualInput {
@@ -15,6 +18,7 @@ impl ManualInput {
             roll: 0,
             pitch: 0,
             yaw: 0,
+            enter_panic: false,
         }
     }
     pub fn new(lift: i32, roll: i32, pitch: i32, yaw: i32) -> Self {
@@ -23,6 +27,7 @@ impl ManualInput {
             roll,
             pitch,
             yaw,
+            enter_panic: false,
         };
     }
 
@@ -42,6 +47,10 @@ impl ManualInput {
         self.yaw = yaw;
     }
 
+    pub fn set_panic(&mut self, panic_mode: bool) {
+        self.enter_panic = panic_mode
+    }
+
     pub fn get_lift(&self) -> i32 {
         self.lift
     }
@@ -56,5 +65,9 @@ impl ManualInput {
 
     pub fn get_yaw(&self) -> i32 {
         self.yaw
+    }
+
+    pub fn is_panic_triggered(&self) -> bool {
+        self.enter_panic
     }
 }
