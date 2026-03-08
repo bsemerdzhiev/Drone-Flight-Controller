@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use crossterm::event::{self, Event};
+use crossterm::event::{self, Event, KeyCode};
 use my_hdlc::pc_command::ManualInput;
 
 fn send_transition(state: my_hdlc::command::FSMState) {}
@@ -9,10 +9,19 @@ pub fn keyboard_trimming(keyboard_trim: &mut ManualInput, rcv: &mut my_hdlc::Hdl
     while event::poll(Duration::from_millis(0)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
+                KeyCode::Esc => {
+                    keyboard_trim.set_panic(true);
+                }
+                KeyCode::Char(' ') => {
+                    keyboard_trim.set_panic(true);
+                }
                 KeyCode::Char('0') => {}
-                KeyCode::Char('1') => {}
+                KeyCode::Char('1') => {
+                    keyboard_trim.set_panic(true);
+                }
                 KeyCode::Char('2') => {}
                 KeyCode::Char('3') => {}
+
                 // Lift trim
                 // KeyCode::Char('a') => keyboard_trim.get_lift() += 0.01, //throttle up
                 // KeyCode::Char('z') => keyboard_trim.get_lift() -= 0.01, //throttle down

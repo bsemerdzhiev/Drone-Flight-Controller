@@ -70,8 +70,8 @@ fn main() {
     // infinitely print whatever the drone sends us
     loop {
         read_joystick(&mut device, &mut joystick_input);
-        keyboard_trimming(&mut keyboard_trim);
-
+        keyboard_trimming(&mut keyboard_trim, &mut rcv);
+        send_panic(&mut joystick_input, &mut keyboard_trim, &mut rcv);
         if last_send.elapsed() >= send_period {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
@@ -104,6 +104,33 @@ fn find_flight_stick() -> Option<Device> {
         }
     }
     None
+}
+
+fn is_joystick_connected() -> bool {
+    for (path, _) in enumerate() {
+        if let Ok(dev) = Device::open(&path) {
+            let name = dev.name().unwrap_or("Unknown");
+            if name.contains("Logitech") {
+                return true;
+            }
+        }
+    }
+    false
+}
+
+fn send_joystick_panic(
+    joy: &mut ManualInput,
+    keyboard: &mut ManualInput,
+    rcv: &mut HdlcTransceiver,
+) {
+    if joy.is_panic_triggered() | keyboard.is_panic_triggered() | !is_joystick_connected() {
+        let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
+            &my_hdlc::command::DeviceCommand::ChangeMode(my_hdlc::command::FSMState::PanicMode),
+        );
+        serial.write(&send_buffer.0[0..send_buffer.1]);
+        joy.set_panic(false);
+        keyboard.set_panic(false);
+    }
 }
 
 #[allow(unused)]
