@@ -30,7 +30,7 @@ pub fn read_joystick(device: &mut Device, joystick_input: &mut ManualInput) {
                 //trigger button; this should activate panic mode
                 EventSummary::Key(_, key_type, 1) => match key_type {
                     evdev::KeyCode::BTN_TRIGGER => {
-                        todo!()
+                        joystick_input.set_panic(true);
                     }
                     _ => {}
                 },
