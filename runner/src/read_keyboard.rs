@@ -79,12 +79,6 @@ pub fn keyboard_trimming(
                 KeyCode::Char('8') => {
                     send_transition(my_hdlc::command::FSMState::WirelessMode, rcv, serial);
                 }
-                KeyCode::Char('a') => {
-                    //TODO: trim
-                }
-                KeyCode::Char('z') => {
-                    //TODO: trim
-                }
                 //TODO: missing the reset of the maps of page
                 // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
                 KeyCode::Esc => {
@@ -96,21 +90,6 @@ pub fn keyboard_trimming(
                 KeyCode::Char('1') => {
                     keyboard_trim.set_panic(true);
                 }
-                // Lift trim
-                // KeyCode::Char('a') => keyboard_trim.get_lift() += 0.01, //throttle up
-                // KeyCode::Char('z') => keyboard_trim.get_lift() -= 0.01, //throttle down
-                //
-                // // Roll trim
-                // KeyCode::Right => keyboard_trim.get_roll() -= 0.02, //roll down  right arrow key
-                // KeyCode::Left => keyboard_trim.get_roll() += 0.02,  //roll up     left arrow key
-                //
-                // // Pitch trim
-                // KeyCode::Char('i') => keyboard_trim.get_pitch() += 0.02, // pitch up  down arrow key
-                // KeyCode::Char('k') => keyboard_trim.get_pitch() -= 0.02, // pitch down up arrow key
-                //
-                // // Yaw trim
-                // KeyCode::Char('q') => keyboard_trim.get_yaw() -= 0.02, //yaw down
-                // KeyCode::Char('w') => keyboard_trim.get_yaw() += 0.02, //yaw up
                 _ => {}
             }
         }

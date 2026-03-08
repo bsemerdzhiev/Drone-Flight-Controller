@@ -1,3 +1,5 @@
+use core::mem::type_info::Slice;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
