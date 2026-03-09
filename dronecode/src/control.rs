@@ -58,19 +58,8 @@ pub fn main_loop() -> ! {
             battery_panic = true;
         }
 
-        // Check battery level and switch to panic
-        let bat_level = read_battery();
-        if bat_level < 300 && bat_level != 0 {
-            op_mode = op_mode.step(command::FSMState::PanicMode, &mut calibration_state);
-            bat_panic = true;
-        }
-
         // Read Uart Buff
-
         let num_received = receive_bytes(&mut uart_buf[0..transceiver.remaining_bytes]);
-
-        transceiver.add_bytes(&uart_buf[0..num_received]);
-        let deserialized_command = transceiver.read_structure::<DeviceCommand>();
 
         if num_received != 0usize && !battery_panic {
             transceiver.add_bytes(&uart_buf[..num_received]);

@@ -1,11 +1,8 @@
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 
 use crate::calibration_state::CalibrationState;
-use crate::calibration_state::CalibrationState;
-use crate::full_control_logic as logic;
 use crate::full_control_logic as logic;
 use crate::states::FSM_control_trait::FSMControl;
-use my_hdlc::command::FSMState;
 use tudelft_quadrupel::motor::set_motors;
 use tudelft_quadrupel::mpu;
 
