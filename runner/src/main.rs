@@ -121,6 +121,7 @@ fn is_joystick_connected() -> bool {
             }
         }
     }
+    println!("Joystick disconnected!");
     false
 }
 
