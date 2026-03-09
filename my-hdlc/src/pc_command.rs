@@ -68,4 +68,8 @@ impl ManualInput {
     pub fn is_panic_triggered(&self) -> bool {
         self.enter_panic
     }
+
+    pub fn is_zeroed(&self) -> bool {
+        self.lift == 0 && self.pitch == 0 && self.roll == 0 && self.yaw == 0 && !self.enter_panic
+    }
 }
