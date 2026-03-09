@@ -7,7 +7,6 @@ extern crate alloc;
 
 use crate::control::main_loop;
 
-use crate::communication_test::send_and_receive;
 use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
@@ -22,11 +21,11 @@ use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
 pub mod calibration_state;
-pub mod full_control_logic;
-#[cfg(target_arch = "arm")]
-pub mod communication_test;
+
 #[cfg(target_arch = "arm")]
 pub mod control;
+#[cfg(target_arch = "arm")]
+pub mod full_control_logic;
 #[cfg(target_arch = "arm")]
 pub mod states;
 #[cfg(target_arch = "arm")]

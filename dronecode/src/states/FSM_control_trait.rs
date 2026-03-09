@@ -10,30 +10,10 @@ pub trait FSMControl {
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
     ) -> &dyn FSMControl;
-    // fn run_safe_mode_cl(& self);
     fn step(
         &self,
         next_state: FSMState,
         calibration_state: &mut CalibrationState,
     ) -> &dyn FSMControl;
+    fn get_state(&self) -> FSMState;
 }
-
-// impl FSMControl for FSMState {
-//     fn run_control_loop(&mut self) {
-//         match self {
-//             FSMState::SafeMode => self.run_safe_mode_cl(),
-//             FSMState::CalibrationMode => todo!(),
-//             FSMState::FullControlMode => todo!(),
-//             FSMState::HeightControlMode => todo!(),
-//             FSMState::ManualMode => todo!(),
-//             FSMState::PanicMode => todo!(),
-//             FSMState::RawSensorsFullControlMode => todo!(),
-//             FSMState::WirelessMode => todo!(),
-//             FSMState::YawControl => todo!(),
-//         }
-//     }
-
-//     fn run_safe_mode_cl(&mut self) {
-//         set_motor_max(0);
-//     }
-// }

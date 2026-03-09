@@ -1,14 +1,10 @@
-use my_hdlc::{pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 
-use crate::states::FSM_control_trait::FSMControl;
 use crate::calibration_state::CalibrationState;
-use tudelft_quadrupel::mpu;
-use my_hdlc::command::FSMState;
-use tudelft_quadrupel::motor::set_motors;
 use crate::full_control_logic as logic;
-//use rtt_target::rprintln; // For validation test printing
-//use portable_atomic::{AtomicU32, Ordering}; // Allows mutation safely for print_counter (Cell<T> isn't Sync)
-
+use crate::states::FSM_control_trait::FSMControl;
+use tudelft_quadrupel::motor::set_motors;
+use tudelft_quadrupel::mpu;
 
 pub struct FSMFullControl;
 
@@ -16,7 +12,6 @@ impl FSMFullControl {
     pub const fn new() -> Self {
         Self
     }
-
 }
 
 impl FSMControl for FSMFullControl {
@@ -29,9 +24,10 @@ impl FSMControl for FSMFullControl {
     ) -> &dyn FSMControl {
         // Get quaternion from DMP
         // -------------------------------------------------------------
-        if let Ok(q) = mpu::read_dmp_bytes(){ //Control loops only updates when DMP data arrives
+        if let Ok(q) = mpu::read_dmp_bytes() {
+            //Control loops only updates when DMP data arrives
             //let count = self.print_counter.fetch_add(1, Ordering::Relaxed);
-            
+
             // Convert fixed-point -> f32
             let w = q.w.to_num::<f32>();
             let x = q.x.to_num::<f32>();
@@ -40,7 +36,7 @@ impl FSMControl for FSMFullControl {
 
             // Convert to roll and pitch
             // -------------------------------------------------------------
-            let (roll, pitch) = logic::quaternion_to_roll_pitch(w,x,y,z);
+            let (roll, pitch) = logic::quaternion_to_roll_pitch(w, x, y, z);
 
             // Desired angles (from RC / keyboard)
             // -------------------------------------------------------------
@@ -58,8 +54,8 @@ impl FSMControl for FSMFullControl {
             // Send torques to motor mixer
             // -------------------------------------------------------------
             let z_lift: f32 = 200.0; // no lift value yet so use predefined for now
-            let n_yaw: f32 = 0.0;    // no yaw control yet
-            let motors = logic::compute_motor_speeds(z_lift,n_yaw,m_pitch,l_roll);
+            let n_yaw: f32 = 0.0; // no yaw control yet
+            let motors = logic::compute_motor_speeds(z_lift, n_yaw, m_pitch, l_roll);
             set_motors(motors);
 
             // // For DEBUG printing
@@ -74,6 +70,7 @@ impl FSMControl for FSMFullControl {
         }
         self
     }
+
     fn step(
         &self,
         next_state: FSMState,
@@ -85,6 +82,7 @@ impl FSMControl for FSMFullControl {
         }
     }
 
+    fn get_state(&self) -> FSMState {
+        return FSMState::CalibrationMode;
+    }
 }
-
-

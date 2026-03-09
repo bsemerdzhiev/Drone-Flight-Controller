@@ -49,10 +49,6 @@ fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::Hdl
 
         k += 1;
     }
-    let to_write =
-        transceiver.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&pwm_to_set)));
-
-    uart::send_bytes(&to_write.0[0..to_write.1]);
 
     motor::set_motors(pwm_to_set);
 }
@@ -99,11 +95,21 @@ impl FSMControl for FSMManual {
         next_state: my_hdlc::command::FSMState,
         calibration_state: &mut CalibrationState,
     ) -> &dyn FSMControl {
-        //TODO:
         match next_state {
             FSMState::SafeMode => return &FSMSafe,
+            FSMState::CalibrationMode => return self,
+            FSMState::FullControlMode => return self,
+            FSMState::HeightControlMode => return self,
+            FSMState::ManualMode => &FSMManual,
+            FSMState::RawSensorsFullControlMode => return self,
+            FSMState::WirelessMode => return self,
+            FSMState::YawControl => return self,
             FSMState::PanicMode => return &FSMPanic,
             _ => return self,
         }
+    }
+
+    fn get_state(&self) -> FSMState {
+        return FSMState::ManualMode;
     }
 }

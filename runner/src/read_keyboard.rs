@@ -1,33 +1,95 @@
 use std::time::Duration;
 
-use crossterm::event::{self, Event};
-use my_hdlc::pc_command::ManualInput;
+use crossterm::event::{self, Event, KeyCode};
+use my_hdlc::{
+    command::{DeviceCommand, FSMState},
+    pc_command::ManualInput,
+};
+use tudelft_serial_upload::serial2::SerialPort;
 
-fn send_transition(state: my_hdlc::command::FSMState) {}
+fn send_transition(
+    state: my_hdlc::command::FSMState,
+    rcv: &mut my_hdlc::HdlcTransceiver,
+    serial: &mut SerialPort,
+) {
+    let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
+    loop {
+        let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
 
-pub fn keyboard_trimming(keyboard_trim: &mut ManualInput, rcv: &mut my_hdlc::HdlcTransceiver) {
-    while event::poll(Duration::from_millis(0)).unwrap() {
+        serial.write(&send_buffer.0[0..send_buffer.1]);
+
+        let mut to_break = false;
+
+        //wait for ack
+        if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
+            rcv.add_bytes(&buf[0..num]);
+        }
+
+        // the number of loop iterations below is chosen at random
+        for _ in 0..100 {
+            if let Some(x) = rcv.read_structure::<DeviceCommand>() {
+                match x {
+                    DeviceCommand::Ack => {
+                        to_break = true;
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        if to_break {
+            break;
+        }
+    }
+}
+
+pub fn keyboard_trimming(
+    keyboard_trim: &mut ManualInput,
+    rcv: &mut my_hdlc::HdlcTransceiver,
+    serial: &mut SerialPort,
+) {
+    while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
-                KeyCode::Char('0') => {}
-                KeyCode::Char('1') => {}
-                KeyCode::Char('2') => {}
-                KeyCode::Char('3') => {}
-                // Lift trim
-                // KeyCode::Char('a') => keyboard_trim.get_lift() += 0.01, //throttle up
-                // KeyCode::Char('z') => keyboard_trim.get_lift() -= 0.01, //throttle down
-                //
-                // // Roll trim
-                // KeyCode::Right => keyboard_trim.get_roll() -= 0.02, //roll down  right arrow key
-                // KeyCode::Left => keyboard_trim.get_roll() += 0.02,  //roll up     left arrow key
-                //
-                // // Pitch trim
-                // KeyCode::Char('i') => keyboard_trim.get_pitch() += 0.02, // pitch up  down arrow key
-                // KeyCode::Char('k') => keyboard_trim.get_pitch() -= 0.02, // pitch down up arrow key
-                //
-                // // Yaw trim
-                // KeyCode::Char('q') => keyboard_trim.get_yaw() -= 0.02, //yaw down
-                // KeyCode::Char('w') => keyboard_trim.get_yaw() += 0.02, //yaw up
+                KeyCode::Char('0') => {
+                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv, serial);
+                }
+                KeyCode::Char('1') => {
+                    send_transition(my_hdlc::command::FSMState::PanicMode, rcv, serial);
+                }
+                KeyCode::Char('2') => {
+                    send_transition(my_hdlc::command::FSMState::ManualMode, rcv, serial);
+                }
+                KeyCode::Char('3') => {
+                    send_transition(my_hdlc::command::FSMState::CalibrationMode, rcv, serial);
+                }
+                KeyCode::Char('4') => {
+                    send_transition(my_hdlc::command::FSMState::YawControl, rcv, serial);
+                }
+                KeyCode::Char('5') => {
+                    send_transition(my_hdlc::command::FSMState::FullControlMode, rcv, serial);
+                }
+                KeyCode::Char('6') => {
+                    send_transition(
+                        my_hdlc::command::FSMState::RawSensorsFullControlMode,
+                        rcv,
+                        serial,
+                    );
+                }
+                KeyCode::Char('7') => {
+                    send_transition(my_hdlc::command::FSMState::HeightControlMode, rcv, serial);
+                }
+                KeyCode::Char('8') => {
+                    send_transition(my_hdlc::command::FSMState::WirelessMode, rcv, serial);
+                }
+                KeyCode::Char('a') => {
+                    //TODO: trim
+                }
+                KeyCode::Char('z') => {
+                    //TODO: trim
+                }
+                //TODO: missing the reset of the maps of page
+                // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
                 _ => {}
             }
         }
