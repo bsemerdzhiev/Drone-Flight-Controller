@@ -32,7 +32,7 @@ impl FSMControl for FSMPanic {
             // equalize all motors and descend from there. Otherwise if motors were set
             // to the initial speed previously it will just keep descending.
             let max_value = current_speed.iter().copied().max().unwrap();
-            set_motors([(max_value - 1); 4]);
+            set_motors([(max_value.saturating_sub(1)); 4]);
             return self;
         }
     }
