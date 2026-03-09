@@ -4,7 +4,7 @@ use crate::states::FSM_control_trait::FSMControl;
 use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
-use tudelft_quadrupel::led::Led::Green;
+use tudelft_quadrupel::led::Led::Red;
 use tudelft_quadrupel::motor::*;
 
 pub struct FSMPanic;
@@ -22,10 +22,10 @@ impl FSMControl for FSMPanic {
         let current_speed = get_motors();
         if current_speed.iter().any(|&v| v > initial_speed) {
             set_motors([initial_speed; 4]);
-            Green.on();
+            Red.on();
             return self;
         } else if current_speed[0] == 0 {
-            Green.off();
+            Red.off();
             return &FSMSafe;
         } else {
             // in the case the current maximum is smaller than initial speed
