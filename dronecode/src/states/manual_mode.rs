@@ -100,7 +100,7 @@ impl FSMControl for FSMManual {
             FSMState::CalibrationMode => return self,
             FSMState::FullControlMode => return self,
             FSMState::HeightControlMode => return self,
-            FSMState::ManualMode => &FSMManual,
+            FSMState::ManualMode => return self,
             FSMState::RawSensorsFullControlMode => return self,
             FSMState::WirelessMode => return self,
             FSMState::YawControl => return self,
