@@ -31,6 +31,8 @@ pub mod states;
 #[cfg(target_arch = "arm")]
 pub mod telemetry_read;
 #[cfg(target_arch = "arm")]
+pub mod util;
+#[cfg(target_arch = "arm")]
 pub mod yaw_pitch_roll;
 
 /// The heap size of your drone code in bytes.

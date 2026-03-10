@@ -1,6 +1,6 @@
 use crate::read_joystick::combine_inputs;
 use crate::read_joystick::read_joystick;
-use crate::read_keyboard::keyboard_trimming;
+use crate::read_keyboard::read_keyboard;
 use crate::read_keyboard::send_transition;
 
 use crossterm::terminal::disable_raw_mode;
@@ -29,6 +29,7 @@ use my_hdlc::STUFFED_MESSAGE_SIZE;
 
 mod read_joystick;
 mod read_keyboard;
+
 const DEBUG_BOARD_MODE: bool = true;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
@@ -60,9 +61,9 @@ fn main() {
 
     // let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
     let mut device: Option<Device> = None;
+
     if !DEBUG_BOARD_MODE {
         device = Some(find_flight_stick().expect("Cannot find flight stick"));
-        //comment this when testing without stick
     }
 
     // for timing and sending inputs at fixed rate
@@ -84,20 +85,20 @@ fn main() {
     let mut current_mode = FSMState::SafeMode;
     loop {
         read_joystick(&mut device, &mut joystick_input);
-        keyboard_trimming(
+        read_keyboard(
             &mut keyboard_trim,
             &mut joystick_input,
             &mut rcv,
             &mut current_mode,
             &mut serial,
         );
-        send_panic(
-            &mut joystick_input,
-            &mut keyboard_trim,
-            &mut current_mode,
-            &mut rcv,
-            &mut serial,
-        );
+        // check_for_panic(
+        //     &mut joystick_input,
+        //     &mut keyboard_trim,
+        //     &mut current_mode,
+        //     &mut rcv,
+        //     &mut serial,
+        // );
         if last_send.elapsed() >= send_period {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
@@ -116,7 +117,6 @@ fn main() {
             println!("{:?}\r", x);
         }
     }
-    disable_raw_mode().unwrap();
 }
 
 fn find_flight_stick() -> Option<Device> {
@@ -142,11 +142,11 @@ fn is_joystick_connected() -> bool {
             }
         }
     }
-    println!("Joystick disconnected!");
+    println!("Joystick disconnected!\r");
     false
 }
 
-fn send_panic(
+fn check_for_panic(
     joy: &mut ManualInput,
     keyboard: &mut ManualInput,
     current_mode: &mut FSMState,
