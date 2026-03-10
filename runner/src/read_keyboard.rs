@@ -7,9 +7,10 @@ use my_hdlc::{
 };
 use tudelft_serial_upload::serial2::SerialPort;
 
-fn send_transition(
+pub fn send_transition(
     state: my_hdlc::command::FSMState,
     rcv: &mut my_hdlc::HdlcTransceiver,
+    cur_mode: &mut FSMState,
     serial: &mut SerialPort,
 ) {
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
@@ -26,7 +27,8 @@ fn send_transition(
         }
 
         // the number of loop iterations below is chosen at random
-        for _ in 0..100 {
+        let i_range = if(state == FSMState::PanicMode) {10000} else {100}
+        for _ in 0..i_range {
             if let Some(x) = rcv.read_structure::<DeviceCommand>() {
                 match x {
                     DeviceCommand::Ack => {
@@ -41,43 +43,47 @@ fn send_transition(
             break;
         }
     }
+    *cur_mode = state; 
 }
 
 pub fn keyboard_trimming(
     keyboard_trim: &mut ManualInput,
+    joystick_info: &mut ManualInput,
     rcv: &mut my_hdlc::HdlcTransceiver,
+    cur_mode: &mut FSMState,
     serial: &mut SerialPort,
 ) {
     while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
                 KeyCode::Char('0') => {
-                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv, serial);
-                }
+                    if joystick_info.is_zeroed(){
+                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv,cur_mode serial);
+                }}
                 KeyCode::Char('2') => {
-                    send_transition(my_hdlc::command::FSMState::ManualMode, rcv, serial);
+                    send_transition(my_hdlc::command::FSMState::ManualMode, rcv,cur_mode serial);
                 }
                 KeyCode::Char('3') => {
-                    send_transition(my_hdlc::command::FSMState::CalibrationMode, rcv, serial);
+                    send_transition(my_hdlc::command::FSMState::CalibrationMode, rcv,cur_mode serial);
                 }
                 KeyCode::Char('4') => {
-                    send_transition(my_hdlc::command::FSMState::YawControl, rcv, serial);
+                    send_transition(my_hdlc::command::FSMState::YawControl, rcv,cur_mode serial);
                 }
                 KeyCode::Char('5') => {
-                    send_transition(my_hdlc::command::FSMState::FullControlMode, rcv, serial);
+                    send_transition(my_hdlc::command::FSMState::FullControlMode, rcv,cur_mode serial);
                 }
                 KeyCode::Char('6') => {
                     send_transition(
                         my_hdlc::command::FSMState::RawSensorsFullControlMode,
-                        rcv,
+                        rcv,cur_mode
                         serial,
                     );
                 }
                 KeyCode::Char('7') => {
-                    send_transition(my_hdlc::command::FSMState::HeightControlMode, rcv, serial);
+                    send_transition(my_hdlc::command::FSMState::HeightControlMode, rcv,cur_mode serial);
                 }
                 KeyCode::Char('8') => {
-                    send_transition(my_hdlc::command::FSMState::WirelessMode, rcv, serial);
+                    send_transition(my_hdlc::command::FSMState::WirelessMode, rcv,cur_mode serial);
                 }
                 //TODO: missing the reset of the maps of page
                 // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
