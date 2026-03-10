@@ -92,13 +92,13 @@ fn main() {
             &mut current_mode,
             &mut serial,
         );
-        // check_for_panic(
-        //     &mut joystick_input,
-        //     &mut keyboard_trim,
-        //     &mut current_mode,
-        //     &mut rcv,
-        //     &mut serial,
-        // );
+        check_for_panic(
+            &mut joystick_input,
+            &mut keyboard_trim,
+            &mut current_mode,
+            &mut rcv,
+            &mut serial,
+        );
         if last_send.elapsed() >= send_period {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
 

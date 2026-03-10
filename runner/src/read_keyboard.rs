@@ -151,8 +151,8 @@ pub fn read_keyboard(
                     keyboard_trim.set_panic(true);
                 }
                 // Lift trim
-                KeyCode::Char('a') => keyboard_trim.increment_lift(1), //throttle up
-                KeyCode::Char('z') => keyboard_trim.increment_lift(-1), //throttle down
+                KeyCode::Char('a') => keyboard_trim.increment_lift(2), //throttle up
+                KeyCode::Char('z') => keyboard_trim.increment_lift(-2), //throttle down
                 //
                 // // Roll trim
                 KeyCode::Right => keyboard_trim.increment_roll(-2), //roll down  right arrow key
