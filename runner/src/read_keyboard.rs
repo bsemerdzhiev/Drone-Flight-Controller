@@ -27,7 +27,11 @@ pub fn send_transition(
         }
 
         // the number of loop iterations below is chosen at random
-        let i_range = if(state == FSMState::PanicMode) {10000} else {100}
+        let i_range = if (state == FSMState::PanicMode) {
+            10000
+        } else {
+            100
+        };
         for _ in 0..i_range {
             if let Some(x) = rcv.read_structure::<DeviceCommand>() {
                 match x {
@@ -43,7 +47,7 @@ pub fn send_transition(
             break;
         }
     }
-    *cur_mode = state; 
+    *cur_mode = state;
 }
 
 pub fn keyboard_trimming(
@@ -57,33 +61,70 @@ pub fn keyboard_trimming(
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
                 KeyCode::Char('0') => {
-                    if joystick_info.is_zeroed(){
-                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv,cur_mode serial);
-                }}
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::SafeMode,
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
+                }
                 KeyCode::Char('2') => {
-                    send_transition(my_hdlc::command::FSMState::ManualMode, rcv,cur_mode serial);
+                    send_transition(
+                        my_hdlc::command::FSMState::ManualMode,
+                        rcv,
+                        cur_mode,
+                        serial,
+                    );
                 }
                 KeyCode::Char('3') => {
-                    send_transition(my_hdlc::command::FSMState::CalibrationMode, rcv,cur_mode serial);
+                    send_transition(
+                        my_hdlc::command::FSMState::CalibrationMode,
+                        rcv,
+                        cur_mode,
+                        serial,
+                    );
                 }
                 KeyCode::Char('4') => {
-                    send_transition(my_hdlc::command::FSMState::YawControl, rcv,cur_mode serial);
+                    send_transition(
+                        my_hdlc::command::FSMState::YawControl,
+                        rcv,
+                        cur_mode,
+                        serial,
+                    );
                 }
                 KeyCode::Char('5') => {
-                    send_transition(my_hdlc::command::FSMState::FullControlMode, rcv,cur_mode serial);
+                    send_transition(
+                        my_hdlc::command::FSMState::FullControlMode,
+                        rcv,
+                        cur_mode,
+                        serial,
+                    );
                 }
                 KeyCode::Char('6') => {
                     send_transition(
                         my_hdlc::command::FSMState::RawSensorsFullControlMode,
-                        rcv,cur_mode
+                        rcv,
+                        cur_mode,
                         serial,
                     );
                 }
                 KeyCode::Char('7') => {
-                    send_transition(my_hdlc::command::FSMState::HeightControlMode, rcv,cur_mode serial);
+                    send_transition(
+                        my_hdlc::command::FSMState::HeightControlMode,
+                        rcv,
+                        cur_mode,
+                        serial,
+                    );
                 }
                 KeyCode::Char('8') => {
-                    send_transition(my_hdlc::command::FSMState::WirelessMode, rcv,cur_mode serial);
+                    send_transition(
+                        my_hdlc::command::FSMState::WirelessMode,
+                        rcv,
+                        cur_mode,
+                        serial,
+                    );
                 }
                 //TODO: missing the reset of the maps of page
                 // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
