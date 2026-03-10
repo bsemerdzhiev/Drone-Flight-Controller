@@ -33,6 +33,9 @@ pub mod telemetry_read;
 #[cfg(target_arch = "arm")]
 pub mod yaw_pitch_roll;
 
+#[cfg(target_arch = "arm")]
+pub mod filters;
+
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
 const HEAP_SIZE: usize = 4096;
