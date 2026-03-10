@@ -29,7 +29,7 @@ use my_hdlc::STUFFED_MESSAGE_SIZE;
 
 mod read_joystick;
 mod read_keyboard;
-
+const DEBUG_BOARD_MODE: bool = true;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
@@ -59,6 +59,11 @@ fn main() {
     let mut joystick_input = ManualInput::zero();
 
     // let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
+    let mut device: Option<Device> = None;
+    if !DEBUG_BOARD_MODE {
+        device = Some(find_flight_stick().expect("Cannot find flight stick"));
+        //comment this when testing without stick
+    }
 
     // for timing and sending inputs at fixed rate
     let send_period = Duration::from_micros(400);
@@ -91,6 +96,7 @@ fn main() {
             &mut keyboard_trim,
             &mut current_mode,
             &mut rcv,
+            &mut serial,
         );
         if last_send.elapsed() >= send_period {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
@@ -145,6 +151,7 @@ fn send_panic(
     keyboard: &mut ManualInput,
     current_mode: &mut FSMState,
     rcv: &mut HdlcTransceiver,
+    serial: &mut SerialPort,
 ) {
     if joy.is_panic_triggered() | keyboard.is_panic_triggered() | !is_joystick_connected() {
         let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
