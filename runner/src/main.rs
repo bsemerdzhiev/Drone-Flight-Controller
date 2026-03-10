@@ -1,10 +1,12 @@
 use crate::read_joystick::combine_inputs;
 use crate::read_joystick::read_joystick;
 use crate::read_keyboard::keyboard_trimming;
+use crate::read_keyboard::send_transition;
 
 use crossterm::terminal::disable_raw_mode;
 use crossterm::terminal::enable_raw_mode;
 use my_hdlc::command::DeviceCommand;
+use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
 use rand;
 
@@ -73,10 +75,23 @@ fn main() {
     // infinitely print whatever the drone sends us
 
     enable_raw_mode().unwrap();
+
+    let mut current_mode = FSMState::SafeMode;
     loop {
         read_joystick(&mut device, &mut joystick_input);
-        keyboard_trimming(&mut keyboard_trim, &mut rcv);
-        send_panic(&mut joystick_input, &mut keyboard_trim, &mut rcv);
+        keyboard_trimming(
+            &mut keyboard_trim,
+            &mut joystick_input,
+            &mut rcv,
+            &mut current_mode,
+            &mut serial,
+        );
+        send_panic(
+            &mut joystick_input,
+            &mut keyboard_trim,
+            &mut current_mode,
+            &mut rcv,
+        );
         if last_send.elapsed() >= send_period {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
@@ -125,16 +140,17 @@ fn is_joystick_connected() -> bool {
     false
 }
 
-fn send_joystick_panic(
+fn send_panic(
     joy: &mut ManualInput,
     keyboard: &mut ManualInput,
+    current_mode: &mut FSMState,
     rcv: &mut HdlcTransceiver,
 ) {
     if joy.is_panic_triggered() | keyboard.is_panic_triggered() | !is_joystick_connected() {
         let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
             &my_hdlc::command::DeviceCommand::ChangeMode(my_hdlc::command::FSMState::PanicMode),
         );
-        serial.write(&send_buffer.0[0..send_buffer.1]);
+        send_transition(FSMState::PanicMode, rcv, current_mode, serial);
         joy.set_panic(false);
         keyboard.set_panic(false);
     }
