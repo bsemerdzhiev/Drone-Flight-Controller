@@ -1,3 +1,5 @@
+use crate::util::rpm_calculator::map_rms;
+
 use my_hdlc::{
     command::{self, DebugRpms, DeviceCommand, FSMState},
     pc_command::ManualInput,
@@ -10,48 +12,7 @@ use crate::{
     states::{panic_mode::FSMPanic, safe_mode::FSMSafe, FSM_control_trait::FSMControl},
 };
 
-const THRUST_COEFFICIENT: f32 = 1e-2;
-const DRAG_COEFFICIENT: f32 = 1e-3;
-
-const MAX_BATTERY_VOLTAGE: i32 = 22;
-const MOTOR_K_V: i32 = 980;
-
-const MAX_RPM: i32 = MOTOR_K_V * MAX_BATTERY_VOLTAGE;
-
-const MAX_POSSIBLE_PWM: i32 = 5000;
-
-const LINEAR_FACTOR: u16 = 10;
-
 pub struct FSMManual;
-
-fn my_sqrt(x: i32) -> i32 {
-    let mut to_return = 0;
-    for i in 0..10000 {
-        if (i * i >= x) {
-            to_return = i;
-            break;
-        }
-    }
-    return to_return;
-}
-
-fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::HdlcTransceiver) {
-    let max_allowed_pwm: i32 = MAX_POSSIBLE_PWM; //motor::get_motor_max() as i32;
-
-    let mut pwm_to_set: [u16; 4] = [0u16; 4];
-
-    let mut k: usize = 0;
-    for x in rpms_square {
-        let squared_number: u16 = my_sqrt(*x) as u16;
-        // let rhs: u16 = squared_number * LINEAR_FACTOR;
-        let rhs = squared_number as u16;
-        pwm_to_set[k] = rhs;
-
-        k += 1;
-    }
-
-    motor::set_motors(pwm_to_set);
-}
 
 impl FSMControl for FSMManual {
     fn run_control_loop(
@@ -64,28 +25,7 @@ impl FSMControl for FSMManual {
         if !*has_received_input {
             return self;
         }
-        let Nb: f32 = input_from_controller.get_yaw() as f32 * THRUST_COEFFICIENT;
-        let Md: f32 = input_from_controller.get_pitch() as f32 * DRAG_COEFFICIENT;
-        let Zd: f32 = -input_from_controller.get_lift() as f32 * DRAG_COEFFICIENT;
-        let Ld: f32 = input_from_controller.get_roll() as f32 * DRAG_COEFFICIENT;
-
-        let four_times_bd: f32 = 4.0 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
-
-        let rpm_one: i32 = (((-Nb - (2.0 * Md) - Zd) / (four_times_bd)) as i32).max(0);
-        let rpm_two: i32 = (((Nb - (2.0 * Ld) - Zd) / (four_times_bd)) as i32).max(0);
-        let rpm_three: i32 = (((-Nb + (2.0 * Md) - Zd) / (four_times_bd)) as i32).max(0);
-        let rpm_four: i32 = (((Nb + (2.0 * Ld) - Zd) / (four_times_bd)) as i32).max(0);
-
-        // let to_write = transceiver.write_structure(&Command::ManualInput(input_from_controller));
-        // let to_write = transceiver.write_structure(&Command::DebugRpms(DebugRpms::new(&[
-        // rpm_one as i32,
-        // rpm_two as i32,
-        // rpm_three as i32,
-        // rpm_four as i32,
-        // ])));
-
-        // uart::send_bytes(&to_write.0[0..to_write.1]);
-        map_rpm_square_to_pwm(&mut [rpm_one, rpm_two, rpm_three, rpm_four], my_hdlc);
+        map_rms(&input_from_controller, my_hdlc);
         *has_received_input = false;
         self
     }

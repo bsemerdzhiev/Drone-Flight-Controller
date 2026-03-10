@@ -1,3 +1,5 @@
+use core::i32;
+
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
@@ -51,6 +53,22 @@ impl ManualInput {
 
     pub fn get_lift(&self) -> i32 {
         self.lift
+    }
+
+    pub fn increment_lift(&mut self, inc: i32) {
+        self.lift += inc
+    }
+
+    pub fn increment_pitch(&mut self, inc: i32) {
+        self.pitch += inc
+    }
+
+    pub fn increment_roll(&mut self, inc: i32) {
+        self.roll += inc
+    }
+
+    pub fn increment_yaw(&mut self, inc: i32) {
+        self.yaw += inc
     }
 
     pub fn get_roll(&self) -> i32 {
