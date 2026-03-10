@@ -13,13 +13,14 @@ const DRONE_WEIGHT: f32 = 4.2;
 // in N(ewtons)
 const HOVER_FORCE: f32 = 9.8 * DRONE_WEIGHT;
 
-pub const MAX_LIFT: f32 = HOVER_FORCE * 6.0;
+// pub const MAX_LIFT: f32 = HOVER_FORCE * 6.0;
+pub const MAX_LIFT: f32 = 10000f32;
 
 //------------------------------------------------------
 
-const YAW_RATE: f32 = 2000.0;
-const PITCH_RATE: f32 = 2000.0;
-const ROLL_RATE: f32 = 2000.0;
+const YAW_RATE: f32 = 2000f32;
+const PITCH_RATE: f32 = 2000f32;
+const ROLL_RATE: f32 = 2000f32;
 
 //------------------------------------------------------
 
