@@ -23,7 +23,7 @@ use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 
 const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 
-const SHOULD_CHECK_BATTERY_LEVEL: bool = true;
+const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
 const MIN_BAT_LEVEL: u16 = 1050;
 
 pub fn main_loop() -> ! {
