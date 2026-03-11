@@ -3,6 +3,7 @@ use crate::states::panic_mode::FSMPanic;
 use crate::states::FSM_control_trait::FSMControl;
 use crate::{calibration_state::CalibrationState, states::manual_mode::FSMManual};
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use tudelft_quadrupel::led::Red;
 use tudelft_quadrupel::motor::{self, *};
 pub struct FSMSafe;
 
@@ -22,6 +23,9 @@ impl FSMControl for FSMSafe {
         next_state: FSMState,
         calibration_state: &mut CalibrationState,
     ) -> &dyn FSMControl {
+        if next_state != FSMState::SafeMode {
+            Red.off();
+        }
         match next_state {
             FSMState::SafeMode => return self,
             FSMState::CalibrationMode => {
