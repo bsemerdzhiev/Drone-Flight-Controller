@@ -30,7 +30,7 @@ fn map_rpm_square_to_pwm(
 
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
 
-    let mut all_zero: bool = false;
+    let mut all_zero: bool = true;
 
     let mut k: usize = 0;
     for x in rpms_square {
@@ -38,7 +38,7 @@ fn map_rpm_square_to_pwm(
         pwm_to_set[k] = squared_number;
 
         if pwm_to_set[k] != 0 {
-            all_zero = true;
+            all_zero = false;
         }
         k += 1;
     }
