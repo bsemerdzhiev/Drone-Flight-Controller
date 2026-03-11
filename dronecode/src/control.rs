@@ -97,7 +97,7 @@ pub fn main_loop() -> ! {
             &mut has_received_input,
             &mut transceiver,
         );
-        if i % 100 == 0 {
+        if i % 10 == 0 {
             send_drone_data(&mut transceiver, current_state.get_state());
             Green.off();
         }
