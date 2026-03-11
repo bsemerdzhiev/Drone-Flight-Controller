@@ -107,28 +107,34 @@ pub fn read_keyboard(
                     );
                 }
                 KeyCode::Char('5') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::FullControlMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::FullControlMode,
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
                 }
                 KeyCode::Char('6') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::RawSensorsFullControlMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::RawSensorsFullControlMode,
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
                 }
                 KeyCode::Char('7') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::HeightControlMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::HeightControlMode,
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
                 }
                 KeyCode::Char('8') => {
                     send_transition(
