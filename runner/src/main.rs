@@ -30,7 +30,7 @@ use my_hdlc::STUFFED_MESSAGE_SIZE;
 mod read_joystick;
 mod read_keyboard;
 
-const DEBUG_BOARD_MODE: bool = true;
+const DEBUG_BOARD_MODE: bool = false;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
@@ -67,7 +67,7 @@ fn main() {
     }
 
     // for timing and sending inputs at fixed rate
-    let send_period = Duration::from_micros(400);
+    let send_period = Duration::from_millis(40);
     let mut last_send = Instant::now();
 
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
