@@ -40,7 +40,7 @@ pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInp
                         let v = value as f32;
                         match axis {
                             AbsoluteAxisCode::ABS_THROTTLE => {
-                                joystick_input.set_lift(((v / 255.0) * MAX_LIFT) as i32);
+                                joystick_input.set_lift(((-v / 255.0) * MAX_LIFT) as i32);
                             }
                             AbsoluteAxisCode::ABS_X => {
                                 joystick_input
