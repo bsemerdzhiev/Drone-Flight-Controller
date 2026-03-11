@@ -2,6 +2,8 @@ use core::i32;
 
 use serde::{Deserialize, Serialize};
 
+const MIN_THRESHOLD: i32 = 30;
+
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct ManualInput {
     lift: i32,
@@ -37,14 +39,23 @@ impl ManualInput {
 
     pub fn set_roll(&mut self, roll: i32) {
         self.roll = roll;
+        if (self.roll.abs() < MIN_THRESHOLD) {
+            self.roll = 0;
+        }
     }
 
     pub fn set_pitch(&mut self, pitch: i32) {
         self.pitch = pitch;
+        if (self.pitch.abs() < MIN_THRESHOLD) {
+            self.pitch = 0;
+        }
     }
 
     pub fn set_yaw(&mut self, yaw: i32) {
         self.yaw = yaw;
+        if (self.yaw.abs() < MIN_THRESHOLD) {
+            self.yaw = 0;
+        }
     }
 
     pub fn set_panic(&mut self, panic_mode: bool) {

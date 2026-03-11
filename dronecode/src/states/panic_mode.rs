@@ -21,6 +21,7 @@ impl FSMControl for FSMPanic {
         let current_speed = get_motors();
         const DESCENT_STEP: u16 = 2;
 
+        Red.on();
         let mut avg_speed: u16 = 0;
         for i in current_speed {
             avg_speed += i;
@@ -29,7 +30,6 @@ impl FSMControl for FSMPanic {
 
         if current_speed.iter().any(|&v| v != avg_speed) {
             set_motors([avg_speed; 4]);
-            Red.on();
             return self;
         } else if current_speed[0] == 0 {
             Red.off();
@@ -48,7 +48,10 @@ impl FSMControl for FSMPanic {
         calibration_state: &mut CalibrationState,
     ) -> &dyn FSMControl {
         match next_state {
-            FSMState::SafeMode => return &FSMSafe,
+            FSMState::SafeMode => {
+                Red.off();
+                return &FSMSafe;
+            }
             FSMState::PanicMode => return self,
             _ => return self, // can only stay in panic or go to safe
         }
