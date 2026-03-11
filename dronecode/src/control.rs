@@ -104,6 +104,7 @@ pub fn main_loop() -> ! {
 
         let to_write = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
             current_state.get_state(),
+            read_battery(),
         )));
 
         send_bytes(&to_write.0[0..to_write.1]);
