@@ -8,7 +8,7 @@ use crate::telemetry_read::TelemetryRead;
 use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::format;
 
-use my_hdlc::command::{self, DeviceCommand, DroneInfo};
+use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::barometer::read_pressure;
@@ -93,27 +93,22 @@ pub fn main_loop() -> ! {
             &mut transceiver,
         );
         if i % 100 == 0 {
-            send_drone_data(&mut transceiver, dt);
+            send_drone_data(&mut transceiver, current_state.get_state());
             Green.off();
         }
-
-        let to_write = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
-            current_state.get_state(),
-        )));
-
-        send_bytes(&to_write.0[0..to_write.1]);
 
         wait_for_next_tick();
     }
     unreachable!();
 }
 
-fn send_drone_data(transceiver: &mut HdlcTransceiver, dt: Duration) {
-    let data = TelemetryRead::read_telemetry(dt);
-    let cmd: DeviceCommand = DeviceCommand::Telemetry(data);
+fn send_drone_data(transceiver: &mut HdlcTransceiver, cuurent_state: FSMState) {
+    let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
+        cuurent_state,
+        read_battery(),
+    )));
     Green.on();
 
-    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&cmd);
     send_bytes(&msg.0[0..msg.1]);
 }
 

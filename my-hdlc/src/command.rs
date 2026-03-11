@@ -32,11 +32,12 @@ pub enum FSMState {
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
 pub struct DroneInfo {
     state: FSMState,
+    bat_level: u16,
 }
 
 impl DroneInfo {
-    pub fn new(state: FSMState) -> Self {
-        DroneInfo { state }
+    pub fn new(state: FSMState, bat_level: u16) -> Self {
+        DroneInfo { state, bat_level }
     }
 }
 
