@@ -35,7 +35,8 @@ impl FSMControl for FSMPanic {
             return &FSMSafe;
         } else {
             // all motors are equalized
-            let new_speed: u16 = (avg_speed - DESCENT_STEP).max(0u16);
+
+            let new_speed: u16 = (avg_speed.saturating_sub(DESCENT_STEP)).max(0u16);
 
             set_motors([new_speed; 4]);
             return self;
