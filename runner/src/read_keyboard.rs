@@ -81,6 +81,14 @@ pub fn read_keyboard(
                     send_transition(my_hdlc::command::FSMState::SafeMode, rcv, cur_mode, serial);
                 }
                 KeyCode::Char('2') => {
+                    println!(
+                        "{} {} {} {} {}\r",
+                        joystick_info.get_lift(),
+                        joystick_info.get_pitch(),
+                        joystick_info.get_roll(),
+                        joystick_info.get_yaw(),
+                        joystick_info.is_panic_triggered()
+                    );
                     if joystick_info.is_zeroed() {
                         send_transition(
                             my_hdlc::command::FSMState::ManualMode,
