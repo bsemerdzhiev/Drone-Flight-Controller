@@ -81,7 +81,7 @@ fn main() {
     // infinitely print whatever the drone sends us
 
     enable_raw_mode().unwrap();
-
+    let mut iterations_without_message = 0u16;
     let mut current_mode = FSMState::SafeMode;
     loop {
         read_joystick(&mut device, &mut joystick_input);
@@ -114,7 +114,14 @@ fn main() {
             rcv.add_bytes(&buf[0..num]);
         }
         if let Some(x) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
+            iterations_without_message = 0;
             println!("{:?}\r", x);
+        } else {
+            iterations_without_message += 1;
+        }
+        if iterations_without_message == 200u16 {
+            println!("Board Disconnected!!");
+            break;
         }
     }
 }
@@ -134,6 +141,9 @@ fn find_flight_stick() -> Option<Device> {
 }
 
 fn is_joystick_connected() -> bool {
+    if DEBUG_BOARD_MODE {
+        return true;
+    }
     for (path, _) in enumerate() {
         if let Ok(dev) = Device::open(&path) {
             let name = dev.name().unwrap_or("Unknown");
