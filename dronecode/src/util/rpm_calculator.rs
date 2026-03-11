@@ -19,7 +19,7 @@ const LINEAR_FACTOR: u16 = 10;
 
 const MIN_PWM: u16 = 200;
 
-const THRESHOLD_LIFT: u16 = 100;
+const THRESHOLD_LIFT: i32 = 100;
 
 fn map_rpm_square_to_pwm(
     lift_raw_value: i32,
