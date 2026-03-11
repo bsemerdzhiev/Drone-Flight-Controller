@@ -54,7 +54,7 @@ pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInp
                                 joystick_input
                                     .set_pitch((((v / 512.0) as f32 - 1.0) * PITCH_RATE) as i32);
                             }
-                            AbsoluteAxisCode::ABS_RY => {
+                            AbsoluteAxisCode::ABS_RZ => {
                                 // have to check what the standard value for this axis is
                                 joystick_input
                                     .set_yaw((((v / 128.0) as f32 - 1.0) * YAW_RATE) as i32);
