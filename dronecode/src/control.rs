@@ -23,7 +23,7 @@ use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 
 const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 
-const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
+const SHOULD_CHECK_BATTERY_LEVEL: bool = true;
 
 pub fn main_loop() -> ! {
     set_tick_frequency(100);
