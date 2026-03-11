@@ -17,21 +17,31 @@ const MAX_POSSIBLE_PWM: i32 = 5000;
 
 const LINEAR_FACTOR: u16 = 10;
 
+const MIN_PWM: u16 = 200;
+
 fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::HdlcTransceiver) {
     let max_allowed_pwm: i32 = MAX_POSSIBLE_PWM; //motor::get_motor_max() as i32;
 
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
 
+    let all_zero: bool = false;
+
     let mut k: usize = 0;
     for x in rpms_square {
         let squared_number: u16 = f32::sqrt(*x as f32) as u16;
+        pwm_to_set[k] = squared_number;
 
-        let rhs = squared_number as u16;
-        pwm_to_set[k] = rhs;
-
+        if pwm_to_set[k] != 0 {
+            all_zero = true;
+        }
         k += 1;
     }
 
+    if !all_zero {
+        for cur_motor_rpm in &pwm_to_set {
+            *cur_motor_rpm = MIN_PWM.max(*cur_motor_rpm);
+        }
+    }
     let to_write =
         transceiver.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&pwm_to_set)));
     send_bytes(&to_write.0[0..to_write.1]);
