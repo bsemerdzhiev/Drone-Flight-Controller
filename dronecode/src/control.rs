@@ -24,7 +24,7 @@ use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = true;
-const MIN_BAT_LEVEL: u16 = 0;
+const MIN_BAT_LEVEL: u16 = 1050;
 
 pub fn main_loop() -> ! {
     set_tick_frequency(100);
@@ -54,11 +54,11 @@ pub fn main_loop() -> ! {
 
         // Check battery level and switch to panic
         let bat_level = read_battery();
-        if SHOULD_CHECK_BATTERY_LEVEL && bat_level < MIN_BAT_LEVEL && bat_level != 0 {
+        if SHOULD_CHECK_BATTERY_LEVEL && bat_level < MIN_BAT_LEVEL {
             current_state =
                 current_state.step(command::FSMState::PanicMode, &mut calibration_state);
             battery_panic = true;
-        } else if battery_panic && bat_level > MIN_BAT_LEVEL {
+        } else if battery_panic && bat_level >= MIN_BAT_LEVEL {
             current_state = current_state.step(command::FSMState::SafeMode, &mut calibration_state);
             battery_panic = false;
         }
