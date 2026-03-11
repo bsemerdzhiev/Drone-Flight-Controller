@@ -86,9 +86,10 @@ fn main() {
     let mut current_mode = FSMState::SafeMode;
     let mut joystick_disconnected = false;
     loop {
-        if is_joystick_connected() {
+        let dev_stat = find_flight_stick();
+        if dev_stat.is_some() || DEBUG_BOARD_MODE {
             if joystick_disconnected {
-                device = Some(find_flight_stick().expect("Problem reconnecting the joystick"));
+                device = dev_stat;
                 joystick_disconnected = false;
             }
             read_joystick(&mut device, &mut joystick_input);
@@ -101,6 +102,7 @@ fn main() {
                 &mut serial,
             );
         } else {
+            println!("Joystick disconnected!");
             joystick_disconnected = true;
         }
         check_for_panic(
@@ -152,22 +154,6 @@ fn find_flight_stick() -> Option<Device> {
         }
     }
     None
-}
-
-fn is_joystick_connected() -> bool {
-    if DEBUG_BOARD_MODE {
-        return true;
-    }
-    for (path, _) in enumerate() {
-        if let Ok(dev) = Device::open(&path) {
-            let name = dev.name().unwrap_or("Unknown");
-            if name.contains("Logitech") {
-                return true;
-            }
-        }
-    }
-    println!("Joystick disconnected!\r");
-    false
 }
 
 fn check_for_panic(
