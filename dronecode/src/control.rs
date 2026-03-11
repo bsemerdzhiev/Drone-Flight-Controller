@@ -56,6 +56,9 @@ pub fn main_loop() -> ! {
             current_state =
                 current_state.step(command::FSMState::PanicMode, &mut calibration_state);
             battery_panic = true;
+        } else if battery_panic && bat_level > 300 {
+            current_state = current_state.step(command::FSMState::SafeMode, &mut calibration_state);
+            battery_panic = false;
         }
 
         // Read Uart Buff
