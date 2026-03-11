@@ -32,7 +32,6 @@ impl FSMControl for FSMPanic {
             set_motors([avg_speed; 4]);
             return self;
         } else if current_speed[0] == 0 {
-            Red.off();
             return &FSMSafe;
         } else {
             // all motors are equalized
@@ -49,7 +48,6 @@ impl FSMControl for FSMPanic {
     ) -> &dyn FSMControl {
         match next_state {
             FSMState::SafeMode => {
-                Red.off();
                 return &FSMSafe;
             }
             FSMState::PanicMode => return self,
