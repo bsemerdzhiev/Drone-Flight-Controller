@@ -1,3 +1,4 @@
+use core::fmt;
 use core::i32;
 
 use serde::{Deserialize, Serialize};
@@ -100,5 +101,22 @@ impl ManualInput {
 
     pub fn is_zeroed(&self) -> bool {
         self.lift == 0 && self.pitch == 0 && self.roll == 0 && self.yaw == 0 && !self.enter_panic
+    }
+}
+
+impl fmt::Display for ManualInput {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // write!(
+        //     f,
+        //     "x: {}, y: {}, steps: {}",
+        //     (self.pos_x as i16 - self.starting_x as i16),
+        //     (self.pos_y as i16 - self.starting_y as i16),
+        //     self.step_count
+        // )
+        write!(
+            f,
+            "Pitch: {}, Roll: {}, Yaw: {}, Lift: {}, Enter Panic? :{}",
+            self.pitch, self.roll, self.yaw, self.lift, self.enter_panic
+        )
     }
 }

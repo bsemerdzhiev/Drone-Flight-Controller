@@ -30,6 +30,7 @@ use my_hdlc::STUFFED_MESSAGE_SIZE;
 mod read_joystick;
 mod read_keyboard;
 
+const PRINT_DRONE_DATA: bool = true;
 const DEBUG_BOARD_MODE: bool = false;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
@@ -83,19 +84,30 @@ fn main() {
     enable_raw_mode().unwrap();
     let mut iterations_without_message = 0u16;
     let mut current_mode = FSMState::SafeMode;
+    let mut joystick_disconnected = false;
     loop {
-        read_joystick(&mut device, &mut joystick_input);
-        read_keyboard(
-            &mut keyboard_trim,
-            &mut joystick_input,
-            &mut rcv,
-            &mut current_mode,
-            &mut serial,
-        );
+        if is_joystick_connected() {
+            if joystick_disconnected {
+                device = Some(find_flight_stick().expect("Problem reconnecting the joystick"));
+                joystick_disconnected = false;
+            }
+            read_joystick(&mut device, &mut joystick_input);
+            // println!("{}", joystick_input);
+            read_keyboard(
+                &mut keyboard_trim,
+                &mut joystick_input,
+                &mut rcv,
+                &mut current_mode,
+                &mut serial,
+            );
+        } else {
+            joystick_disconnected = true;
+        }
         check_for_panic(
             &mut joystick_input,
             &mut keyboard_trim,
             &mut current_mode,
+            &mut joystick_disconnected,
             &mut rcv,
             &mut serial,
         );
@@ -115,7 +127,9 @@ fn main() {
         }
         if let Some(x) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
             iterations_without_message = 0;
-            println!("{:?}\r", x);
+            if PRINT_DRONE_DATA {
+                println!("{:?}\r", x);
+            }
         } else {
             iterations_without_message += 1;
         }
@@ -160,10 +174,11 @@ fn check_for_panic(
     joy: &mut ManualInput,
     keyboard: &mut ManualInput,
     current_mode: &mut FSMState,
+    joystick_disconnected: &mut bool,
     rcv: &mut HdlcTransceiver,
     serial: &mut SerialPort,
 ) {
-    if joy.is_panic_triggered() | keyboard.is_panic_triggered() | !is_joystick_connected() {
+    if joy.is_panic_triggered() | keyboard.is_panic_triggered() | *joystick_disconnected {
         let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
             &my_hdlc::command::DeviceCommand::ChangeMode(my_hdlc::command::FSMState::PanicMode),
         );
