@@ -21,7 +21,7 @@ pub fn send_transition(
 ) {
     //TODO: Only try this transition if its possible
     //In other words, try to perform it in the runner first, and only then send it
-    const LATENCY_WAIT_TIME: Duration = Duration::from_millis(20);
+    const LATENCY_WAIT_TIME: Duration = Duration::from_millis(30);
     const WAIT_TIME: Duration = Duration::from_micros(100);
 
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
@@ -32,14 +32,19 @@ pub fn send_transition(
 
         let mut to_break = false;
 
+        let mut cur_time: Instant = Instant::now();
+        loop {
+            if cur_time.elapsed() >= LATENCY_WAIT_TIME {
+                break;
+            }
+        }
         //wait for ack
         if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
             rcv.add_bytes(&buf[0..num]);
         }
 
-        sleep(LATENCY_WAIT_TIME);
         // the number of loop iterations below is chosen at random
-        let cur_time: Instant = Instant::now();
+        cur_time = Instant::now();
 
         loop {
             if cur_time.elapsed() >= WAIT_TIME {
