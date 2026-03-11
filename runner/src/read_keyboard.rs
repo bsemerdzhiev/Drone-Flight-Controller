@@ -78,22 +78,17 @@ pub fn read_keyboard(
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
                 KeyCode::Char('0') => {
+                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv, cur_mode, serial);
+                }
+                KeyCode::Char('2') => {
                     if joystick_info.is_zeroed() {
                         send_transition(
-                            my_hdlc::command::FSMState::SafeMode,
+                            my_hdlc::command::FSMState::ManualMode,
                             rcv,
                             cur_mode,
                             serial,
                         );
                     }
-                }
-                KeyCode::Char('2') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::ManualMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
                 }
                 KeyCode::Char('3') => {
                     send_transition(
