@@ -1,6 +1,7 @@
 use crate::calibration_state::CalibrationState;
 use crate::states::safe_mode::*;
 use crate::states::FSM_control_trait::FSMControl;
+use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
@@ -12,12 +13,12 @@ pub struct FSMPanic;
 impl FSMControl for FSMPanic {
     // loop is called every tick
     fn run_control_loop(
-        &self,
+        self: Box<Self>,
         calibration_state: &mut CalibrationState,
         command: &ManualInput,
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         let current_speed = get_motors();
         const DESCENT_STEP: u16 = 2;
 
@@ -32,7 +33,7 @@ impl FSMControl for FSMPanic {
             set_motors([avg_speed; 4]);
             return self;
         } else if current_speed[0] == 0 {
-            return &FSMSafe;
+            return Box::new(FSMSafe);
         } else {
             // all motors are equalized
 
@@ -43,13 +44,13 @@ impl FSMControl for FSMPanic {
         }
     }
     fn step(
-        &self,
+        self: Box<Self>,
         next_state: FSMState,
         calibration_state: &mut CalibrationState,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::SafeMode => {
-                return &FSMSafe;
+                return Box::new(FSMSafe);
             }
             FSMState::PanicMode => return self,
             _ => return self, // can only stay in panic or go to safe

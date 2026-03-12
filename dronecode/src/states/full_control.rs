@@ -2,7 +2,10 @@ use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 
 use crate::calibration_state::CalibrationState;
 use crate::full_control_logic as logic;
+use crate::states::panic_mode::FSMPanic;
+use crate::states::safe_mode::FSMSafe;
 use crate::states::FSM_control_trait::FSMControl;
+use alloc::boxed::Box;
 use tudelft_quadrupel::motor::set_motors;
 use tudelft_quadrupel::mpu;
 
@@ -16,12 +19,12 @@ impl FSMFullControl {
 
 impl FSMControl for FSMFullControl {
     fn run_control_loop(
-        &self,
+        self: Box<Self>,
         calibration_state: &mut crate::calibration_state::CalibrationState,
         command: &ManualInput,
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         // Get quaternion from DMP
         // -------------------------------------------------------------
         if let Ok(q) = mpu::read_dmp_bytes() {
@@ -72,12 +75,13 @@ impl FSMControl for FSMFullControl {
     }
 
     fn step(
-        &self,
+        self: Box<Self>,
         next_state: FSMState,
         _calibration_state: &mut CalibrationState,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         match next_state {
-            FSMState::FullControlMode => self,
+            FSMState::PanicMode => Box::new(FSMPanic {}),
+            FSMState::SafeMode => Box::new(FSMSafe {}),
             _ => self, // transition to a different state
         }
     }

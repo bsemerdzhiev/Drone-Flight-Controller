@@ -10,3 +10,5 @@ pub mod manual_mode;
 pub mod panic_mode;
 #[cfg(target_arch = "arm")]
 pub mod safe_mode;
+#[cfg(target_arch = "arm")]
+pub mod yaw_control;

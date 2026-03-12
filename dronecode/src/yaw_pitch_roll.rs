@@ -35,3 +35,13 @@ impl From<Quaternion> for YawPitchRoll {
         Self { yaw, pitch, roll }
     }
 }
+
+impl YawPitchRoll {
+    pub fn calculate_rate_per_sec(&self, prev_sample: YawPitchRoll, duration_in_sec: f32) -> Self {
+        YawPitchRoll {
+            yaw: (self.yaw - prev_sample.yaw) / duration_in_sec,
+            pitch: (self.pitch - prev_sample.pitch) / duration_in_sec,
+            roll: (self.roll - prev_sample.roll) / duration_in_sec,
+        }
+    }
+}

@@ -1,8 +1,13 @@
 use crate::calibration_state::Axis;
 use crate::calibration_state::CalibrationState;
+use crate::filters::dmp_readings::DmpReadings;
 use crate::states::full_control::FSMFullControl;
+use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
+use crate::states::yaw_control::FSMYaw;
 use crate::states::{safe_mode::FSMSafe, FSM_control_trait::FSMControl};
+
+use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
@@ -34,34 +39,39 @@ impl From<Gyro> for Axis {
 
 impl FSMControl for FSMCalibration {
     fn run_control_loop(
-        &self,
+        self: Box<Self>,
         calibration_state: &mut CalibrationState,
         command: &ManualInput,
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         let (accel, gyro) = read_raw().unwrap();
         calibration_state.accumulate_calibration(Axis::from(accel), Axis::from(gyro));
         return self;
     }
     fn step(
-        &self,
+        self: Box<Self>,
         next_state: FSMState,
         calibration_state: &mut CalibrationState,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         match next_state {
-            FSMState::SafeMode => return &FSMSafe,
-            FSMState::CalibrationMode => return self,
             FSMState::FullControlMode => {
                 calibration_state.finish_calibration();
-                return &FSMFullControl;
+                return Box::new(FSMFullControl);
             }
-            FSMState::HeightControlMode => return self,
-            FSMState::ManualMode => return self,
-            FSMState::PanicMode => return &FSMPanic,
-            FSMState::RawSensorsFullControlMode => return self,
-            FSMState::WirelessMode => return self,
-            FSMState::YawControl => return self,
+            FSMState::ManualMode => {
+                calibration_state.finish_calibration();
+                return Box::new(FSMManual);
+            }
+            FSMState::YawControl => {
+                calibration_state.finish_calibration();
+                return Box::new(FSMYaw {
+                    imu_sampler: Box::new(DmpReadings::new()),
+                });
+            }
+            FSMState::PanicMode => Box::new(FSMPanic {}),
+            FSMState::SafeMode => Box::new(FSMSafe {}),
+            _ => return self,
         }
     }
 
