@@ -1,3 +1,5 @@
+use core::ops::{Add, Div, Mul, Sub};
+
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
@@ -8,6 +10,66 @@ pub struct YawPitchRoll {
     pub yaw: f32,
     pub pitch: f32,
     pub roll: f32,
+}
+
+impl Sub for YawPitchRoll {
+    type Output = Self;
+
+    fn sub(self, other: YawPitchRoll) -> Self::Output {
+        Self {
+            yaw: self.yaw - other.yaw,
+            pitch: self.pitch - other.pitch,
+            roll: self.roll - other.roll,
+        }
+    }
+}
+
+impl Add for YawPitchRoll {
+    type Output = Self;
+
+    fn add(self, other: YawPitchRoll) -> Self::Output {
+        Self {
+            yaw: self.yaw + other.yaw,
+            pitch: self.pitch + other.pitch,
+            roll: self.roll + other.roll,
+        }
+    }
+}
+
+impl Mul<f32> for YawPitchRoll {
+    type Output = Self;
+
+    fn mul(self, scalar: f32) -> Self::Output {
+        Self {
+            yaw: self.yaw * scalar,
+            pitch: self.pitch * scalar,
+            roll: self.roll * scalar,
+        }
+    }
+}
+
+impl Div<f32> for YawPitchRoll {
+    type Output = Self;
+
+    fn div(self, scalar: f32) -> Self::Output {
+        Self {
+            yaw: self.yaw / scalar,
+            pitch: self.pitch / scalar,
+            roll: self.roll / scalar,
+        }
+    }
+}
+
+impl Mul<[i32; 3]> for YawPitchRoll {
+    type Output = Self;
+
+    fn mul(self, scalar: [i32; 3]) -> Self::Output {
+        Self {
+            yaw: self.yaw * (scalar[0] as f32),
+            pitch: self.pitch * (scalar[1] as f32),
+            roll: self.roll * (scalar[2] as f32),
+        }
+    }
 }
 
 impl From<Quaternion> for YawPitchRoll {
