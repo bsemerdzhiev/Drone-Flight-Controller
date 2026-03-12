@@ -30,7 +30,8 @@ use my_hdlc::STUFFED_MESSAGE_SIZE;
 mod read_joystick;
 mod read_keyboard;
 
-const DEBUG_BOARD_MODE: bool = true;
+const PRINT_DRONE_DATA: bool = true;
+const DEBUG_BOARD_MODE: bool = false;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
@@ -67,7 +68,7 @@ fn main() {
     }
 
     // for timing and sending inputs at fixed rate
-    let send_period = Duration::from_micros(400);
+    let send_period = Duration::from_millis(40);
     let mut last_send = Instant::now();
 
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
@@ -81,21 +82,34 @@ fn main() {
     // infinitely print whatever the drone sends us
 
     enable_raw_mode().unwrap();
-
+    let mut iterations_without_message = 0u16;
     let mut current_mode = FSMState::SafeMode;
+    let mut joystick_disconnected = false;
     loop {
-        read_joystick(&mut device, &mut joystick_input);
-        read_keyboard(
-            &mut keyboard_trim,
-            &mut joystick_input,
-            &mut rcv,
-            &mut current_mode,
-            &mut serial,
-        );
+        let dev_stat = find_flight_stick();
+        if dev_stat.is_some() || DEBUG_BOARD_MODE {
+            if joystick_disconnected {
+                device = dev_stat;
+                joystick_disconnected = false;
+            }
+            read_joystick(&mut device, &mut joystick_input);
+            // println!("{}", joystick_input);
+            read_keyboard(
+                &mut keyboard_trim,
+                &mut joystick_input,
+                &mut rcv,
+                &mut current_mode,
+                &mut serial,
+            );
+        } else {
+            println!("Joystick disconnected!");
+            joystick_disconnected = true;
+        }
         check_for_panic(
             &mut joystick_input,
             &mut keyboard_trim,
             &mut current_mode,
+            &mut joystick_disconnected,
             &mut rcv,
             &mut serial,
         );
@@ -114,7 +128,16 @@ fn main() {
             rcv.add_bytes(&buf[0..num]);
         }
         if let Some(x) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
-            println!("{:?}\r", x);
+            iterations_without_message = 0;
+            if PRINT_DRONE_DATA {
+                println!("{:?}\r", x);
+            }
+        } else {
+            iterations_without_message += 1;
+        }
+        if iterations_without_message == 200u16 {
+            println!("Board Disconnected!!");
+            break;
         }
     }
 }
@@ -133,27 +156,15 @@ fn find_flight_stick() -> Option<Device> {
     None
 }
 
-fn is_joystick_connected() -> bool {
-    for (path, _) in enumerate() {
-        if let Ok(dev) = Device::open(&path) {
-            let name = dev.name().unwrap_or("Unknown");
-            if name.contains("Logitech") {
-                return true;
-            }
-        }
-    }
-    println!("Joystick disconnected!\r");
-    false
-}
-
 fn check_for_panic(
     joy: &mut ManualInput,
     keyboard: &mut ManualInput,
     current_mode: &mut FSMState,
+    joystick_disconnected: &mut bool,
     rcv: &mut HdlcTransceiver,
     serial: &mut SerialPort,
 ) {
-    if joy.is_panic_triggered() | keyboard.is_panic_triggered() | !is_joystick_connected() {
+    if joy.is_panic_triggered() | keyboard.is_panic_triggered() | *joystick_disconnected {
         let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
             &my_hdlc::command::DeviceCommand::ChangeMode(my_hdlc::command::FSMState::PanicMode),
         );

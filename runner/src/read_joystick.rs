@@ -18,10 +18,11 @@ pub const MAX_LIFT: f32 = 10000f32;
 
 //------------------------------------------------------
 
-const YAW_RATE: f32 = 2000f32;
+const YAW_RATE: f32 = 200f32;
 const PITCH_RATE: f32 = 2000f32;
 const ROLL_RATE: f32 = 2000f32;
 
+const THRESHOLD: f32 = 10f32;
 //------------------------------------------------------
 
 pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInput) {
@@ -37,23 +38,27 @@ pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInp
                         _ => {}
                     },
                     EventSummary::AbsoluteAxis(_, axis, value) => {
-                        let v = value as f32;
+                        let mut v = value as f32;
+                        if v < THRESHOLD {
+                            v = 0f32;
+                        }
                         match axis {
                             AbsoluteAxisCode::ABS_THROTTLE => {
-                                joystick_input.set_lift(((v / 255.0) * MAX_LIFT) as i32);
+                                joystick_input.set_lift((((255.0 - v) / 255.0) * MAX_LIFT) as i32);
                             }
                             AbsoluteAxisCode::ABS_X => {
                                 joystick_input
-                                    .set_roll((((v / 512.0) as f32 - 1.0) * ROLL_RATE) as i32);
+                                    .set_roll((((v / 512.0) - 1.0 as f32) * ROLL_RATE) as i32);
                             }
                             AbsoluteAxisCode::ABS_Y => {
                                 joystick_input
-                                    .set_pitch((((v / 512.0) as f32 - 1.0) * PITCH_RATE) as i32);
+                                    .set_pitch(((1.0 - (v / 512.0) as f32) * PITCH_RATE) as i32);
                             }
-                            AbsoluteAxisCode::ABS_RY => {
+                            AbsoluteAxisCode::ABS_RZ => {
                                 // have to check what the standard value for this axis is
                                 joystick_input
                                     .set_yaw((((v / 128.0) as f32 - 1.0) * YAW_RATE) as i32);
+                                println!("{}\r", joystick_input.get_yaw());
                             }
                             _ => {}
                         }

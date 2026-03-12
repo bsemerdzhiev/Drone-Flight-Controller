@@ -17,21 +17,41 @@ const MAX_POSSIBLE_PWM: i32 = 5000;
 
 const LINEAR_FACTOR: u16 = 10;
 
-fn map_rpm_square_to_pwm(rpms_square: &mut [i32], transceiver: &mut my_hdlc::HdlcTransceiver) {
+const MIN_PWM: u16 = 200;
+
+const THRESHOLD_LIFT: i32 = 100;
+
+fn map_rpm_square_to_pwm(
+    lift_raw_value: i32,
+    rpms_square: &mut [i32],
+    transceiver: &mut my_hdlc::HdlcTransceiver,
+) {
     let max_allowed_pwm: i32 = MAX_POSSIBLE_PWM; //motor::get_motor_max() as i32;
 
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
 
+    let mut all_zero: bool = true;
+
     let mut k: usize = 0;
     for x in rpms_square {
         let squared_number: u16 = f32::sqrt(*x as f32) as u16;
+        pwm_to_set[k] = squared_number;
 
-        let rhs = squared_number as u16;
-        pwm_to_set[k] = rhs;
-
+        if pwm_to_set[k] != 0 {
+            all_zero = false;
+        }
         k += 1;
     }
 
+    if lift_raw_value < THRESHOLD_LIFT {
+        for cur_motor_rpm in &mut pwm_to_set {
+            *cur_motor_rpm = 0;
+        }
+    } else if !all_zero {
+        for cur_motor_rpm in &mut pwm_to_set {
+            *cur_motor_rpm = MIN_PWM.max(*cur_motor_rpm);
+        }
+    }
     let to_write =
         transceiver.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&pwm_to_set)));
     send_bytes(&to_write.0[0..to_write.1]);
@@ -47,12 +67,14 @@ pub fn map_rms(input_from_controller: &ManualInput, my_hdlc: &mut my_hdlc::HdlcT
 
     let four_times_bd: f32 = 4.0 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
 
+    let lift_is_zero: i32 = input_from_controller.get_lift();
     let omega_one: i32 = (((-Nb - (2.0 * Md) - Zd) / (four_times_bd)) as i32).max(0);
     let omega_two: i32 = (((Nb - (2.0 * Ld) - Zd) / (four_times_bd)) as i32).max(0);
     let omega_three: i32 = (((-Nb + (2.0 * Md) - Zd) / (four_times_bd)) as i32).max(0);
     let omega_four: i32 = (((Nb + (2.0 * Ld) - Zd) / (four_times_bd)) as i32).max(0);
 
     map_rpm_square_to_pwm(
+        lift_is_zero,
         &mut [omega_one, omega_two, omega_three, omega_four],
         my_hdlc,
     );

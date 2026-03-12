@@ -21,7 +21,7 @@ pub fn send_transition(
 ) {
     //TODO: Only try this transition if its possible
     //In other words, try to perform it in the runner first, and only then send it
-    const LATENCY_WAIT_TIME: Duration = Duration::from_millis(20);
+    const LATENCY_WAIT_TIME: Duration = Duration::from_millis(30);
     const WAIT_TIME: Duration = Duration::from_micros(100);
 
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
@@ -32,14 +32,19 @@ pub fn send_transition(
 
         let mut to_break = false;
 
+        let mut cur_time: Instant = Instant::now();
+        loop {
+            if cur_time.elapsed() >= LATENCY_WAIT_TIME {
+                break;
+            }
+        }
         //wait for ack
         if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
             rcv.add_bytes(&buf[0..num]);
         }
 
-        sleep(LATENCY_WAIT_TIME);
         // the number of loop iterations below is chosen at random
-        let cur_time: Instant = Instant::now();
+        cur_time = Instant::now();
 
         loop {
             if cur_time.elapsed() >= WAIT_TIME {
@@ -73,22 +78,17 @@ pub fn read_keyboard(
         if let Event::Key(key) = event::read().unwrap() {
             match key.code {
                 KeyCode::Char('0') => {
+                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv, cur_mode, serial);
+                }
+                KeyCode::Char('2') => {
                     if joystick_info.is_zeroed() {
                         send_transition(
-                            my_hdlc::command::FSMState::SafeMode,
+                            my_hdlc::command::FSMState::ManualMode,
                             rcv,
                             cur_mode,
                             serial,
                         );
                     }
-                }
-                KeyCode::Char('2') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::ManualMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
                 }
                 KeyCode::Char('3') => {
                     send_transition(
@@ -107,28 +107,34 @@ pub fn read_keyboard(
                     );
                 }
                 KeyCode::Char('5') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::FullControlMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::FullControlMode,
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
                 }
                 KeyCode::Char('6') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::RawSensorsFullControlMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::RawSensorsFullControlMode,
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
                 }
                 KeyCode::Char('7') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::HeightControlMode,
-                        rcv,
-                        cur_mode,
-                        serial,
-                    );
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::HeightControlMode,
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
                 }
                 KeyCode::Char('8') => {
                     send_transition(
