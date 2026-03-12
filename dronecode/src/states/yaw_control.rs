@@ -1,5 +1,6 @@
 use crate::calibration_state::CalibrationState;
 use crate::filters::sensors_handler::ImuHandler;
+use crate::states::state_context::StateContext;
 use crate::states::{fsm_control_trait::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
 
 use alloc::boxed::Box;
@@ -12,13 +13,7 @@ pub struct FSMYaw {
 }
 
 impl FSMControl for FSMYaw {
-    fn run_control_loop(
-        self: Box<Self>,
-        calibration_state: &mut CalibrationState,
-        command: &ManualInput,
-        has_received_input: &mut bool,
-        my_hdlc: &mut HdlcTransceiver,
-    ) -> Box<dyn FSMControl> {
+    fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // read sensor data
 
         // add to current input
@@ -26,14 +21,10 @@ impl FSMControl for FSMYaw {
         // output to motors
         return self;
     }
-    fn step(
-        self: Box<Self>,
-        next_state: FSMState,
-        calibration_state: &mut CalibrationState,
-    ) -> Box<dyn FSMControl> {
+    fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
-            FSMState::PanicMode => Box::new(FSMPanic),
-            FSMState::SafeMode => Box::new(FSMSafe),
+            FSMState::PanicMode => Box::new(FSMPanic {}),
+            FSMState::SafeMode => Box::new(FSMSafe {}),
             _ => self,
         }
     }
