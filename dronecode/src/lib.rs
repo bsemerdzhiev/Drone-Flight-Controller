@@ -7,7 +7,6 @@ extern crate alloc;
 
 pub mod calibration_state;
 pub mod full_control_logic;
-pub mod yaw_pitch_roll;
 
 #[cfg(target_arch = "arm")]
 pub mod states;

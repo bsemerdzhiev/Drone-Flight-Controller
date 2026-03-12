@@ -1,5 +1,3 @@
-
-
 pub struct CalibrationState {
     accel: Axis,
     gyro: Axis,
@@ -10,14 +8,15 @@ pub struct CalibrationState {
 }
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct Axis{
+pub struct Axis {
     pub x: i16,
     pub y: i16,
     pub z: i16,
 }
 
 #[derive(Copy, Clone, Debug, Default)]
-struct AxisI32{ //Only used for the sums in accumulate_calibration
+struct AxisI32 {
+    //Only used for the sums in accumulate_calibration
     pub x: i32,
     pub y: i32,
     pub z: i32,
@@ -26,8 +25,8 @@ struct AxisI32{ //Only used for the sums in accumulate_calibration
 impl CalibrationState {
     pub fn new() -> Self {
         return CalibrationState {
-            accel: Axis {x:0,y:0,z:0},
-            gyro: Axis {x:0,y:0,z:0},
+            accel: Axis { x: 0, y: 0, z: 0 },
+            gyro: Axis { x: 0, y: 0, z: 0 },
             accel_sum: AxisI32::default(),
             gyro_sum: AxisI32::default(),
             samples: 0,
@@ -35,8 +34,8 @@ impl CalibrationState {
         };
     }
     pub fn start_calibration(&mut self) {
-        self.accel = Axis {x:0,y:0,z:0};
-        self.gyro = Axis {x:0,y:0,z:0};
+        self.accel = Axis { x: 0, y: 0, z: 0 };
+        self.gyro = Axis { x: 0, y: 0, z: 0 };
         self.accel_sum = AxisI32::default();
         self.gyro_sum = AxisI32::default();
         self.samples = 0;
@@ -85,12 +84,12 @@ impl CalibrationState {
         (
             Axis {
                 //True value = measured - offset (m=tv + off)
-                x: accel.x.wrapping_sub(self.accel.x),  //wrapping_sub because subrtacting i16 can overflow
+                x: accel.x.wrapping_sub(self.accel.x), //wrapping_sub because subrtacting i16 can overflow
                 y: accel.y.wrapping_sub(self.accel.y),
                 z: accel.z.wrapping_sub(self.accel.z),
             },
             Axis {
-                x: gyro.x.wrapping_sub(self.gyro.x),  //wrapping_sub because subrtacting i16 can overflow
+                x: gyro.x.wrapping_sub(self.gyro.x), //wrapping_sub because subrtacting i16 can overflow
                 y: gyro.y.wrapping_sub(self.gyro.y),
                 z: gyro.z.wrapping_sub(self.gyro.z),
             },
@@ -100,7 +99,7 @@ impl CalibrationState {
 
 #[cfg(test)]
 mod tests {
-    use super::{CalibrationState,Axis};
+    use super::{Axis, CalibrationState};
 
     #[test]
     fn calibration_removes_dc_offset() {
@@ -108,10 +107,38 @@ mod tests {
 
         // Simulate raw values with offset
         let fake_samples = [
-            (Axis{x: 100,y: -50,z: 16380},Axis{x: 12,y: -8,z: 4}),  //(Accel, Gyro)
-            (Axis{x: 101,y: -49,z: 16382},Axis{x: 11,y: -7,z: 3}),
-            (Axis{x: 99, y: -51,z: 16381},Axis{x: 13,y: -9,z: 5}),
-            (Axis{x: 100,y: -50,z: 16379},Axis{x: 12,y: -8,z: 4}),
+            (
+                Axis {
+                    x: 100,
+                    y: -50,
+                    z: 16380,
+                },
+                Axis { x: 12, y: -8, z: 4 },
+            ), //(Accel, Gyro)
+            (
+                Axis {
+                    x: 101,
+                    y: -49,
+                    z: 16382,
+                },
+                Axis { x: 11, y: -7, z: 3 },
+            ),
+            (
+                Axis {
+                    x: 99,
+                    y: -51,
+                    z: 16381,
+                },
+                Axis { x: 13, y: -9, z: 5 },
+            ),
+            (
+                Axis {
+                    x: 100,
+                    y: -50,
+                    z: 16379,
+                },
+                Axis { x: 12, y: -8, z: 4 },
+            ),
         ];
 
         // Accumulate samples
@@ -123,11 +150,14 @@ mod tests {
         calib.finish_calibration();
 
         // Apply calibration to a sample
-        let (accel_corrected, gyro_corrected) =
-            calib.apply_calibration(
-                Axis { x: 100, y: -50, z: 16380 },
-                Axis  { x: 12,  y: -8,  z: 4 }
-            );
+        let (accel_corrected, gyro_corrected) = calib.apply_calibration(
+            Axis {
+                x: 100,
+                y: -50,
+                z: 16380,
+            },
+            Axis { x: 12, y: -8, z: 4 },
+        );
 
         // Since drone was stationary, corrected values should be ~0
         assert!(accel_corrected.x.abs() <= 1);
@@ -143,14 +173,17 @@ mod tests {
     fn apply_before_calibration_returns_raw_values() {
         let mut calib = CalibrationState::new();
 
-        let accel = Axis { x: 100, y: -50, z: 16380 };
-        let gyro  = Axis  { x: 12,  y: -8,  z: 4 };
+        let accel = Axis {
+            x: 100,
+            y: -50,
+            z: 16380,
+        };
+        let gyro = Axis { x: 12, y: -8, z: 4 };
 
         // Accumulate but DO NOT finish calibration
         calib.accumulate_calibration(accel, gyro);
 
-        let (accel_out, gyro_out) =
-            calib.apply_calibration(accel, gyro);
+        let (accel_out, gyro_out) = calib.apply_calibration(accel, gyro);
 
         // Raw values should be returned
         assert_eq!(accel_out.x, accel.x);
@@ -162,4 +195,3 @@ mod tests {
         assert_eq!(gyro_out.z, gyro.z);
     }
 }
-

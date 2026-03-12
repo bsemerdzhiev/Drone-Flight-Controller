@@ -1,4 +1,4 @@
-use crate::yaw_pitch_roll::YawPitchRoll;
+use crate::util::yaw_pitch_roll::YawPitchRoll;
 use tudelft_quadrupel::mpu::structs::Accel;
 use tudelft_quadrupel::mpu::structs::Gyro;
 
