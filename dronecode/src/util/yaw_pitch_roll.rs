@@ -1,3 +1,4 @@
+use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
 /// This struct holds the yaw, pitch, and roll that the drone things it is in.
@@ -37,6 +38,20 @@ impl From<Quaternion> for YawPitchRoll {
 }
 
 impl YawPitchRoll {
+    pub fn new() -> Self {
+        YawPitchRoll {
+            yaw: 0f32,
+            pitch: 0f32,
+            roll: 0f32,
+        }
+    }
+    pub fn from_manual_input(input: &ManualInput) -> Self {
+        Self {
+            yaw: input.get_yaw() as f32,
+            pitch: input.get_roll() as f32,
+            roll: input.get_roll() as f32,
+        }
+    }
     pub fn calculate_rate_per_sec(&self, prev_sample: YawPitchRoll, duration_in_sec: f32) -> Self {
         YawPitchRoll {
             yaw: (self.yaw - prev_sample.yaw) / duration_in_sec,

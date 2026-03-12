@@ -17,10 +17,13 @@ pub struct FSMManual {}
 
 impl FSMControl for FSMManual {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
+        // check if there is a new command from the controller to run
         if ctx.input_from_controller.is_none() {
             return self;
         }
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
+
+        // consume the command and set it to None
         *ctx.input_from_controller = None;
 
         self
