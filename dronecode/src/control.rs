@@ -8,7 +8,7 @@ use crate::telemetry_read::TelemetryRead;
 use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::format;
 
-use my_hdlc::command::{self, DeviceCommand, DroneInfo};
+use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::barometer::read_pressure;
@@ -24,6 +24,7 @@ use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
+const MIN_BAT_LEVEL: u16 = 1050;
 
 pub fn main_loop() -> ! {
     set_tick_frequency(100);
@@ -42,20 +43,24 @@ pub fn main_loop() -> ! {
 
     let mut calibration_state: CalibrationState = CalibrationState::new();
     let mut received_manual_input: ManualInput = ManualInput::default();
-    let mut has_received_input = false;
+    let mut has_received_input: bool;
 
     for i in 0.. {
         let _ = Blue.toggle();
         let now = Instant::now();
         let dt = now.duration_since(last_instant);
         last_instant = now;
+        has_received_input = false;
 
         // Check battery level and switch to panic
         let bat_level = read_battery();
-        if SHOULD_CHECK_BATTERY_LEVEL && bat_level < 300 && bat_level != 0 {
+        if SHOULD_CHECK_BATTERY_LEVEL && bat_level < MIN_BAT_LEVEL {
             current_state =
                 current_state.step(command::FSMState::PanicMode, &mut calibration_state);
             battery_panic = true;
+        } else if battery_panic && bat_level >= MIN_BAT_LEVEL {
+            current_state = current_state.step(command::FSMState::SafeMode, &mut calibration_state);
+            battery_panic = false;
         }
 
         // Read Uart Buff
@@ -92,28 +97,23 @@ pub fn main_loop() -> ! {
             &mut has_received_input,
             &mut transceiver,
         );
-        if i % 100 == 0 {
-            send_drone_data(&mut transceiver, dt);
+        if i % 10 == 0 {
+            send_drone_data(&mut transceiver, current_state.get_state());
             Green.off();
         }
-
-        let to_write = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
-            current_state.get_state(),
-        )));
-
-        send_bytes(&to_write.0[0..to_write.1]);
 
         wait_for_next_tick();
     }
     unreachable!();
 }
 
-fn send_drone_data(transceiver: &mut HdlcTransceiver, dt: Duration) {
-    let data = TelemetryRead::read_telemetry(dt);
-    let cmd: DeviceCommand = DeviceCommand::Telemetry(data);
+fn send_drone_data(transceiver: &mut HdlcTransceiver, cuurent_state: FSMState) {
+    let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
+        cuurent_state,
+        read_battery(),
+    )));
     Green.on();
 
-    let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&cmd);
     send_bytes(&msg.0[0..msg.1]);
 }
 
