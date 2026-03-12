@@ -1,6 +1,6 @@
 use crate::calibration_state::CalibrationState;
+use crate::states::fsm_control_trait::FSMControl;
 use crate::states::safe_mode::*;
-use crate::states::FSM_control_trait::FSMControl;
 use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;

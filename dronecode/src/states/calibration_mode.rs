@@ -5,7 +5,7 @@ use crate::states::full_control::FSMFullControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::yaw_control::FSMYaw;
-use crate::states::{safe_mode::FSMSafe, FSM_control_trait::FSMControl};
+use crate::states::{fsm_control_trait::FSMControl, safe_mode::FSMSafe};
 
 use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
