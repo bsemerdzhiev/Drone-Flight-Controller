@@ -2,7 +2,7 @@ use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 
 use crate::calibration_state::CalibrationState;
 use crate::full_control_logic as logic;
-use crate::states::fsm_control_trait::FSMControl;
+use crate::states::fsm_base_class::FSMControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_context::StateContext;

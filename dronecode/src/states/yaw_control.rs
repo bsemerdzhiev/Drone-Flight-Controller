@@ -1,7 +1,7 @@
 use crate::calibration_state::CalibrationState;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_context::StateContext;
-use crate::states::{fsm_control_trait::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
+use crate::states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
 
 use alloc::boxed::Box;
 use my_hdlc::command::FSMState;

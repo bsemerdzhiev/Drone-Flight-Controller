@@ -6,10 +6,10 @@ pub const KP_PITCH: f32 = 1.0;
 /// Convert quaternion (as f32 components) to roll & pitch
 pub fn quaternion_to_roll_pitch(w: f32, x: f32, y: f32, z: f32) -> (f32, f32) {
     // Euler angle equations
-    let roll = f32::atan2(2.0 * (w * x + y * z),1.0 - 2.0 * (x * x + y * y));
+    let roll = f32::atan2(2.0 * (w * x + y * z), 1.0 - 2.0 * (x * x + y * y));
 
     let sinp = 2.0 * (w * y - z * x);
-    let sinp = sinp.clamp(-1.0, 1.0);  // Clamp necessary since rounding floating point can produce NaN on hardware
+    let sinp = sinp.clamp(-1.0, 1.0); // Clamp necessary since rounding floating point can produce NaN on hardware
     let pitch = sinp.asin();
 
     (roll, pitch)
@@ -23,20 +23,17 @@ pub fn pitch_controller(desired: f32, measured: f32) -> f32 {
     KP_PITCH * (desired - measured)
 }
 
-
-pub fn compute_motor_speeds(z_lift: f32,n_yaw: f32,m_pitch: f32,l_roll: f32) -> [u16; 4] {
-
+pub fn compute_motor_speeds(z_lift: f32, n_yaw: f32, m_pitch: f32, l_roll: f32) -> [u16; 4] {
     /// Motor numbering:
     /// 0 = Front
     /// 1 = Right
     /// 2 = Back
     /// 3 = Left
-
     let m0 = z_lift - m_pitch + n_yaw; // Front motor
     let m2 = z_lift + m_pitch + n_yaw; // Back motor
 
-    let m1 = z_lift - l_roll - n_yaw;  // Right motor
-    let m3 = z_lift + l_roll - n_yaw;  // Left motor
+    let m1 = z_lift - l_roll - n_yaw; // Right motor
+    let m3 = z_lift + l_roll - n_yaw; // Left motor
 
     // Clamp motor speeds just in case, 800 as reasonable max cap defined in quadrupel library
     [
@@ -98,24 +95,14 @@ mod tests {
     #[test]
     fn motor_hover_no_torque() {
         // No torque -> drone hovers equally
-        let motors = compute_motor_speeds(
-            200.0,
-            0.0,
-            0.0,
-            0.0,
-        );
+        let motors = compute_motor_speeds(200.0, 0.0, 0.0, 0.0);
 
         assert_eq!(motors, [200, 200, 200, 200]);
     }
 
     #[test]
     fn pitch_forward_increases_back_motor() {
-        let motors = compute_motor_speeds(
-            200.0,
-            0.0,
-            10.0,
-            0.0,
-        );
+        let motors = compute_motor_speeds(200.0, 0.0, 10.0, 0.0);
 
         // Front = Z - M (lift - pitch torque)
         // Back  = Z + M (lift + pitch torque)
@@ -125,12 +112,7 @@ mod tests {
 
     #[test]
     fn roll_right_increases_left_motor() {
-        let motors = compute_motor_speeds(
-            200.0,
-            0.0,
-            0.0,
-            10.0,
-        );
+        let motors = compute_motor_speeds(200.0, 0.0, 0.0, 10.0);
 
         // Right = Z - L (lift - roll torque)
         // Left  = Z + L (lift + roll torque)
@@ -141,13 +123,9 @@ mod tests {
     #[test]
     fn motor_clamping_works() {
         // make sure motor speeds don't exceed the limit
-        let motors = compute_motor_speeds(
-            900.0,
-            0.0,
-            0.0,
-            0.0,
-        );
+        let motors = compute_motor_speeds(900.0, 0.0, 0.0, 0.0);
 
         assert_eq!(motors, [800, 800, 800, 800]);
     }
 }
+

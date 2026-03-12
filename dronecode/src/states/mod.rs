@@ -1,7 +1,7 @@
 #[cfg(target_arch = "arm")]
 pub mod calibration_mode;
 #[cfg(target_arch = "arm")]
-pub mod fsm_control_trait;
+pub mod fsm_base_class;
 #[cfg(target_arch = "arm")]
 pub mod full_control;
 #[cfg(target_arch = "arm")]
