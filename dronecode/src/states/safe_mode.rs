@@ -25,7 +25,8 @@ impl FSMControl for FSMSafe {
         match next_state {
             FSMState::CalibrationMode => {
                 if is_throttle_zero() {
-                    ctx.calibration_state.start_calibration();
+                    ctx.calibration_state.reset();
+
                     return Box::new(FSMCalibration {});
                 }
                 return self;
