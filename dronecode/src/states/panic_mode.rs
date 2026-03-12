@@ -1,5 +1,5 @@
 use crate::calibration_state::CalibrationState;
-use crate::states::fsm_control_trait::FSMControl;
+use crate::states::fsm_base_class::FSMControl;
 use crate::states::safe_mode::*;
 use crate::states::state_context::StateContext;
 use alloc::boxed::Box;

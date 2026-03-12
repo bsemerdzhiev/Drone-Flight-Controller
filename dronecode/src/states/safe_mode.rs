@@ -1,5 +1,5 @@
 use crate::states::calibration_mode::FSMCalibration;
-use crate::states::fsm_control_trait::FSMControl;
+use crate::states::fsm_base_class::FSMControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::state_context::StateContext;
 use crate::{calibration_state::CalibrationState, states::manual_mode::FSMManual};

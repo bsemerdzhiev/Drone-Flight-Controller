@@ -59,7 +59,10 @@ fn map_rpm_square_to_pwm(
     motor::set_motors(pwm_to_set);
 }
 
-pub fn map_rms(input_from_controller: &ManualInput, my_hdlc: &mut my_hdlc::HdlcTransceiver) {
+pub fn actuate_motors_with_rates(
+    input_from_controller: &ManualInput,
+    my_hdlc: &mut my_hdlc::HdlcTransceiver,
+) {
     let Nb: f32 = input_from_controller.get_yaw() as f32 * THRUST_COEFFICIENT;
     let Md: f32 = input_from_controller.get_pitch() as f32 * DRAG_COEFFICIENT;
     let Zd: f32 = -input_from_controller.get_lift() as f32 * DRAG_COEFFICIENT;

@@ -1,4 +1,4 @@
-use crate::{states::state_context::StateContext, util::rpm_calculator::map_rms};
+use crate::{states::state_context::StateContext, util::rpm_calculator::actuate_motors_with_rates};
 
 use alloc::boxed::Box;
 use my_hdlc::{
@@ -10,7 +10,7 @@ use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uar
 
 use crate::{
     calibration_state::CalibrationState,
-    states::{fsm_control_trait::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe},
+    states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe},
 };
 
 pub struct FSMManual {}
@@ -20,7 +20,7 @@ impl FSMControl for FSMManual {
         if ctx.input_from_controller.is_none() {
             return self;
         }
-        map_rms(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
+        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
         *ctx.input_from_controller = None;
 
         self

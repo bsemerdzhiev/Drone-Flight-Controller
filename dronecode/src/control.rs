@@ -4,7 +4,7 @@ use alloc::boxed::Box;
 use alloc::format;
 
 use crate::calibration_state::CalibrationState;
-use crate::states::fsm_control_trait::FSMControl;
+use crate::states::fsm_base_class::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_context::StateContext;
@@ -26,6 +26,9 @@ use tudelft_quadrupel::uart::{receive_bytes, send_bytes};
 const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 
 // -------------------------------------------------------------------------
+
+// in ms
+const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(300);
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
 const MIN_BAT_LEVEL: u16 = 1050;
@@ -61,9 +64,8 @@ pub fn main_loop() -> ! {
 
     // -------------------------------------------------------------------------
 
-    // Used for determining whether we should panic
-    // used to determine if connection to the PC is lost
-    let mut iterations_without_message = 0u32;
+    // used for determining whether we should panic
+    let mut time_for_last_received_message: Instant = Instant::now();
 
     // used to determine whether battery voltage is too low
     let mut battery_panic = false;
@@ -87,8 +89,13 @@ pub fn main_loop() -> ! {
         let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
 
         if num_received != 0usize && !battery_panic {
+            //read the sent bytes
             ctx.trv.add_bytes(&uart_buf[..num_received]);
+
+            //try to deserialize the command
             let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
+
+            // if there is a command
             if let Some(command) = deserialized_command {
                 match command {
                     DeviceCommand::ChangeMode(new_mode) => {
@@ -100,13 +107,13 @@ pub fn main_loop() -> ! {
                     }
                     _ => continue,
                 }
-                iterations_without_message = 0;
+                time_for_last_received_message = Instant::now();
             }
-        } else if !battery_panic {
-            iterations_without_message += 1;
-            if iterations_without_message == 50 {
-                current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
-            }
+        }
+        if Instant::now().duration_since(time_for_last_received_message)
+            >= WATCHDOG_TIMER_FOR_PANICKING
+        {
+            current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
         }
 
         // run the loop of the state
