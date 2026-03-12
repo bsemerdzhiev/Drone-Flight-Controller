@@ -1,6 +1,6 @@
 use my_hdlc::{pc_command::ManualInput, HdlcTransceiver};
 
-use crate::calibration_state::CalibrationState;
+use crate::states::state_structures::calibration_state::CalibrationState;
 
 pub struct StateContext<'a> {
     pub calibration_state: &'a mut CalibrationState,

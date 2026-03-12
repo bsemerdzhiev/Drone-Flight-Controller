@@ -1,11 +1,10 @@
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 
-use crate::calibration_state::CalibrationState;
 use crate::full_control_logic as logic;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
-use crate::states::state_context::StateContext;
+use crate::states::state_structures::state_context::StateContext;
 use alloc::boxed::Box;
 use tudelft_quadrupel::motor::set_motors;
 use tudelft_quadrupel::mpu;

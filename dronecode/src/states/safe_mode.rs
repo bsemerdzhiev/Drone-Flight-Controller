@@ -1,8 +1,11 @@
+use crate::filters::dmp_readings::DmpReadings;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::fsm_base_class::FSMControl;
+use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
-use crate::states::state_context::StateContext;
-use crate::{calibration_state::CalibrationState, states::manual_mode::FSMManual};
+use crate::states::state_structures::state_context::StateContext;
+use crate::states::yaw_control::FSMYaw;
+use crate::util::pid_controller::PIDController;
 use alloc::boxed::Box;
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 use tudelft_quadrupel::led::Red;
@@ -28,6 +31,12 @@ impl FSMControl for FSMSafe {
                 return self;
             }
             FSMState::ManualMode => return Box::new(FSMManual {}),
+            FSMState::YawControl => {
+                return Box::new(FSMYaw {
+                    imu_sampler: Box::new(DmpReadings::new()),
+                    pid_controller: Box::new(PIDController::new()),
+                })
+            }
             FSMState::PanicMode => return Box::new(FSMPanic {}),
             _ => self,
         }

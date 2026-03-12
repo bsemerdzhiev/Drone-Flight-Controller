@@ -5,7 +5,7 @@
 
 extern crate alloc;
 
-use crate::control::main_loop;
+use crate::main_loop::main_loop;
 
 use alloc::format;
 use core::alloc::Layout;
@@ -20,12 +20,10 @@ use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
-pub mod calibration_state;
-
-#[cfg(target_arch = "arm")]
-pub mod control;
 #[cfg(target_arch = "arm")]
 pub mod full_control_logic;
+#[cfg(target_arch = "arm")]
+pub mod main_loop;
 #[cfg(target_arch = "arm")]
 pub mod states;
 #[cfg(target_arch = "arm")]

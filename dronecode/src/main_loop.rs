@@ -3,11 +3,11 @@ use core::time::Duration;
 use alloc::boxed::Box;
 use alloc::format;
 
-use crate::calibration_state::CalibrationState;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
-use crate::states::state_context::StateContext;
+use crate::states::state_structures::calibration_state::CalibrationState;
+use crate::states::state_structures::state_context::StateContext;
 use crate::telemetry_read::TelemetryRead;
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
@@ -142,9 +142,9 @@ pub fn main_loop() -> ! {
 /*
 * Sends data to the drone
 */
-fn send_drone_data(transceiver: &mut HdlcTransceiver, cuurent_state: FSMState) {
+fn send_drone_data(transceiver: &mut HdlcTransceiver, curent_state: FSMState) {
     let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
-        cuurent_state,
+        curent_state,
         read_battery(),
     )));
     Green.on();
