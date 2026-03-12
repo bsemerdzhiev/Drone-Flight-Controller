@@ -1,6 +1,5 @@
-use crate::calibration_state::CalibrationState;
 use crate::filters::sensors_handler::ImuHandler;
-use crate::states::state_context::StateContext;
+use crate::states::state_structures::state_context::StateContext;
 use crate::states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
 use crate::util::pid_controller::{self, ControllerFlags, PIDController};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
@@ -11,6 +10,7 @@ use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 
+// TODO: Tune the parameters
 const K_P: [i32; 3] = [0, 0, 0];
 const K_I: [i32; 3] = [0, 0, 0];
 const K_D: [i32; 3] = [0, 0, 0];

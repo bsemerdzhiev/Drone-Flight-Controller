@@ -1,4 +1,7 @@
-use crate::{states::state_context::StateContext, util::rpm_calculator::actuate_motors_with_rates};
+use crate::{
+    states::state_structures::state_context::StateContext,
+    util::rpm_calculator::actuate_motors_with_rates,
+};
 
 use alloc::boxed::Box;
 use my_hdlc::{
@@ -8,10 +11,7 @@ use my_hdlc::{
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};
 
-use crate::{
-    calibration_state::CalibrationState,
-    states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe},
-};
+use crate::states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
 
 pub struct FSMManual {}
 
