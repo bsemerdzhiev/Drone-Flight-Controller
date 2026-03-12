@@ -11,6 +11,10 @@ use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 
+const K_P: [i32; 3] = [0, 0, 0];
+const K_I: [i32; 3] = [0, 0, 0];
+const K_D: [i32; 3] = [0, 0, 0];
+
 pub struct FSMYaw {
     pub imu_sampler: Box<dyn ImuHandler>,
     pub pid_controller: Box<PIDController>,
@@ -21,7 +25,7 @@ impl FSMControl for FSMYaw {
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
 
-        if (input.is_none() || ctx.input_from_controller.is_none()) {
+        if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;
         }
 
@@ -34,25 +38,28 @@ impl FSMControl for FSMYaw {
         let correction = self.pid_controller.compute_pid_correction(
             input,
             target,
-            k_p,
-            k_i,
-            k_d,
+            K_P,
+            K_I,
+            K_D,
             ControllerFlags::AddP as u8,
         );
 
         // add to current input
         ctx.input_from_controller
+            .as_mut()
             .unwrap()
             .increment_yaw(correction.yaw as i32);
         ctx.input_from_controller
+            .as_mut()
             .unwrap()
             .increment_pitch(correction.pitch as i32);
         ctx.input_from_controller
+            .as_mut()
             .unwrap()
             .increment_roll(correction.roll as i32);
 
         // output to motors
-        actuate_motors_with_rates(&ctx.input_from_controller.unwrap(), ctx.trv);
+        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
 
         *ctx.input_from_controller = None;
 

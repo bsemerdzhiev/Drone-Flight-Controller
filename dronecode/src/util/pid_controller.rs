@@ -32,31 +32,33 @@ impl PIDController {
         &mut self,
         input: YawPitchRoll,
         target: YawPitchRoll,
-        k_p: i32,
-        k_i: i32,
-        k_d: i32,
+        k_p: [i32; 3],
+        k_i: [i32; 3],
+        k_d: [i32; 3],
         controller_flags: u8,
     ) -> YawPitchRoll {
-        let result = YawPitchRoll::new();
+        let mut result = YawPitchRoll::new();
         let calculated_error = (target - input);
         let current_time = Instant::now();
-        let delta_t = current_time.duration_since(self.last_timestamp);
+        let delta_t = current_time
+            .duration_since(self.last_timestamp)
+            .as_secs_f32();
 
         // compute P part
-        if (controller_flags & ControllerFlags::AddP) {
-            result += calculated_error * k_p;
+        if ((controller_flags & (ControllerFlags::AddP as u8)) != 0) {
+            result = result + (calculated_error * k_p);
         }
 
         // compute D part
-        if (controller_flags & ControllerFlags::AddD) {
-            result += k_d * ((calculated_error - self.prev_error) / delta_t);
+        if ((controller_flags & (ControllerFlags::AddD as u8)) != 0) {
+            result = result + (((calculated_error - self.prev_error) / delta_t) * k_d);
             self.prev_error = calculated_error;
         }
 
         // compute I part
-        if (controller_flags & ControllerFlags::AddI) {
-            self.integration_build_up += (calculated_error - self.prev_error) * delta_t;
-            result += k_i * self.integration_build_up;
+        if ((controller_flags & (ControllerFlags::AddI as u8)) != 0) {
+            self.integration_build_up = self.integration_build_up + (calculated_error * delta_t);
+            result = result + (self.integration_build_up * k_i);
         }
         // update the timestamp
         self.last_timestamp = current_time;
