@@ -2,7 +2,6 @@ use crate::filters::dmp_readings::DmpReadings;
 use crate::states::full_control::FSMFullControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
-use crate::states::state_structures::calibration_state::Axis;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::yaw_control::FSMYaw;
 use crate::states::{fsm_base_class::FSMControl, safe_mode::FSMSafe};
@@ -19,12 +18,17 @@ use tudelft_quadrupel::mpu::{
 pub struct FSMCalibration {}
 
 impl FSMControl for FSMCalibration {
-    fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
+    fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         let (accel, gyro) = read_raw().unwrap();
-        ctx.calibration_state.accumulate_calibration(
-            super::state_structures::calibration_state::Axis::from(accel),
-            Axis::from(gyro),
-        );
+
+        // read new sample
+        ctx.calibration_state.read_new_sample(accel, gyro);
+
+        if ctx.calibration_state.should_finish() {
+            ctx.calibration_state.finalize_calibration();
+
+            return Box::new(FSMSafe {});
+        }
         return self;
     }
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
