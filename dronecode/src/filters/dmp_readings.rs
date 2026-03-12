@@ -31,7 +31,7 @@ impl DmpReadings {
 }
 
 impl ImuHandler for DmpReadings {
-    fn get_reading(&mut self, input: (Accel, Gyro)) -> Option<YawPitchRoll> {
+    fn get_reading(&mut self) -> Option<YawPitchRoll> {
         let sampled_dmp_res = read_dmp_bytes();
 
         if sampled_dmp_res.is_err() {
