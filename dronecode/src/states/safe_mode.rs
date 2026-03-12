@@ -2,27 +2,29 @@ use crate::states::calibration_mode::FSMCalibration;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::FSM_control_trait::FSMControl;
 use crate::{calibration_state::CalibrationState, states::manual_mode::FSMManual};
+use alloc::boxed::Box;
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 use tudelft_quadrupel::led::Red;
 use tudelft_quadrupel::motor::{self, *};
+
 pub struct FSMSafe;
 
 impl FSMControl for FSMSafe {
     fn run_control_loop(
-        &self,
+        self: Box<Self>,
         zero_state: &mut CalibrationState,
         command: &ManualInput,
         has_received_input: &mut bool,
         my_hdlc: &mut HdlcTransceiver,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         set_motors([0, 0, 0, 0]);
         return self;
     }
     fn step(
-        &self,
+        self: Box<Self>,
         next_state: FSMState,
         calibration_state: &mut CalibrationState,
-    ) -> &dyn FSMControl {
+    ) -> Box<dyn FSMControl> {
         if next_state != FSMState::SafeMode {
             Red.off();
         }
@@ -31,14 +33,14 @@ impl FSMControl for FSMSafe {
             FSMState::CalibrationMode => {
                 if is_throttle_zero() {
                     calibration_state.start_calibration();
-                    return &FSMCalibration;
+                    return Box::new(FSMCalibration);
                 }
                 return self;
             }
             FSMState::FullControlMode => return self,
             FSMState::HeightControlMode => return self,
-            FSMState::ManualMode => return &FSMManual,
-            FSMState::PanicMode => return &FSMPanic,
+            FSMState::ManualMode => return Box::new(FSMManual),
+            FSMState::PanicMode => return Box::new(FSMPanic),
             FSMState::RawSensorsFullControlMode => return self,
             FSMState::WirelessMode => return self,
             FSMState::YawControl => return self,

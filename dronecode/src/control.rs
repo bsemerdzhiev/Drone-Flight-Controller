@@ -6,6 +6,7 @@ use crate::states::safe_mode::FSMSafe;
 use crate::states::FSM_control_trait::FSMControl;
 use crate::telemetry_read::TelemetryRead;
 use crate::yaw_pitch_roll::YawPitchRoll;
+use alloc::boxed::Box;
 use alloc::format;
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
@@ -33,7 +34,7 @@ pub fn main_loop() -> ! {
 
     let mut last_instant = Instant::now();
 
-    let mut current_state: &dyn FSMControl = &FSMSafe;
+    let mut current_state: Box<dyn FSMControl> = Box::new(FSMSafe);
 
     let mut iterations_without_message = 0u32;
 
