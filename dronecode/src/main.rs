@@ -32,8 +32,6 @@ pub mod states;
 pub mod telemetry_read;
 #[cfg(target_arch = "arm")]
 pub mod util;
-#[cfg(target_arch = "arm")]
-pub mod yaw_pitch_roll;
 
 #[cfg(target_arch = "arm")]
 pub mod filters;

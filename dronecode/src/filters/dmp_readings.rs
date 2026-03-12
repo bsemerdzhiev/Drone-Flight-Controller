@@ -1,4 +1,4 @@
-use crate::{filters::sensors_handler::ImuHandler, yaw_pitch_roll::YawPitchRoll};
+use crate::{filters::sensors_handler::ImuHandler, util::yaw_pitch_roll::YawPitchRoll};
 use tudelft_quadrupel::{
     mpu::{
         read_dmp_bytes,

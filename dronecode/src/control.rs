@@ -5,7 +5,6 @@ use crate::states::fsm_control_trait::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
 use crate::telemetry_read::TelemetryRead;
-use crate::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
 use alloc::format;
 

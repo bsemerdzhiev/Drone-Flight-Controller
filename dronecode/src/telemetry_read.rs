@@ -1,6 +1,5 @@
 use core::time::Duration;
 
-use crate::yaw_pitch_roll::YawPitchRoll;
 use my_hdlc::telemetry_data::TelemetryData;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
