@@ -10,7 +10,7 @@ use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uar
 
 use crate::{
     calibration_state::CalibrationState,
-    states::{panic_mode::FSMPanic, safe_mode::FSMSafe, FSM_control_trait::FSMControl},
+    states::{fsm_control_trait::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe},
 };
 
 pub struct FSMManual;
