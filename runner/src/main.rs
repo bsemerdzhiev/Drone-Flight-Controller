@@ -114,8 +114,9 @@ fn main() {
             &mut serial,
         );
         if last_send.elapsed() >= send_period {
-            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+            let mut cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
+            cmd.set_yaw(200);
             let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );

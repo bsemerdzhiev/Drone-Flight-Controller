@@ -35,7 +35,7 @@ impl ImuHandler for DmpReadings {
         let sampled_dmp_res = read_dmp_bytes();
 
         if sampled_dmp_res.is_err() {
-            return self.last_sample;
+            return None;
         }
         let sampled_quaternion = sampled_dmp_res.unwrap();
 
