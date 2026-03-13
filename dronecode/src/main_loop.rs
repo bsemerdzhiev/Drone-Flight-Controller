@@ -17,7 +17,7 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
 use tudelft_quadrupel::led::Led::{Blue, Green};
 use tudelft_quadrupel::motor::get_motors;
-use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw};
+use tudelft_quadrupel::mpu::{enable_dmp, read_dmp_bytes, read_raw};
 use tudelft_quadrupel::time::{set_tick_frequency, wait_for_next_tick, Instant};
 use tudelft_quadrupel::uart::{receive_bytes, send_bytes};
 
@@ -38,7 +38,6 @@ const MIN_BAT_LEVEL: u16 = 1050;
 pub fn main_loop() -> ! {
     // processor tick frequency
     set_tick_frequency(100);
-
     // -------------------------------------------------------------------------
 
     // buffer for receiving bytes from PC

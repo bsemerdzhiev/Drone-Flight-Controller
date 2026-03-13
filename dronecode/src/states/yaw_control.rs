@@ -6,9 +6,12 @@ use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
-use my_hdlc::command::FSMState;
+use my_hdlc::command::{DebugRpms, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
+use tudelft_quadrupel::battery::read_battery;
+use tudelft_quadrupel::mpu::is_dmp_enabled;
+use tudelft_quadrupel::uart::send_bytes;
 
 // TODO: Tune the parameters
 const K_P: [i32; 3] = [0, 0, 0];
@@ -24,15 +27,25 @@ impl FSMControl for FSMYaw {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
+        let to_write = ctx
+            .trv
+            .write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&[
+                input_opt.is_none() as u16,
+                ctx.input_from_controller.is_none() as u16,
+                is_dmp_enabled() as u16,
+                0,
+            ])));
 
+        send_bytes(&to_write.0[0..to_write.1]);
+
+        // reading from joystick
         if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;
         }
-
-        let input = input_opt.unwrap();
-        // reading from joystick
         let target: YawPitchRoll =
             YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+
+        let input = input_opt.unwrap();
 
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
