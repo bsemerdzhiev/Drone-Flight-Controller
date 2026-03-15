@@ -49,7 +49,7 @@ fn main() {
     // commented function below gives an example of how to do that with python, but again
     // you don't need to choose python.
 
-    // start_interface(&port);
+    start_interface(&port);
 
     // open the serial port we got back from `upload_file_or_stop`. This is the same port
     // as the upload occurred on, so we know that we can communicate with the drone over
