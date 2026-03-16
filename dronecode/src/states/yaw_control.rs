@@ -27,18 +27,7 @@ impl FSMControl for FSMYaw {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
-        let to_write = ctx
-            .trv
-            .write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&[
-                input_opt.is_none() as u16,
-                ctx.input_from_controller.is_none() as u16,
-                is_dmp_enabled() as u16,
-                0,
-            ])));
 
-        send_bytes(&to_write.0[0..to_write.1]);
-
-        // reading from joystick
         if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;
         }
