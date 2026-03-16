@@ -38,6 +38,12 @@ impl FSMControl for FSMSafe {
                     pid_controller: Box::new(PIDController::new()),
                 })
             }
+            FSMState::FullControlMode => {
+                return Box::new(FSMYaw {
+                    imu_sampler: Box::new(DmpReadings::new()),
+                    pid_controller: Box::new(PIDController::new()),
+                })
+            }
             FSMState::PanicMode => return Box::new(FSMPanic {}),
             _ => self,
         }
