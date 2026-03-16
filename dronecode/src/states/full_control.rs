@@ -1,76 +1,83 @@
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 
+use crate::filters::sensors_handler::ImuHandler;
 use crate::full_control_logic as logic;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
+use crate::util::pid_controller::{ControllerFlags, PIDController};
+use crate::util::rpm_calculator::actuate_motors_with_rates;
+use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
 use tudelft_quadrupel::motor::set_motors;
 use tudelft_quadrupel::mpu;
 
-pub struct FSMFullControl {}
+// TODO: Tune the parameters
+// Order of parameters: Yaw - Pitch - Roll
+const K_P: [i32; 3] = [0, 0, 0];
+const K_I: [i32; 3] = [0, 0, 0];
+const K_D: [i32; 3] = [0, 0, 0];
+
+pub struct FSMFullControl {
+    pub imu_sampler: Box<dyn ImuHandler>,
+    pub pid_controller: Box<PIDController>,
+}
 
 impl FSMControl for FSMFullControl {
-    fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        // Get quaternion from DMP
-        // -------------------------------------------------------------
-        if let Ok(q) = mpu::read_dmp_bytes() {
-            //Control loops only updates when DMP data arrives
-            //let count = self.print_counter.fetch_add(1, Ordering::Relaxed);
+    fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
+        // read sensor data
+        let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
 
-            // Convert fixed-point -> f32
-            let w = q.w.to_num::<f32>();
-            let x = q.x.to_num::<f32>();
-            let y = q.y.to_num::<f32>();
-            let z = q.z.to_num::<f32>();
-
-            // Convert to roll and pitch
-            // -------------------------------------------------------------
-            let (roll, pitch) = logic::quaternion_to_roll_pitch(w, x, y, z);
-
-            // Desired angles (from RC / keyboard)
-            // -------------------------------------------------------------
-            // Neutral stick -> 0 rad
-            let desired_roll: f32 = 0.0;
-            let desired_pitch: f32 = 0.0;
-
-            // Controllers -> torques
-            // torque = Kp (proportional gain) x error
-            // torque later converted to motor speed differences
-            // -------------------------------------------------------------
-            let l_roll = logic::roll_controller(desired_roll, roll);
-            let m_pitch = logic::pitch_controller(desired_pitch, pitch);
-
-            // Send torques to motor mixer
-            // -------------------------------------------------------------
-            let z_lift: f32 = 200.0; // no lift value yet so use predefined for now
-            let n_yaw: f32 = 0.0; // no yaw control yet
-            let motors = logic::compute_motor_speeds(z_lift, n_yaw, m_pitch, l_roll);
-            set_motors(motors);
-
-            // // For DEBUG printing
-            // if count % 2 == 0 { // After 2 DMP sensor updates do printing
-
-            //     let roll_deg = roll * 57.2958; // Multiplied by this to convert from radians to degrees
-            //     let pitch_deg = pitch * 57.2958;
-
-            //     rprintln!("Roll: {:.2}°, Pitch: {:.2}°",roll_deg,pitch_deg);
-            //     rprintln!("Motors: {:?}", motors);
-            // }
+        if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
+            return self;
         }
-        self
+        let target: YawPitchRoll =
+            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+
+        let input = input_opt.unwrap();
+
+        // calculate the error correction
+        let correction = self.pid_controller.compute_pid_correction(
+            input,
+            target,
+            K_P,
+            K_I,
+            K_D,
+            ControllerFlags::AddP as u8,
+        );
+
+        // add to current input
+        ctx.input_from_controller
+            .as_mut()
+            .unwrap()
+            .increment_yaw(correction.yaw as i32);
+        ctx.input_from_controller
+            .as_mut()
+            .unwrap()
+            .increment_pitch(correction.pitch as i32);
+        ctx.input_from_controller
+            .as_mut()
+            .unwrap()
+            .increment_roll(correction.roll as i32);
+
+        // output to motors
+        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
+
+        *ctx.input_from_controller = None;
+
+        return self;
     }
 
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
             FSMState::SafeMode => Box::new(FSMSafe {}),
-            _ => self, // transition to a different state
+            _ => self,
         }
     }
 
     fn get_state(&self) -> FSMState {
-        return FSMState::CalibrationMode;
+        return FSMState::FullControlMode;
     }
 }

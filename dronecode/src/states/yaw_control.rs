@@ -14,6 +14,7 @@ use tudelft_quadrupel::mpu::is_dmp_enabled;
 use tudelft_quadrupel::uart::send_bytes;
 
 // TODO: Tune the parameters
+// Order of parameters: Yaw - Pitch - Roll
 const K_P: [i32; 3] = [0, 0, 0];
 const K_I: [i32; 3] = [0, 0, 0];
 const K_D: [i32; 3] = [0, 0, 0];
