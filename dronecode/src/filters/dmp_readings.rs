@@ -1,4 +1,5 @@
 use crate::{filters::sensors_handler::ImuHandler, util::yaw_pitch_roll::YawPitchRoll};
+use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;
 
 use tudelft_quadrupel::{
@@ -41,7 +42,8 @@ impl ImuHandler for DmpReadings {
         }
         let sampled_quaternion = sampled_dmp_res.unwrap();
 
-        let sampled_yaw_pitch_roll = YawPitchRoll::from(sampled_quaternion);
+        let mut sampled_yaw_pitch_roll = YawPitchRoll::from(sampled_quaternion);
+        sampled_yaw_pitch_roll.pressure = read_pressure() as f32;
 
         if self.last_sampled_time.is_none() {
             self.last_sampled_time = Some(Instant::now());

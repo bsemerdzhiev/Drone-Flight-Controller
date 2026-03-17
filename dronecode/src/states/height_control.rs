@@ -1,30 +1,33 @@
-use crate::filters::sensors_handler::ImuHandler;
-use crate::states::state_structures::state_context::StateContext;
-use crate::states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
-use crate::util::pid_controller::{self, ControllerFlags, PIDController};
-use crate::util::rpm_calculator::actuate_motors_with_rates;
-use crate::util::yaw_pitch_roll::YawPitchRoll;
-
 use alloc::boxed::Box;
-use my_hdlc::command::{DebugRpms, DebugYawPitchRoll, DeviceCommand, DroneInfo, FSMState};
-use my_hdlc::pc_command::ManualInput;
-use my_hdlc::HdlcTransceiver;
-use tudelft_quadrupel::battery::read_battery;
-use tudelft_quadrupel::mpu::is_dmp_enabled;
-use tudelft_quadrupel::uart::send_bytes;
+use my_hdlc::command::FSMState;
+use tudelft_quadrupel::{barometer::read_pressure, once_cell, time::Instant};
 
-// TODO: Tune the parameters
-// Order of parameters: Yaw - Pitch - Roll
+use crate::{
+    filters::sensors_handler::ImuHandler,
+    states::{
+        fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe,
+        state_structures::state_context::StateContext,
+    },
+    util::{
+        pid_controller::{ControllerFlags, PIDController},
+        rpm_calculator::actuate_motors_with_rates,
+        yaw_pitch_roll::YawPitchRoll,
+    },
+};
+
 const K_P: [f32; 4] = [3f32, 2f32, 2f32, 0f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
-pub struct FSMYaw {
+pub struct FSMHeightControl {
     pub imu_sampler: Box<dyn ImuHandler>,
     pub pid_controller: Box<PIDController>,
+    pub prev_state: Box<dyn FSMControl>,
+
+    pub initial_pressure: f32,
 }
 
-impl FSMControl for FSMYaw {
+impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
@@ -33,10 +36,12 @@ impl FSMControl for FSMYaw {
             return self;
         }
 
-        let target: YawPitchRoll =
-            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
-
         let input = input_opt.unwrap();
+
+        // the target
+        let mut target: YawPitchRoll =
+            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+        target.pressure = self.initial_pressure;
 
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
@@ -69,6 +74,7 @@ impl FSMControl for FSMYaw {
 
         return self;
     }
+
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
@@ -76,7 +82,8 @@ impl FSMControl for FSMYaw {
             _ => self,
         }
     }
+
     fn get_state(&self) -> FSMState {
-        return FSMState::YawControl;
+        return FSMState::HeightControlMode;
     }
 }

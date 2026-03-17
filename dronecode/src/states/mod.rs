@@ -20,4 +20,7 @@ pub mod safe_mode;
 pub mod yaw_control;
 
 #[cfg(target_arch = "arm")]
+pub mod height_control;
+
+#[cfg(target_arch = "arm")]
 pub mod state_structures;

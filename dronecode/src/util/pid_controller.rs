@@ -13,9 +13,15 @@ pub enum ControllerFlags {
     AddI = (1 << 2),
 }
 
+// in kg
+const DRONE_WEIGHT: f32 = 5f32;
+
+const GRAVITY_CONSTANT: f32 = 9.8;
+
 pub struct PIDController {
     prev_error: YawPitchRoll,
     integration_build_up: YawPitchRoll,
+
     last_timestamp: Instant,
 }
 
@@ -24,6 +30,7 @@ impl PIDController {
         PIDController {
             prev_error: YawPitchRoll::new(),
             integration_build_up: YawPitchRoll::new(),
+
             last_timestamp: Instant::now(),
         }
     }
@@ -32,13 +39,14 @@ impl PIDController {
         &mut self,
         input: YawPitchRoll,
         target: YawPitchRoll,
-        k_p: [f32; 3],
-        k_i: [f32; 3],
-        k_d: [f32; 3],
+        k_p: [f32; 4],
+        k_i: [f32; 4],
+        k_d: [f32; 4],
         controller_flags: u8,
     ) -> YawPitchRoll {
         let mut result = YawPitchRoll::new();
         let calculated_error = (target - input);
+
         let current_time = Instant::now();
         let delta_t = current_time
             .duration_since(self.last_timestamp)
@@ -62,6 +70,9 @@ impl PIDController {
         }
         // update the timestamp
         self.last_timestamp = current_time;
+
+        // calculate lift based on pressure calculations
+        result.lift = DRONE_WEIGHT * (GRAVITY_CONSTANT + result.pressure);
 
         return result;
     }
