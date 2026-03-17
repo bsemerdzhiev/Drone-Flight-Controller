@@ -30,8 +30,15 @@ use my_hdlc::STUFFED_MESSAGE_SIZE;
 mod read_joystick;
 mod read_keyboard;
 
-const PRINT_DRONE_DATA: bool = true;
-const DEBUG_BOARD_MODE: bool = false;
+use std::os::unix::net::UnixListener;
+use std::os::unix::net::UnixStream;
+use std::io::Write;
+use std::fs;
+use serde_json;
+
+
+const PRINT_DRONE_DATA: bool = false;
+const DEBUG_BOARD_MODE: bool = true;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
@@ -56,6 +63,14 @@ fn main() {
     // this port.
     let mut serial = SerialPort::open(port, 115200).unwrap();
     serial.set_read_timeout(Duration::from_millis(400)).unwrap();
+
+    // --- Unix domain socket setup for Python GUI ---
+    let socket_path = "/tmp/drone_telemetry.sock";
+    let _ = fs::remove_file(socket_path);
+    let listener = UnixListener::bind(socket_path).expect("Failed to bind UDS socket");
+    println!("Waiting for Python GUI to connect…");
+    let (mut python_stream, _) = listener.accept().expect("Failed to accept Python connection");
+    println!("Python GUI connected!");
 
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
@@ -127,10 +142,23 @@ fn main() {
         if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
             rcv.add_bytes(&buf[0..num]);
         }
-        if let Some(x) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
+        if let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
             iterations_without_message = 0;
+
+            // Only forward telemetry messages for now
+            if let DeviceCommand::DroneInfo(t) = &msg {
+                // Convert telemetry struct to JSON
+                let json = serde_json::to_string(&t).unwrap();
+
+                // Send JSON + newline to Python
+                if let Err(e) = python_stream.write_all(json.as_bytes()) {
+                    eprintln!("Error writing JSON to Python: {}", e);
+                }
+                let _ = python_stream.write_all(b"\n");
+            }
+
             if PRINT_DRONE_DATA {
-                println!("{:?}\r", x);
+                println!("{:?}\r", msg);
             }
         } else {
             iterations_without_message += 1;
@@ -183,12 +211,13 @@ fn start_interface(port: &PathBuf) {
         // pass the serial port as a command line parameter to the python program
         .arg(port.to_str().unwrap());
 
-    match cmd.output() {
-        Err(e) => {
-            eprintln!("{}", e);
-            exit(1);
-        }
-        Ok(i) if !i.status.success() => exit(i.status.code().unwrap_or(1)),
-        Ok(_) => {}
-    }
+    // match cmd.output() {
+    //     Err(e) => {
+    //         eprintln!("{}", e);
+    //         exit(1);
+    //     }
+    //     Ok(i) if !i.status.success() => exit(i.status.code().unwrap_or(1)),
+    //     Ok(_) => {}
+    // }
+    cmd.spawn().expect("cannot open UI");
 }
