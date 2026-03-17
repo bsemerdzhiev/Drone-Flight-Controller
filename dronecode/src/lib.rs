@@ -5,8 +5,6 @@ extern crate std;
 
 extern crate alloc;
 
-pub mod full_control_logic;
-
 #[cfg(target_arch = "arm")]
 pub mod states;
 

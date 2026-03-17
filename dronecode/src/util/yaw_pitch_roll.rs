@@ -60,10 +60,10 @@ impl Div<f32> for YawPitchRoll {
     }
 }
 
-impl Mul<[i32; 3]> for YawPitchRoll {
+impl Mul<[f32; 3]> for YawPitchRoll {
     type Output = Self;
 
-    fn mul(self, scalar: [i32; 3]) -> Self::Output {
+    fn mul(self, scalar: [f32; 3]) -> Self::Output {
         Self {
             yaw: self.yaw * (scalar[0] as f32),
             pitch: self.pitch * (scalar[1] as f32),

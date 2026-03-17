@@ -4,11 +4,16 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct DebugRpms {
-    rpms: [u16; 4],
+    rpms: [i32; 4],
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct DebugYawPitchRoll {
+    pub info: [f32; 3],
 }
 
 impl DebugRpms {
-    pub fn new(rpms: &[u16; 4]) -> Self {
+    pub fn new(rpms: &[i32; 4]) -> Self {
         return Self {
             rpms: [rpms[0], rpms[1], rpms[2], rpms[3]],
         };
@@ -49,4 +54,5 @@ pub enum DeviceCommand {
     Telemetry(TelemetryData),
     Ack,
     DebugRpms(DebugRpms),
+    DebugYawPitchRoll(DebugYawPitchRoll),
 }

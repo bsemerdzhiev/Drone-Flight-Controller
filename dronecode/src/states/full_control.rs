@@ -1,7 +1,8 @@
+use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand};
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use tudelft_quadrupel::uart::send_bytes;
 
 use crate::filters::sensors_handler::ImuHandler;
-use crate::full_control_logic as logic;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
@@ -15,9 +16,9 @@ use tudelft_quadrupel::mpu;
 
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
-const K_P: [i32; 3] = [0, 0, 0];
-const K_I: [i32; 3] = [0, 0, 0];
-const K_D: [i32; 3] = [0, 0, 0];
+const K_P: [f32; 3] = [3f32, 2f32, 2f32];
+const K_I: [f32; 3] = [0f32, 0f32, 0f32];
+const K_D: [f32; 3] = [0f32, 0f32, 0f32];
 
 pub struct FSMFullControl {
     pub imu_sampler: Box<dyn ImuHandler>,

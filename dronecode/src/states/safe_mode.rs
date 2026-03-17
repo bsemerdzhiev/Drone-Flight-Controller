@@ -1,6 +1,7 @@
 use crate::filters::dmp_readings::DmpReadings;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::fsm_base_class::FSMControl;
+use crate::states::full_control::FSMFullControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::state_structures::state_context::StateContext;
@@ -39,7 +40,7 @@ impl FSMControl for FSMSafe {
                 })
             }
             FSMState::FullControlMode => {
-                return Box::new(FSMYaw {
+                return Box::new(FSMFullControl {
                     imu_sampler: Box::new(DmpReadings::new()),
                     pid_controller: Box::new(PIDController::new()),
                 })
