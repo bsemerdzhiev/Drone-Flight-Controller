@@ -1,7 +1,12 @@
-use tudelft_quadrupel::mpu::structs::{Accel, Gyro};
-
+use crate::filters::sensors_handler::ImuHandler;
+use crate::util::yaw_pitch_roll::YawPitchRoll;
+use libm::{atan2f, sqrtf};
+use tudelft_quadrupel::{
+    mpu::structs::{Accel, Gyro, Quaternion},
+    nrf51_pac::gpio::out,
+};
 const LOOK_BACK_ELEMENTS: i32 = 100;
-
+const RAD2DEG: f32 = 57.2958;
 struct ButterWorth {
     output: (Accel, Gyro),
     prev_input: (Accel, Gyro),
@@ -14,6 +19,21 @@ impl ButterWorth {
             prev_input: input,
         }
     }
+}
+// phi        — your current roll estimate (rad)
+// theta      — your current pitch estimate (rad)
+// psi        — your current yaw estimate (rad)
+impl ImuHandler for ButterWorth {
+    fn get_reading(&mut self) -> Option<YawPitchRoll> {
+        let roll = atan2f(self.output.0.y as f32, self.output.0.x as f32);
+        let pitch = atan2f(
+            -self.output.0.x as f32,
+            sqrtf((self.output.0.y * self.output.0.y + self.output.0.z * self.output.0.z) as f32),
+        );
+        let yaw = self.output.1.z as f32;
+        Some(YawPitchRoll { yaw, pitch, roll })
+    }
+
     fn append_new_reading(&mut self, input: (Accel, Gyro)) {
         let cur_input_arr: [i16; 6] = [
             input.0.x, input.0.y, input.0.z, input.1.x, input.1.y, input.1.z,
