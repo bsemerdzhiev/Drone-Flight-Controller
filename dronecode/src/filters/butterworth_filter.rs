@@ -6,7 +6,7 @@ use tudelft_quadrupel::{
     nrf51_pac::gpio::out,
 };
 const LOOK_BACK_ELEMENTS: i32 = 100;
-const RAD2DEG: f32 = 57.2958;
+
 struct ButterWorth {
     output: (Accel, Gyro),
     prev_input: (Accel, Gyro),
@@ -46,6 +46,7 @@ impl ImuHandler for ButterWorth {
             self.output.1.y,
             self.output.1.z,
         ];
+
         let prev_input_arr: [i16; 6] = [
             self.prev_input.0.x,
             self.prev_input.0.y,
@@ -63,8 +64,8 @@ impl ImuHandler for ButterWorth {
             let x_cur: i32 = cur_input_arr[i] as i32;
 
             let y_cur: i32 = (((LOOK_BACK_ELEMENTS - 1i32) * y_prev) / LOOK_BACK_ELEMENTS)
-                + (x_prev / 2i32)
-                + (x_cur / 2i32);
+                + (x_prev / (LOOK_BACK_ELEMENTS * 2))
+                + (x_cur / (LOOK_BACK_ELEMENTS * 2));
 
             cur_output[i] = y_cur.clamp(i16::MIN as i32, i16::MAX as i32) as i16;
         }
@@ -81,7 +82,6 @@ impl ImuHandler for ButterWorth {
                 z: cur_output[5],
             },
         );
-
         self.prev_input = input;
     }
 }
