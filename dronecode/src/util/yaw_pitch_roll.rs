@@ -7,9 +7,12 @@ use tudelft_quadrupel::mpu::structs::Quaternion;
 /// The struct is currently implemented using `f32`, you may want to change this to use fixed point arithmetic.
 #[derive(Debug, Copy, Clone)]
 pub struct YawPitchRoll {
+    pub lift: f32,
     pub yaw: f32,
     pub pitch: f32,
     pub roll: f32,
+
+    pub pressure: f32,
 }
 
 impl Sub for YawPitchRoll {
@@ -17,9 +20,11 @@ impl Sub for YawPitchRoll {
 
     fn sub(self, other: YawPitchRoll) -> Self::Output {
         Self {
+            lift: self.lift - other.lift,
             yaw: self.yaw - other.yaw,
             pitch: self.pitch - other.pitch,
             roll: self.roll - other.roll,
+            pressure: self.pressure - other.pressure,
         }
     }
 }
@@ -29,9 +34,11 @@ impl Add for YawPitchRoll {
 
     fn add(self, other: YawPitchRoll) -> Self::Output {
         Self {
+            lift: self.lift + other.lift,
             yaw: self.yaw + other.yaw,
             pitch: self.pitch + other.pitch,
             roll: self.roll + other.roll,
+            pressure: self.pressure + other.pressure,
         }
     }
 }
@@ -41,9 +48,11 @@ impl Mul<f32> for YawPitchRoll {
 
     fn mul(self, scalar: f32) -> Self::Output {
         Self {
+            lift: self.lift * scalar,
             yaw: self.yaw * scalar,
             pitch: self.pitch * scalar,
             roll: self.roll * scalar,
+            pressure: self.pressure * scalar,
         }
     }
 }
@@ -53,21 +62,25 @@ impl Div<f32> for YawPitchRoll {
 
     fn div(self, scalar: f32) -> Self::Output {
         Self {
+            lift: self.lift / scalar,
             yaw: self.yaw / scalar,
             pitch: self.pitch / scalar,
             roll: self.roll / scalar,
+            pressure: self.pressure / scalar,
         }
     }
 }
 
-impl Mul<[f32; 3]> for YawPitchRoll {
+impl Mul<[f32; 4]> for YawPitchRoll {
     type Output = Self;
 
-    fn mul(self, scalar: [f32; 3]) -> Self::Output {
+    fn mul(self, scalar: [f32; 4]) -> Self::Output {
         Self {
-            yaw: self.yaw * (scalar[0] as f32),
-            pitch: self.pitch * (scalar[1] as f32),
-            roll: self.roll * (scalar[2] as f32),
+            lift: self.lift,
+            yaw: self.yaw * scalar[0],
+            pitch: self.pitch * scalar[1],
+            roll: self.roll * scalar[2],
+            pressure: self.pressure * scalar[3],
         }
     }
 }
@@ -95,30 +108,42 @@ impl From<Quaternion> for YawPitchRoll {
         // roll: (tilt left/right, about X axis)
         let roll = micromath::F32Ext::atan2(gy, gz);
 
-        Self { yaw, pitch, roll }
+        Self {
+            lift: 0f32,
+            yaw,
+            pitch,
+            roll,
+            pressure: 0f32,
+        }
     }
 }
 
 impl YawPitchRoll {
     pub fn new() -> Self {
         YawPitchRoll {
+            lift: 0f32,
             yaw: 0f32,
             pitch: 0f32,
             roll: 0f32,
+            pressure: 0f32,
         }
     }
     pub fn from_manual_input(input: &ManualInput) -> Self {
         Self {
+            lift: input.get_lift() as f32,
             yaw: input.get_yaw() as f32,
             pitch: input.get_roll() as f32,
             roll: input.get_roll() as f32,
+            pressure: 0f32,
         }
     }
     pub fn calculate_rate_per_sec(&self, prev_sample: YawPitchRoll, duration_in_sec: f32) -> Self {
         YawPitchRoll {
+            lift: 0f32,
             yaw: (self.yaw - prev_sample.yaw) / duration_in_sec,
             pitch: (self.pitch - prev_sample.pitch) / duration_in_sec,
             roll: (self.roll - prev_sample.roll) / duration_in_sec,
+            pressure: self.pressure,
         }
     }
 }

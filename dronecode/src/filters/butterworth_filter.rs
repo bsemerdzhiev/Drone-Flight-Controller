@@ -2,6 +2,7 @@ use crate::filters::sensors_handler::ImuHandler;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use libm::{atan2f, sqrtf};
 use tudelft_quadrupel::{
+    barometer::read_pressure,
     mpu::structs::{Accel, Gyro, Quaternion},
     nrf51_pac::gpio::out,
 };
@@ -31,7 +32,13 @@ impl ImuHandler for ButterWorth {
             sqrtf((self.output.0.y * self.output.0.y + self.output.0.z * self.output.0.z) as f32),
         );
         let yaw = self.output.1.z as f32;
-        Some(YawPitchRoll { yaw, pitch, roll })
+        Some(YawPitchRoll {
+            lift: 0f32,
+            yaw,
+            pitch,
+            roll,
+            pressure: read_pressure() as f32,
+        })
     }
 
     fn append_new_reading(&mut self, input: (Accel, Gyro)) {

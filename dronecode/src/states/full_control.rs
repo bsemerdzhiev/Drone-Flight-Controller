@@ -1,9 +1,12 @@
 use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand};
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::uart::send_bytes;
 
+use crate::filters::dmp_readings::DmpReadings;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::fsm_base_class::FSMControl;
+use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
@@ -16,9 +19,10 @@ use tudelft_quadrupel::mpu;
 
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
-const K_P: [f32; 3] = [3f32, 2f32, 2f32];
-const K_I: [f32; 3] = [0f32, 0f32, 0f32];
-const K_D: [f32; 3] = [0f32, 0f32, 0f32];
+
+const K_P: [f32; 4] = [3f32, 2f32, 2f32, 0f32];
+const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
+const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
 pub struct FSMFullControl {
     pub imu_sampler: Box<dyn ImuHandler>,
@@ -74,6 +78,14 @@ impl FSMControl for FSMFullControl {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
             FSMState::SafeMode => Box::new(FSMSafe {}),
+            FSMState::HeightControlMode => Box::new(FSMHeightControl {
+                imu_sampler: Box::new(DmpReadings::new()),
+                pid_controller: Box::new(PIDController::new()),
+
+                prev_state: self,
+                initial_pressure: read_pressure() as f32,
+            }),
+
             _ => self,
         }
     }

@@ -3,6 +3,7 @@ use core::time::Duration;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::util::yaw_pitch_roll::*;
 use libm::{atan2f, sqrtf};
+use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
@@ -68,9 +69,11 @@ impl ImuHandler for KalmanFilter {
     fn get_reading(&mut self) -> Option<YawPitchRoll> {
         let raw_yaw = self.reading.1.z as f32;
         Some(YawPitchRoll {
+            lift: 0f32,
             yaw: raw_yaw,
             pitch: self.pitch,
             roll: self.roll,
+            pressure: read_pressure() as f32,
         })
     }
 }
