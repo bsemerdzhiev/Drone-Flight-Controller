@@ -75,10 +75,23 @@ def serial_reader():
                 t = json.loads(line)
 
                 # print("JSON received:", t)
-
                 if "state" in t and "bat_level" in t:
                     fsm_state = t["state"]
                     battery_level = t["bat_level"] / 100.0  # convert 0–100 to 0.0–1.0
+                    continue
+                
+                if "DebugRpms" in t:
+                    rpms = t["DebugRpms"]["rpms"]
+                    for i in range(4):
+                        motor_values[i] = rpms[i]
+                    continue 
+
+                if "ManualInput" in t:
+                    mi = t["ManualInput"]
+                    joystick["lift"]  = mi["lift"]
+                    joystick["roll"]  = mi["roll"]
+                    joystick["pitch"] = mi["pitch"]
+                    joystick["yaw"]   = mi["yaw"]
                     continue
 
                 yaw_data.append(t["yaw_rate"])
