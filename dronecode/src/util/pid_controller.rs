@@ -16,7 +16,7 @@ pub enum ControllerFlags {
 // in kg
 const DRONE_WEIGHT: f32 = 5f32;
 
-const GRAVITY_CONSTANT: f32 = 9.8;
+const GRAVITY_CONSTANT: f32 = 9.8f32;
 
 pub struct PIDController {
     prev_error: YawPitchRoll,
@@ -44,6 +44,11 @@ impl PIDController {
         k_d: [f32; 4],
         controller_flags: u8,
     ) -> YawPitchRoll {
+        /*
+         *  for calculations, check
+         *  https://harikrishnansuresh.github.io/assets/QuadcopterControlFinalVersion.pdf
+         */
+
         let mut result = YawPitchRoll::new();
         let calculated_error = (target - input);
 
@@ -71,7 +76,17 @@ impl PIDController {
         // update the timestamp
         self.last_timestamp = current_time;
 
-        // calculate lift based on pressure calculations
+        // unit of result.pressure in the end is m/s^2(in other words acceleration)
+        // units of result.lift become Newtons
+
+        /* calculate lift based on pressure calculations
+         *
+         *
+         *                          since we want to hover
+         *                                   |
+         *            measured drone         |             calculated
+         *               weight              v               correction
+         */
         result.lift = DRONE_WEIGHT * (GRAVITY_CONSTANT + result.pressure);
 
         return result;

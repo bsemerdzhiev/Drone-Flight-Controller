@@ -1,6 +1,6 @@
 use alloc::boxed::Box;
-use my_hdlc::command::FSMState;
-use tudelft_quadrupel::{barometer::read_pressure, once_cell, time::Instant};
+use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand, FSMState};
+use tudelft_quadrupel::{barometer::read_pressure, once_cell, time::Instant, uart::send_bytes};
 
 use crate::{
     filters::sensors_handler::ImuHandler,
@@ -15,7 +15,7 @@ use crate::{
     },
 };
 
-const K_P: [f32; 4] = [3f32, 2f32, 2f32, 0f32];
+const K_P: [f32; 4] = [3f32, 2f32, 2f32, 1f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -29,6 +29,8 @@ pub struct FSMHeightControl {
 
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
+        //TODO: Implement going back to the state from which we came
+
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
 
@@ -52,6 +54,20 @@ impl FSMControl for FSMHeightControl {
             K_D,
             ControllerFlags::AddP as u8,
         );
+
+        let to_write =
+            ctx.trv
+                .write_structure(&DeviceCommand::DebugYawPitchRoll(DebugYawPitchRoll {
+                    info: [
+                        correction.lift,
+                        correction.yaw,
+                        correction.pitch,
+                        correction.roll,
+                        correction.pressure,
+                    ],
+                }));
+
+        send_bytes(&to_write.0[0..to_write.1]);
 
         // add to current input
         ctx.input_from_controller

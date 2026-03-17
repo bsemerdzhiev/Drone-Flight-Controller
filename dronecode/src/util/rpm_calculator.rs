@@ -11,10 +11,6 @@ const DRAG_COEFFICIENT: f32 = 1e-3;
 const MAX_BATTERY_VOLTAGE: i32 = 22;
 const MOTOR_K_V: i32 = 980;
 
-const MAX_RPM: i32 = MOTOR_K_V * MAX_BATTERY_VOLTAGE;
-
-const MAX_POSSIBLE_PWM: i32 = 5000;
-
 const LINEAR_FACTOR: u16 = 10;
 
 const MIN_PWM: u16 = 200;
@@ -26,8 +22,6 @@ fn map_rpm_square_to_pwm(
     rpms_square: &mut [i32],
     transceiver: &mut my_hdlc::HdlcTransceiver,
 ) {
-    let max_allowed_pwm: i32 = MAX_POSSIBLE_PWM; //motor::get_motor_max() as i32;
-
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
 
     let mut all_zero: bool = true;
