@@ -21,8 +21,6 @@ use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
 #[cfg(target_arch = "arm")]
-pub mod full_control_logic;
-#[cfg(target_arch = "arm")]
 pub mod main_loop;
 #[cfg(target_arch = "arm")]
 pub mod states;

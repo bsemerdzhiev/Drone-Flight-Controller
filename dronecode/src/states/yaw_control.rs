@@ -6,7 +6,7 @@ use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
-use my_hdlc::command::{DebugRpms, DeviceCommand, DroneInfo, FSMState};
+use my_hdlc::command::{DebugRpms, DebugYawPitchRoll, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::battery::read_battery;
@@ -15,9 +15,9 @@ use tudelft_quadrupel::uart::send_bytes;
 
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
-const K_P: [i32; 3] = [0, 0, 0];
-const K_I: [i32; 3] = [0, 0, 0];
-const K_D: [i32; 3] = [0, 0, 0];
+const K_P: [f32; 3] = [3f32, 0f32, 0f32];
+const K_I: [f32; 3] = [0f32, 0f32, 0f32];
+const K_D: [f32; 3] = [0f32, 0f32, 0f32];
 
 pub struct FSMYaw {
     pub imu_sampler: Box<dyn ImuHandler>,
@@ -32,6 +32,7 @@ impl FSMControl for FSMYaw {
         if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;
         }
+
         let target: YawPitchRoll =
             YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
 

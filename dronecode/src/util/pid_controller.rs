@@ -32,9 +32,9 @@ impl PIDController {
         &mut self,
         input: YawPitchRoll,
         target: YawPitchRoll,
-        k_p: [i32; 3],
-        k_i: [i32; 3],
-        k_d: [i32; 3],
+        k_p: [f32; 3],
+        k_i: [f32; 3],
+        k_d: [f32; 3],
         controller_flags: u8,
     ) -> YawPitchRoll {
         let mut result = YawPitchRoll::new();
