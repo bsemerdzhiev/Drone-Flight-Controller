@@ -9,7 +9,7 @@ pub struct DebugRpms {
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct DebugYawPitchRoll {
-    pub info: [f32; 3],
+    pub info: [f32; 5],
 }
 
 impl DebugRpms {
