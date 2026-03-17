@@ -130,12 +130,26 @@ fn main() {
         );
         if last_send.elapsed() >= send_period {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+            let cmd_for_ui = cmd.clone();
 
             let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );
 
             serial.write(&send_buffer.0[0..send_buffer.1]);
+
+            let json = serde_json::to_string(&serde_json::json!({
+                "ManualInput": {
+                    "lift": cmd_for_ui.lift,
+                    "roll": cmd_for_ui.roll,
+                    "pitch": cmd_for_ui.pitch,
+                    "yaw": cmd_for_ui.yaw,
+                }
+            })).unwrap();
+
+            let _ = python_stream.write_all(json.as_bytes());
+            let _ = python_stream.write_all(b"\n");
+
             last_send += send_period;
         }
 
@@ -145,17 +159,28 @@ fn main() {
         if let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
             iterations_without_message = 0;
 
-            // Only forward telemetry messages for now
-            if let DeviceCommand::DroneInfo(t) = &msg {
-                // Convert telemetry struct to JSON
-                let json = serde_json::to_string(&t).unwrap();
+            match &msg {
+                DeviceCommand::DroneInfo(info) => {
+                    let json = serde_json::to_string(info).unwrap();
 
-                // Send JSON + newline to Python
-                if let Err(e) = python_stream.write_all(json.as_bytes()) {
-                    eprintln!("Error writing JSON to Python: {}", e);
+                    // Send JSON + newline to Python
+                    if let Err(e) = python_stream.write_all(json.as_bytes()) {
+                        eprintln!("Error writing JSON to Python: {}", e);
+                    }
+                    let _ = python_stream.write_all(b"\n");
                 }
-                let _ = python_stream.write_all(b"\n");
+
+                DeviceCommand::DebugRpms(rpms) => {
+                    let json = serde_json::to_string(&serde_json::json!({
+                        "DebugRpms": { "rpms": rpms.rpms }
+                    })).unwrap();
+                    let _ = python_stream.write_all(json.as_bytes());
+                    let _ = python_stream.write_all(b"\n");
+                }
+
+                _ => {}
             }
+
 
             if PRINT_DRONE_DATA {
                 println!("{:?}\r", msg);
