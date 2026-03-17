@@ -9,6 +9,7 @@ edition = "2021"
 target = "thumbv6m-none-eabi"
 
 [dependencies]
+libm = "0.2.16"
 # portable-atomic = { version = "1", features = ["fallback", "critical-section"] }
 # rtt-target = "0.6.2"
 micromath = "2"
