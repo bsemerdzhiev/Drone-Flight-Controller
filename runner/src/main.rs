@@ -31,7 +31,7 @@ mod read_joystick;
 mod read_keyboard;
 
 const PRINT_DRONE_DATA: bool = true;
-const DEBUG_BOARD_MODE: bool = true;
+const DEBUG_BOARD_MODE: bool = false;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
@@ -116,6 +116,7 @@ fn main() {
         if last_send.elapsed() >= send_period {
             let mut cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
+            println!("{:?}\r", cmd);
             let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );

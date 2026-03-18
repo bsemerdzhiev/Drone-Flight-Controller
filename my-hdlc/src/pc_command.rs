@@ -11,6 +11,10 @@ pub struct ManualInput {
     roll: i32,
     pitch: i32,
     yaw: i32,
+
+    pub yaw_p_trim: f32,
+    pub roll_pitch_p_trim: f32,
+    pub roll_pitch_d_trim: f32,
     enter_panic: bool,
 }
 
@@ -21,6 +25,10 @@ impl ManualInput {
             roll: 0,
             pitch: 0,
             yaw: 0,
+
+            yaw_p_trim: 0f32,
+            roll_pitch_p_trim: 0f32,
+            roll_pitch_d_trim: 0f32,
             enter_panic: false,
         }
     }
@@ -30,6 +38,10 @@ impl ManualInput {
             roll,
             pitch,
             yaw,
+
+            yaw_p_trim: 0f32,
+            roll_pitch_p_trim: 0f32,
+            roll_pitch_d_trim: 0f32,
             enter_panic: false,
         };
     }
@@ -81,6 +93,16 @@ impl ManualInput {
 
     pub fn increment_yaw(&mut self, inc: i32) {
         self.yaw += inc
+    }
+
+    pub fn increment_yaw_p_trim(&mut self, inc: f32) {
+        self.yaw_p_trim += inc
+    }
+    pub fn increment_roll_pitch_p_trim(&mut self, inc: f32) {
+        self.roll_pitch_p_trim += inc
+    }
+    pub fn increment_roll_pitch_d_trim(&mut self, inc: f32) {
+        self.roll_pitch_d_trim += inc
     }
 
     pub fn get_roll(&self) -> i32 {

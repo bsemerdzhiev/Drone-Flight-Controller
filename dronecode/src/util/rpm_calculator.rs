@@ -5,8 +5,8 @@ use my_hdlc::{
 };
 use tudelft_quadrupel::{motor, uart::send_bytes};
 
-const THRUST_COEFFICIENT: f32 = 1e-2;
-const DRAG_COEFFICIENT: f32 = 1e-3;
+const THRUST_COEFFICIENT: f32 = 1e-3;
+const DRAG_COEFFICIENT: f32 = 1e-4;
 
 const MAX_BATTERY_VOLTAGE: i32 = 22;
 const MOTOR_K_V: i32 = 980;
