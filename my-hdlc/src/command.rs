@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct DebugRpms {
-    rpms: [u16; 4],
+    pub rpms: [u16; 4],
 }
 
 impl DebugRpms {
