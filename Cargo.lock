@@ -901,6 +901,7 @@ dependencies = [
  "evdev",
  "my-hdlc",
  "rand",
+ "serde_json",
  "tudelft-serial-upload",
 ]
 

@@ -1,20 +1,23 @@
 import sys
 import serial
+import socket
 import threading
 import time
 import dearpygui.dearpygui as dpg
 from collections import deque
 import math
 import random
+import json
 
 # Serial connection
 # ---------------------------------------
 
-MOCK_MODE = True  # Set to False when drone is connected
+MOCK_MODE = False  # Set to False when drone is connected
 
-if not MOCK_MODE:
-    port = sys.argv[1]
-    ser = serial.Serial(port, 115200, timeout=0.1)
+# if not MOCK_MODE:
+#     port = sys.argv[1]
+#     ser = serial.Serial(port, 115200, timeout=0.1)
+SOCKET_PATH = "/tmp/drone_telemetry.sock"
 
 
 # Telemetry storage
@@ -65,6 +68,11 @@ def log_message(direction: str, msg: str):
         message_log.append((ts, direction, msg))
 
 
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+sock.connect(SOCKET_PATH)
+sock_file = sock.makefile("r")
+
+
 # Serial reading thread
 # ---------------------------------------
 
@@ -79,48 +87,79 @@ def serial_reader():
     while True:
         try:
             if not MOCK_MODE:
-                if ser.in_waiting:
-                    line = ser.readline().decode("utf-8", errors="ignore").strip()
-                    # Expected format (22 comma-separated values):
-                    # yaw_rate, pitch_rate, roll_rate,
-                    # m0, m1, m2, m3,
-                    # joy_pitch, joy_roll, joy_lift, joy_yaw,
-                    # battery, fsm_state,
-                    # p_yaw, p_pitch, p_roll,
-                    # accel_x, accel_y, accel_z,
-                    # gyro_x,  gyro_y,  gyro_z
-                    parts = line.split(",")
-                    if len(parts) == 22:
-                        t = time.time() - start_time
-                        yaw_data.append(float(parts[0]))
-                        pitch_data.append(float(parts[1]))
-                        roll_data.append(float(parts[2]))
-                        time_data.append(t)
+                line = sock_file.readline()
+                if not line:
+                    continue
 
-                        for i in range(4):
-                            motor_values[i] = int(parts[3 + i])
+                t = json.loads(line)
 
-                        joystick["pitch"] = float(parts[7])
-                        joystick["roll"]  = float(parts[8])
-                        joystick["lift"]  = float(parts[9])
-                        joystick["yaw"]   = float(parts[10])
+                # print("JSON received:", t)
+                if "state" in t and "bat_level" in t:
+                    fsm_state = t["state"]
+                    battery_level = t["bat_level"] / 100.0  # convert 0–100 to 0.0–1.0
+                    continue
+                
+                if "DebugRpms" in t:
+                    rpms = t["DebugRpms"]["rpms"]
+                    for i in range(4):
+                        motor_values[i] = rpms[i]
+                    continue 
 
-                        battery_level     = float(parts[11])
-                        fsm_state         = parts[12].strip()
+                if "ManualInput" in t:
+                    mi = t["ManualInput"]
+                    joystick["lift"]  = mi["lift"]
+                    joystick["roll"]  = mi["roll"]
+                    joystick["pitch"] = mi["pitch"]
+                    joystick["yaw"]   = mi["yaw"]
+                    continue
 
-                        p_values["yaw"]   = float(parts[13])
-                        p_values["pitch"] = float(parts[14])
-                        p_values["roll"]  = float(parts[15])
+                yaw_data.append(t["yaw_rate"])
+                pitch_data.append(t["pitch_rate"])
+                roll_data.append(t["roll_rate"])
+                time_data.append(time.time() - start_time)
 
-                        accel["x"] = int(parts[16])
-                        accel["y"] = int(parts[17])
-                        accel["z"] = int(parts[18])
+                for i in range(4):
+                    motor_values[i] = t["motors"][i]
 
-                        gyro["x"]  = int(parts[19])
-                        gyro["y"]  = int(parts[20])
-                        gyro["z"]  = int(parts[21])
+                joystick["pitch"] = t["pitch"]
+                joystick["roll"]  = t["roll"]
+                joystick["lift"]  = t["lift"]
+                joystick["yaw"]   = t["yaw"]
 
-                        log_message("Drone→PC", line)
+                battery_level = t["battery"]
+                fsm_state     = t["fsm_state"]
+
+                p_values["yaw"]   = t["p_yaw"]
+                p_values["pitch"] = t["p_pitch"]
+                p_values["roll"]  = t["p_roll"]
+                # if ser.in_waiting:
+                #     line = ser.readline().decode("utf-8", errors="ignore").strip()
+                #     # Expected format:
+                #     # yaw_rate,pitch_rate,roll_rate,m0,m1,m2,m3,
+                #     # pitch,roll,lift,yaw,battery,fsm_state,
+                #     # p_yaw,p_pitch,p_roll
+                #     parts = line.split(",")
+                #     if len(parts) == 16:
+                #         t = time.time() - start_time
+                #         yaw_data.append(float(parts[0]))
+                #         pitch_data.append(float(parts[1]))
+                #         roll_data.append(float(parts[2]))
+                #         time_data.append(t)
+
+                #         for i in range(4):
+                #             motor_values[i] = int(parts[3 + i])
+
+                #         joystick["pitch"] = float(parts[7])
+                #         joystick["roll"]  = float(parts[8])
+                #         joystick["lift"]  = float(parts[9])
+                #         joystick["yaw"]   = float(parts[10])
+
+                #         battery_level     = float(parts[11])
+                #         fsm_state         = parts[12].strip()
+
+                #         p_values["yaw"]   = float(parts[13])
+                #         p_values["pitch"] = float(parts[14])
+                #         p_values["roll"]  = float(parts[15])
             else:
                 t = time.time() - start_time
 
@@ -194,7 +233,7 @@ def serial_reader():
 
 dpg.create_context()
 
-with dpg.window(label="Drone Ground Station", tag="main_window", width=1200, height=1000):
+with dpg.window(label="Drone Ground Station", tag="main_window", width=900, height=800):
 
     if MOCK_MODE:
         dpg.add_text("⚠ MOCK MODE - No drone connected", color=[255, 200, 0])
@@ -391,7 +430,7 @@ threading.Thread(target=update_gui, daemon=True).start()
 # Start GUI
 # ---------------------------------------
 
-dpg.create_viewport(title="Drone Interface", width=1220, height=1040)
+dpg.create_viewport(title="Drone Interface", width=920, height=900)
 dpg.setup_dearpygui()
 dpg.show_viewport()
 dpg.start_dearpygui()

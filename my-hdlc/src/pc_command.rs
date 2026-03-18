@@ -7,10 +7,10 @@ const MIN_THRESHOLD: i32 = 30;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct ManualInput {
-    lift: i32,
-    roll: i32,
-    pitch: i32,
-    yaw: i32,
+    pub lift: i32,
+    pub roll: i32,
+    pub pitch: i32,
+    pub yaw: i32,
     enter_panic: bool,
 }
 
