@@ -20,7 +20,7 @@ use tudelft_quadrupel::mpu;
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
 
-const K_P: [f32; 4] = [3f32, 2f32, 2f32, 0f32];
+const K_P: [f32; 4] = [20f32, 200f32, 200f32, 0f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -42,13 +42,40 @@ impl FSMControl for FSMFullControl {
 
         let input = input_opt.unwrap();
 
+        let mut k_p: [f32; 4] = K_P;
+        let mut k_i: [f32; 4] = K_I;
+        let mut k_d: [f32; 4] = K_D;
+
+        k_p[0] += ctx.input_from_controller.as_ref().unwrap().yaw_p_trim;
+        k_p[1] += ctx
+            .input_from_controller
+            .as_ref()
+            .unwrap()
+            .roll_pitch_p_trim;
+        k_p[2] += ctx
+            .input_from_controller
+            .as_ref()
+            .unwrap()
+            .roll_pitch_p_trim;
+
+        k_d[1] += ctx
+            .input_from_controller
+            .as_ref()
+            .unwrap()
+            .roll_pitch_p_trim;
+        k_d[2] += ctx
+            .input_from_controller
+            .as_ref()
+            .unwrap()
+            .roll_pitch_p_trim;
+
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
             input,
             target,
-            K_P,
-            K_I,
-            K_D,
+            k_p,
+            k_i,
+            k_d,
             ControllerFlags::AddP as u8,
         );
 
@@ -60,11 +87,11 @@ impl FSMControl for FSMFullControl {
         ctx.input_from_controller
             .as_mut()
             .unwrap()
-            .increment_pitch(correction.pitch as i32);
+            .increment_pitch(-correction.pitch as i32);
         ctx.input_from_controller
             .as_mut()
             .unwrap()
-            .increment_roll(correction.roll as i32);
+            .increment_roll(-correction.roll as i32);
 
         // output to motors
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
