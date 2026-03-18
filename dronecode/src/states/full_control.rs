@@ -20,7 +20,7 @@ use tudelft_quadrupel::mpu;
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
 
-const K_P: [f32; 4] = [20f32, 200f32, 200f32, 0f32];
+const K_P: [f32; 4] = [20f32, 2000f32, 2000f32, 0f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -87,11 +87,11 @@ impl FSMControl for FSMFullControl {
         ctx.input_from_controller
             .as_mut()
             .unwrap()
-            .increment_pitch(-correction.pitch as i32);
+            .increment_pitch(correction.pitch as i32);
         ctx.input_from_controller
             .as_mut()
             .unwrap()
-            .increment_roll(-correction.roll as i32);
+            .increment_roll(correction.roll as i32);
 
         // output to motors
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);

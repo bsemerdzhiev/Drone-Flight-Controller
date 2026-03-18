@@ -116,6 +116,7 @@ fn main() {
         if last_send.elapsed() >= send_period {
             let mut cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
+            println!("{:?}\r", cmd);
             let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );

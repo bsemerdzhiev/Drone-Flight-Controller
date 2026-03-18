@@ -141,8 +141,8 @@ impl YawPitchRoll {
         YawPitchRoll {
             lift: 0f32,
             yaw: (self.yaw - prev_sample.yaw) / duration_in_sec,
-            pitch: (self.pitch - prev_sample.pitch) / duration_in_sec,
-            roll: (self.roll - prev_sample.roll) / duration_in_sec,
+            pitch: (self.pitch - prev_sample.pitch),
+            roll: (self.roll - prev_sample.roll),
             pressure: self.pressure,
         }
     }
