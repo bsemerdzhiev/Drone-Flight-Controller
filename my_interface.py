@@ -67,10 +67,10 @@ def log_message(direction: str, msg: str):
     with message_log_lock:
         message_log.append((ts, direction, msg))
 
-
-sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-sock.connect(SOCKET_PATH)
-sock_file = sock.makefile("r")
+if not MOCK_MODE:
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(SOCKET_PATH)
+    sock_file = sock.makefile("r")
 
 
 # Serial reading thread
@@ -132,34 +132,6 @@ def serial_reader():
                 p_values["yaw"]   = t["p_yaw"]
                 p_values["pitch"] = t["p_pitch"]
                 p_values["roll"]  = t["p_roll"]
-                # if ser.in_waiting:
-                #     line = ser.readline().decode("utf-8", errors="ignore").strip()
-                #     # Expected format:
-                #     # yaw_rate,pitch_rate,roll_rate,m0,m1,m2,m3,
-                #     # pitch,roll,lift,yaw,battery,fsm_state,
-                #     # p_yaw,p_pitch,p_roll
-                #     parts = line.split(",")
-                #     if len(parts) == 16:
-                #         t = time.time() - start_time
-                #         yaw_data.append(float(parts[0]))
-                #         pitch_data.append(float(parts[1]))
-                #         roll_data.append(float(parts[2]))
-                #         time_data.append(t)
-
-                #         for i in range(4):
-                #             motor_values[i] = int(parts[3 + i])
-
-                #         joystick["pitch"] = float(parts[7])
-                #         joystick["roll"]  = float(parts[8])
-                #         joystick["lift"]  = float(parts[9])
-                #         joystick["yaw"]   = float(parts[10])
-
-                #         battery_level     = float(parts[11])
-                #         fsm_state         = parts[12].strip()
-
-                #         p_values["yaw"]   = float(parts[13])
-                #         p_values["pitch"] = float(parts[14])
-                #         p_values["roll"]  = float(parts[15])
             else:
                 t = time.time() - start_time
 
