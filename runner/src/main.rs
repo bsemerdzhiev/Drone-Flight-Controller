@@ -38,7 +38,7 @@ use serde_json;
 
 
 const PRINT_DRONE_DATA: bool = false;
-const DEBUG_BOARD_MODE: bool = true;
+const DEBUG_BOARD_MODE: bool = false;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
