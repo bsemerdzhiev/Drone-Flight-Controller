@@ -2,7 +2,6 @@ use crate::{
     states::state_structures::state_context::StateContext,
     util::rpm_calculator::actuate_motors_with_rates,
 };
-
 use alloc::boxed::Box;
 use my_hdlc::{
     command::{self, DebugRpms, DeviceCommand, FSMState},
@@ -25,7 +24,6 @@ impl FSMControl for FSMManual {
 
         // consume the command and set it to None
         *ctx.input_from_controller = None;
-
         self
     }
 
