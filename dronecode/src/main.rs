@@ -21,6 +21,8 @@ use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
 #[cfg(target_arch = "arm")]
+pub mod filters;
+#[cfg(target_arch = "arm")]
 pub mod main_loop;
 #[cfg(target_arch = "arm")]
 pub mod states;
@@ -28,9 +30,6 @@ pub mod states;
 pub mod telemetry_read;
 #[cfg(target_arch = "arm")]
 pub mod util;
-
-#[cfg(target_arch = "arm")]
-pub mod filters;
 
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
