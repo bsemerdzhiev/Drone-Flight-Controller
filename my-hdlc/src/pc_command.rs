@@ -32,16 +32,24 @@ impl ManualInput {
             enter_panic: false,
         }
     }
-    pub fn new(lift: i32, roll: i32, pitch: i32, yaw: i32) -> Self {
+    pub fn new(
+        lift: i32,
+        roll: i32,
+        pitch: i32,
+        yaw: i32,
+        yaw_p_trim: f32,
+        roll_pitch_p_trim: f32,
+        roll_pitch_d_trim: f32,
+    ) -> Self {
         return Self {
             lift,
             roll,
             pitch,
             yaw,
 
-            yaw_p_trim: 0f32,
-            roll_pitch_p_trim: 0f32,
-            roll_pitch_d_trim: 0f32,
+            yaw_p_trim: yaw_p_trim,
+            roll_pitch_p_trim: roll_pitch_p_trim,
+            roll_pitch_d_trim: roll_pitch_d_trim,
             enter_panic: false,
         };
     }

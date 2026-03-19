@@ -20,7 +20,7 @@ use tudelft_quadrupel::mpu;
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
 
-const K_P: [f32; 4] = [20f32, 2000f32, 2000f32, 0f32];
+const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 0f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -106,7 +106,7 @@ impl FSMControl for FSMFullControl {
             FSMState::PanicMode => Box::new(FSMPanic {}),
             FSMState::SafeMode => Box::new(FSMSafe {}),
             FSMState::HeightControlMode => Box::new(FSMHeightControl {
-                imu_sampler: Box::new(DmpReadings::new()),
+                imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
                 pid_controller: Box::new(PIDController::new()),
 
                 prev_state: self,

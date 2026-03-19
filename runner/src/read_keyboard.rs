@@ -176,12 +176,12 @@ pub fn read_keyboard(
                 KeyCode::Char('q') => keyboard_trim.increment_yaw(-2), //yaw down
                 KeyCode::Char('w') => keyboard_trim.increment_yaw(2),  //yaw up
                 //
-                KeyCode::Char('u') => keyboard_trim.increment_yaw_p_trim(100f32), //yaw up
-                KeyCode::Char('j') => keyboard_trim.increment_yaw_p_trim(-100f32), //yaw up
-                KeyCode::Char('i') => keyboard_trim.increment_roll_pitch_p_trim(20f32), //yaw up
-                KeyCode::Char('k') => keyboard_trim.increment_roll_pitch_p_trim(-20f32), //yaw up
-                KeyCode::Char('o') => keyboard_trim.increment_roll_pitch_d_trim(2f32), //yaw up
-                KeyCode::Char('l') => keyboard_trim.increment_roll_pitch_d_trim(-2f32), //yaw up
+                KeyCode::Char('u') => keyboard_trim.increment_yaw_p_trim(2f32), //yaw up
+                KeyCode::Char('j') => keyboard_trim.increment_yaw_p_trim(-2f32), //yaw up
+                KeyCode::Char('i') => keyboard_trim.increment_roll_pitch_p_trim(500f32), //yaw up
+                KeyCode::Char('k') => keyboard_trim.increment_roll_pitch_p_trim(-500f32), //yaw up
+                KeyCode::Char('o') => keyboard_trim.increment_roll_pitch_d_trim(500f32), //yaw up
+                KeyCode::Char('l') => keyboard_trim.increment_roll_pitch_d_trim(-500f32), //yaw up
                 //TODO: missing the reset of the maps of page
                 // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
                 _ => {}

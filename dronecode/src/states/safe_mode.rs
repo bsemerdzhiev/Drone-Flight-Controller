@@ -35,13 +35,13 @@ impl FSMControl for FSMSafe {
             FSMState::ManualMode => return Box::new(FSMManual {}),
             FSMState::YawControl => {
                 return Box::new(FSMYaw {
-                    imu_sampler: Box::new(DmpReadings::new()),
+                    imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
                     pid_controller: Box::new(PIDController::new()),
                 })
             }
             FSMState::FullControlMode => {
                 return Box::new(FSMFullControl {
-                    imu_sampler: Box::new(DmpReadings::new()),
+                    imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
                     pid_controller: Box::new(PIDController::new()),
                 })
             }
