@@ -1,11 +1,8 @@
 use core::time::Duration;
 
-use crate::yaw_pitch_roll::YawPitchRoll;
 use my_hdlc::telemetry_data::TelemetryData;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
-use tudelft_quadrupel::motor::get_motors;
-use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw, structs::*};
 
 pub trait TelemetryRead {
     fn read_telemetry(dt: Duration) -> Self;
