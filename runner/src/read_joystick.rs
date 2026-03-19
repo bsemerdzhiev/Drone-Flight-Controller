@@ -17,9 +17,9 @@ pub const MAX_LIFT: f32 = 750f32;
 
 //------------------------------------------------------
 
-const YAW_RATE: f32 = 200f32;
-const PITCH_DEGREE: f32 = 150f32;
-const ROLL_DEGREE: f32 = 600f32;
+const YAW_RATE: f32 = 20f32;
+const PITCH_DEGREE: f32 = 75f32;
+const ROLL_DEGREE: f32 = 300f32;
 
 const THRESHOLD: f32 = 10f32;
 //------------------------------------------------------
@@ -77,5 +77,8 @@ pub fn combine_inputs(trim: &ManualInput, joy: &ManualInput) -> ManualInput {
         (trim.get_roll() + joy.get_roll()).clamp(-ROLL_DEGREE as i32, ROLL_DEGREE as i32),
         (trim.get_pitch() + joy.get_pitch()).clamp(-PITCH_DEGREE as i32, PITCH_DEGREE as i32),
         (trim.get_yaw() + joy.get_yaw()).clamp(-YAW_RATE as i32, YAW_RATE as i32),
+        trim.yaw_p_trim,
+        trim.roll_pitch_p_trim,
+        trim.roll_pitch_d_trim,
     )
 }

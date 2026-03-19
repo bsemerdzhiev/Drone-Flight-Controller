@@ -22,13 +22,16 @@ use tudelft_quadrupel::{
 pub struct DmpReadings {
     last_sampled_time: Option<Instant>,
     last_sample: Option<YawPitchRoll>,
+
+    calibration_offset: YawPitchRoll,
 }
 
 impl DmpReadings {
-    pub fn new() -> Self {
+    pub fn new(offset: YawPitchRoll) -> Self {
         DmpReadings {
             last_sampled_time: None,
             last_sample: None,
+            calibration_offset: offset,
         }
     }
 }
@@ -43,6 +46,9 @@ impl ImuHandler for DmpReadings {
         let sampled_quaternion = sampled_dmp_res.unwrap();
 
         let mut sampled_yaw_pitch_roll = YawPitchRoll::from(sampled_quaternion);
+
+        sampled_yaw_pitch_roll = sampled_yaw_pitch_roll - self.calibration_offset;
+
         sampled_yaw_pitch_roll.pressure = read_pressure() as f32;
 
         if self.last_sampled_time.is_none() {
