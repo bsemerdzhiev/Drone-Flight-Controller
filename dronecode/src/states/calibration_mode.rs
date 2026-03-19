@@ -1,67 +1,48 @@
-use crate::calibration_state::Axis;
-use crate::calibration_state::CalibrationState;
+use crate::filters::dmp_readings::DmpReadings;
 use crate::states::full_control::FSMFullControl;
+use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
-use crate::states::{safe_mode::FSMSafe, FSM_control_trait::FSMControl};
+use crate::states::state_structures::state_context::StateContext;
+use crate::states::yaw_control::FSMYaw;
+use crate::states::{fsm_base_class::FSMControl, safe_mode::FSMSafe};
+use crate::util::yaw_pitch_roll::YawPitchRoll;
+
+use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
+use tudelft_quadrupel::block;
 use tudelft_quadrupel::mpu::{
-    read_raw,
+    read_dmp_bytes, read_raw,
     structs::{Accel, Gyro},
 };
-pub struct FSMCalibration;
 
-impl From<Accel> for Axis {
-    fn from(a: Accel) -> Self {
-        Axis {
-            x: a.x,
-            y: a.y,
-            z: a.z,
-        }
-    }
-}
-
-impl From<Gyro> for Axis {
-    fn from(g: Gyro) -> Self {
-        Axis {
-            x: g.x,
-            y: g.y,
-            z: g.z,
-        }
-    }
-}
+pub struct FSMCalibration {}
 
 impl FSMControl for FSMCalibration {
-    fn run_control_loop(
-        &self,
-        calibration_state: &mut CalibrationState,
-        command: &ManualInput,
-        has_received_input: &mut bool,
-        my_hdlc: &mut HdlcTransceiver,
-    ) -> &dyn FSMControl {
+    fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         let (accel, gyro) = read_raw().unwrap();
-        calibration_state.accumulate_calibration(Axis::from(accel), Axis::from(gyro));
+        let dmp_data = block!(read_dmp_bytes());
+        let ypr = if (dmp_data.is_ok()) {
+            YawPitchRoll::from(dmp_data.unwrap())
+        } else {
+            YawPitchRoll::new()
+        };
+        // read new sample
+        ctx.calibration_state.read_new_sample(accel, gyro, ypr);
+
+        if ctx.calibration_state.should_finish() {
+            ctx.calibration_state.finalize_calibration();
+
+            return Box::new(FSMSafe {});
+        }
         return self;
     }
-    fn step(
-        &self,
-        next_state: FSMState,
-        calibration_state: &mut CalibrationState,
-    ) -> &dyn FSMControl {
+    fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
-            FSMState::SafeMode => return &FSMSafe,
-            FSMState::CalibrationMode => return self,
-            FSMState::FullControlMode => {
-                calibration_state.finish_calibration();
-                return &FSMFullControl;
-            }
-            FSMState::HeightControlMode => return self,
-            FSMState::ManualMode => return self,
-            FSMState::PanicMode => return &FSMPanic,
-            FSMState::RawSensorsFullControlMode => return self,
-            FSMState::WirelessMode => return self,
-            FSMState::YawControl => return self,
+            FSMState::PanicMode => Box::new(FSMPanic {}),
+            FSMState::SafeMode => Box::new(FSMSafe {}),
+            _ => return self,
         }
     }
 

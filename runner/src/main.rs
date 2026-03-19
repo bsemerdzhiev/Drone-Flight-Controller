@@ -93,7 +93,7 @@ fn main() {
                 joystick_disconnected = false;
             }
             read_joystick(&mut device, &mut joystick_input);
-            // println!("{}", joystick_input);
+
             read_keyboard(
                 &mut keyboard_trim,
                 &mut joystick_input,
@@ -114,8 +114,9 @@ fn main() {
             &mut serial,
         );
         if last_send.elapsed() >= send_period {
-            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+            let mut cmd = combine_inputs(&keyboard_trim, &joystick_input);
 
+            println!("{:?}\r", cmd);
             let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );
