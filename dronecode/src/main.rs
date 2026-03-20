@@ -5,35 +5,32 @@
 
 extern crate alloc;
 
-use crate::control::main_loop;
+use crate::main_loop::main_loop;
 
 use alloc::format;
 use core::alloc::Layout;
 use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
 use core::ptr::addr_of_mut;
+use tudelft_quadrupel::flash::flash_chip_erase;
 
 use tudelft_quadrupel::initialize::initialize;
-use tudelft_quadrupel::led::Led::{Green, Red};
+use tudelft_quadrupel::led::Led::{Green, Red, Yellow};
 use tudelft_quadrupel::motor::set_motors;
 use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
 
-pub mod calibration_state;
-
 #[cfg(target_arch = "arm")]
-pub mod control;
+pub mod filters;
 #[cfg(target_arch = "arm")]
-pub mod full_control_logic;
+pub mod main_loop;
 #[cfg(target_arch = "arm")]
 pub mod states;
 #[cfg(target_arch = "arm")]
 pub mod telemetry_read;
 #[cfg(target_arch = "arm")]
 pub mod util;
-#[cfg(target_arch = "arm")]
-pub mod yaw_pitch_roll;
 
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
@@ -59,6 +56,11 @@ fn main() -> ! {
     }
 
     // send_and_receive();
+    // Ereasing Flash memory on boot
+    Yellow.on();
+    _ = flash_chip_erase();
+    Yellow.off();
+
     main_loop();
 }
 
