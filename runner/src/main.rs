@@ -108,7 +108,7 @@ fn main() {
                 joystick_disconnected = false;
             }
             read_joystick(&mut device, &mut joystick_input);
-            // println!("{}", joystick_input);
+
             read_keyboard(
                 &mut keyboard_trim,
                 &mut joystick_input,
@@ -132,6 +132,7 @@ fn main() {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
             let cmd_for_ui = cmd.clone();
 
+            println!("{:?}\r", cmd);
             let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );
@@ -140,10 +141,10 @@ fn main() {
 
             let json = serde_json::to_string(&serde_json::json!({
                 "ManualInput": {
-                    "lift": cmd_for_ui.lift,
-                    "roll": cmd_for_ui.roll,
-                    "pitch": cmd_for_ui.pitch,
-                    "yaw": cmd_for_ui.yaw,
+                    "lift": cmd_for_ui.get_lift(),
+                    "roll": cmd_for_ui.get_roll(),
+                    "pitch": cmd_for_ui.get_pitch(),
+                    "yaw": cmd_for_ui.get_yaw(),
                 }
             })).unwrap();
 
