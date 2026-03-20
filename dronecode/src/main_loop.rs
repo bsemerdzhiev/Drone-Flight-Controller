@@ -1,21 +1,23 @@
 use core::time::Duration;
 
+use crate::telemetry_read::TelemetryRead;
 use alloc::boxed::Box;
 use alloc::format;
+use my_hdlc::telemetry_data::*;
+use tudelft_quadrupel::flash::flash_write_bytes;
 
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::states::state_structures::state_context::StateContext;
-use crate::telemetry_read::TelemetryRead;
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
-use tudelft_quadrupel::led::Led::{Blue, Green};
+use tudelft_quadrupel::led::Led::{Blue, Green, Yellow};
 use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{enable_dmp, read_dmp_bytes, read_raw};
 use tudelft_quadrupel::time::{set_tick_frequency, wait_for_next_tick, Instant};
@@ -50,15 +52,23 @@ pub fn main_loop() -> ! {
 
     // -------------------------------------------------------------------------
 
+    // Time data for telemetry data
+    let mut current_time = Instant::now();
+    // -------------------------------------------------------------------------
+
     // fields for the context
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
     let mut received_manual_input: Option<ManualInput> = None;
     let mut calibration_state: CalibrationState = CalibrationState::new();
+    let mut flash_head = 0u32;
+    let mut flash_tail = 0u32;
 
     let mut ctx = StateContext {
         calibration_state: &mut calibration_state,
         trv: &mut transceiver,
         input_from_controller: &mut received_manual_input,
+        flash_head: &mut flash_head,
+        flash_tail: &mut flash_tail,
     };
 
     // -------------------------------------------------------------------------
@@ -71,7 +81,7 @@ pub fn main_loop() -> ! {
     // -------------------------------------------------------------------------
     for i in 0.. {
         let _ = Blue.toggle();
-
+        let now = Instant::now();
         // -------------------------------------------------------------------------
         // Check battery level and switch to panic
         let bat_level = read_battery();
@@ -121,6 +131,12 @@ pub fn main_loop() -> ! {
             send_drone_data(&mut ctx.trv, current_state.get_state());
             Green.off();
         }
+        put_telemetry_data_on_flash(
+            &mut ctx.flash_head,
+            now.duration_since(current_time),
+            current_state.get_state(),
+        );
+        current_time = now;
 
         // -------------------------------------------------------------------------
         // send information about the drone state to PC
@@ -158,4 +174,21 @@ fn send_ack(transceiver: &mut HdlcTransceiver) {
     let ack_cmd = DeviceCommand::Ack;
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
     send_bytes(&msg.0[0..msg.1]);
+}
+
+fn put_telemetry_data_on_flash(flash_head: &mut u32, dt: Duration, curent_state: FSMState) {
+    if (*flash_head + TELEMETERY_DATA_SIZE) > 0x01FFFF {
+        return;
+    }
+    let data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state);
+    // Green.on();
+
+    // let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&cmd);
+    let mut buf = [0u8; (TELEMETERY_DATA_SIZE + 20) as usize];
+    let ser: &mut [u8] = postcard::to_slice(&data, &mut buf).unwrap();
+
+    Yellow.on();
+    _ = flash_write_bytes(*flash_head, ser);
+    Yellow.off();
+    *flash_head += TELEMETERY_DATA_SIZE;
 }
