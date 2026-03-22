@@ -1141,6 +1141,7 @@ dependencies = [
  "libm",
  "micromath",
  "my-hdlc",
+ "nrf51-pac",
  "tudelft-quadrupel",
 ]
 
