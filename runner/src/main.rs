@@ -179,6 +179,12 @@ fn main() {
                     let _ = python_stream.write_all(b"\n");
                 }
 
+                DeviceCommand::Telemetry(telemetry) => {
+                    let json = serde_json::to_string(telemetry).unwrap();
+                    let _ = python_stream.write_all(json.as_bytes());
+                    let _ = python_stream.write_all(b"\n");
+                }
+
                 _ => {}
             }
 

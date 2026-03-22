@@ -67,6 +67,12 @@ def log_message(direction: str, msg: str):
     with message_log_lock:
         message_log.append((ts, direction, msg))
 
+
+def manual_value_to_bar(val: float, axis: str):
+    if axis == "lift":
+        return max(0.0, min(1.0, val / 1000.0))
+    return max(0.0, min(1.0, (val + 1000.0) / 2000.0))
+
 if not MOCK_MODE:
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(SOCKET_PATH)
@@ -91,7 +97,7 @@ def serial_reader():
                 if not line:
                     continue
 
-                t = json.loads(line)
+                t = json.loads(line) # Data on JSON string
 
                 # print("JSON received:", t)
                 if "state" in t and "bat_level" in t:
@@ -111,6 +117,27 @@ def serial_reader():
                     joystick["roll"]  = mi["roll"]
                     joystick["pitch"] = mi["pitch"]
                     joystick["yaw"]   = mi["yaw"]
+                    continue
+
+                if "accel_x" in t and "gyro_x" in t:
+                    yaw_data.append(t.get("yaw", 0.0))
+                    pitch_data.append(t.get("pitch", 0.0))
+                    roll_data.append(t.get("roll", 0.0))
+                    time_data.append(time.time() - start_time)
+
+                    motors = t.get("motors", motor_values)
+                    for i in range(4):
+                        motor_values[i] = motors[i]
+
+                    accel["x"] = t["accel_x"]
+                    accel["y"] = t["accel_y"]
+                    accel["z"] = t["accel_z"]
+                    gyro["x"] = t["gyro_x"]
+                    gyro["y"] = t["gyro_y"]
+                    gyro["z"] = t["gyro_z"]
+
+                    if "cur_state" in t: # In case DroneInfo message is missed, get current state from telemetry
+                        fsm_state = t["cur_state"]
                     continue
 
                 yaw_data.append(t["yaw_rate"])
@@ -354,7 +381,7 @@ def update_gui():
         for axis in ["pitch", "roll", "lift", "yaw"]:
             val = joystick[axis]
             dpg.set_value(f"{axis}_val", f"{val:.3f}")
-            dpg.set_value(f"{axis}_bar", (val + 1) / 2)
+            dpg.set_value(f"{axis}_bar", manual_value_to_bar(val, axis))
 
         # Battery
         dpg.set_value("battery_bar",  battery_level)
