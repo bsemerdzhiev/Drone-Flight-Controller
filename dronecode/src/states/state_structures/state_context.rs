@@ -2,10 +2,18 @@ use my_hdlc::{pc_command::ManualInput, HdlcTransceiver};
 
 use crate::states::state_structures::calibration_state::CalibrationState;
 
+#[derive(Clone, Copy, Default)]
+pub struct LiveControllerValues {
+    pub p_yaw: f32,
+    pub p_pitch: f32,
+    pub p_roll: f32,
+}
+
 pub struct StateContext<'a> {
     pub calibration_state: &'a mut CalibrationState,
     pub trv: &'a mut HdlcTransceiver,
     pub input_from_controller: &'a mut Option<ManualInput>,
     pub flash_head: &'a mut u32,
     pub flash_tail: &'a mut u32,
+    pub live_controller_values: &'a mut LiveControllerValues,
 }

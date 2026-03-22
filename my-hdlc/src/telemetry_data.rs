@@ -21,6 +21,9 @@ pub struct TelemetryData {
     pub bat: u16,
     pub pres: u32,
     pub cur_state: FSMState,
+    pub p_yaw: f32,
+    pub p_pitch: f32,
+    pub p_roll: f32,
 }
 
 // impl fmt::Display for TelemetryData {

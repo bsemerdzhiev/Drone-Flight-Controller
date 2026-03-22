@@ -21,6 +21,7 @@ pub struct FSMSafe {}
 
 impl FSMControl for FSMSafe {
     fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
+        *ctx.live_controller_values = Default::default();
         set_motors([0, 0, 0, 0]);
         if *ctx.flash_head != *ctx.flash_tail {
             send_flash_data(ctx.flash_tail, ctx.trv);

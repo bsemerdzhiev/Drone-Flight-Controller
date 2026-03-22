@@ -1,5 +1,6 @@
 use core::time::Duration;
 
+use crate::states::state_structures::state_context::LiveControllerValues;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use my_hdlc::command::FSMState;
 use my_hdlc::telemetry_data::TelemetryData;
@@ -11,11 +12,11 @@ use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw, structs::*};
 
 pub trait TelemetryRead {
-    fn read_telemetry(dt: Duration, cur_state: FSMState) -> Self;
+    fn read_telemetry(dt: Duration, cur_state: FSMState, live_controller_values: &LiveControllerValues) -> Self;
 }
 
 impl TelemetryRead for TelemetryData {
-    fn read_telemetry(dt: Duration, cur_state: FSMState) -> Self {
+    fn read_telemetry(dt: Duration, cur_state: FSMState, live_controller_values: &LiveControllerValues) -> Self {
         let motors = get_motors();
         let quaternion = block!(read_dmp_bytes());
         let ypr = if quaternion.is_ok() {
@@ -45,6 +46,9 @@ impl TelemetryRead for TelemetryData {
             bat,
             pres,
             cur_state,
+            p_yaw: live_controller_values.p_yaw,
+            p_pitch: live_controller_values.p_pitch,
+            p_roll: live_controller_values.p_roll,
         };
     }
 }
