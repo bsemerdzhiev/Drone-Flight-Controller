@@ -13,6 +13,7 @@ pub struct FSMPanic {}
 impl FSMControl for FSMPanic {
     // loop is called every tick
     fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
+        *ctx.live_controller_values = Default::default();
         let current_speed = get_motors();
         const DESCENT_STEP: u16 = 2;
 

@@ -73,6 +73,7 @@ def manual_value_to_bar(val: float, axis: str):
         return max(0.0, min(1.0, val / 1000.0))
     return max(0.0, min(1.0, (val + 1000.0) / 2000.0))
 
+
 if not MOCK_MODE:
     sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
     sock.connect(SOCKET_PATH)
@@ -135,6 +136,9 @@ def serial_reader():
                     gyro["x"] = t["gyro_x"]
                     gyro["y"] = t["gyro_y"]
                     gyro["z"] = t["gyro_z"]
+                    p_values["yaw"] = t.get("p_yaw", p_values["yaw"])
+                    p_values["pitch"] = t.get("p_pitch", p_values["pitch"])
+                    p_values["roll"] = t.get("p_roll", p_values["roll"])
 
                     if "cur_state" in t: # In case DroneInfo message is missed, get current state from telemetry
                         fsm_state = t["cur_state"]

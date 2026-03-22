@@ -68,6 +68,9 @@ impl FSMControl for FSMFullControl {
             .as_ref()
             .unwrap()
             .roll_pitch_p_trim;
+        ctx.live_controller_values.p_yaw = k_p[0];
+        ctx.live_controller_values.p_pitch = k_p[1];
+        ctx.live_controller_values.p_roll = k_p[2];
 
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
