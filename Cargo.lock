@@ -1142,6 +1142,7 @@ dependencies = [
  "micromath",
  "my-hdlc",
  "postcard",
+ "nrf51-pac",
  "tudelft-quadrupel",
 ]
 
