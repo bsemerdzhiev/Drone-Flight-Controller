@@ -1,5 +1,3 @@
-import sys
-import serial
 import socket
 import threading
 import time
@@ -38,8 +36,8 @@ p_values  = {"yaw": 1.0, "pitch": 1.0, "roll": 1.0}
 accel = {"x": 0, "y": 0, "z": 0}
 gyro  = {"x": 0, "y": 0, "z": 0}
 
-# Message log: list of (timestamp_str, direction, message)
-message_log = deque(maxlen=100)
+# Message log: keep only the most recent entries visible in the GUI
+message_log = deque(maxlen=50)
 message_log_lock = threading.Lock()
 
 FSM_STATES = ["SafeMode", "PanicMode", "ManualMode", "CalibrationMode",
@@ -62,7 +60,7 @@ start_time = time.time()
 # ---------------------------------------
 
 def log_message(direction: str, msg: str):
-    """direction: 'PC→Drone' or 'Drone→PC'"""
+    """direction: 'PC>Drone' or 'Drone>PC'"""
     ts = time.strftime("%H:%M:%S")
     with message_log_lock:
         message_log.append((ts, direction, msg))
@@ -104,14 +102,14 @@ def serial_reader():
                 if "state" in t and "bat_level" in t:
                     fsm_state = t["state"]
                     battery_level = t["bat_level"] / 100.0  # convert 0–100 to 0.0–1.0
-                    log_message("Drone→PC", f"DroneInfo state={fsm_state} bat={battery_level * 100:.1f}%")
+                    log_message("Drone>PC", f"DroneInfo state={fsm_state} bat={battery_level * 100:.1f}%")
                     continue
                 
                 if "DebugRpms" in t:
                     rpms = t["DebugRpms"]["rpms"]
                     for i in range(4):
                         motor_values[i] = rpms[i]
-                    log_message("Drone→PC", f"DebugRpms rpms={rpms}")
+                    log_message("Drone>PC", f"DebugRpms rpms={rpms}")
                     continue 
 
                 if "ManualInput" in t:
@@ -121,7 +119,7 @@ def serial_reader():
                     joystick["pitch"] = mi["pitch"]
                     joystick["yaw"]   = mi["yaw"]
                     log_message(
-                        "PC→Drone",
+                        "PC>Drone",
                         f"ManualInput pitch={mi['pitch']} roll={mi['roll']} lift={mi['lift']} yaw={mi['yaw']}"
                     )
                     continue
@@ -146,7 +144,7 @@ def serial_reader():
                     p_values["pitch"] = t.get("p_pitch", p_values["pitch"])
                     p_values["roll"] = t.get("p_roll", p_values["roll"])
                     log_message(
-                        "Drone→PC",
+                        "Drone>PC",
                         (
                             f"Telemetry accel=({accel['x']},{accel['y']},{accel['z']}) "
                             f"gyro=({gyro['x']},{gyro['y']},{gyro['z']}) "
@@ -156,7 +154,7 @@ def serial_reader():
 
                     if "cur_state" in t: # In case DroneInfo message is missed, get current state from telemetry
                         fsm_state = t["cur_state"]
-                        log_message("Drone→PC", f"DroneInfo state={fsm_state}")
+                        log_message("Drone>PC", f"DroneInfo state={fsm_state}")
 
                     continue
 
@@ -216,7 +214,7 @@ def serial_reader():
                     mock_fsm_index = (mock_fsm_index + 1) % len(FSM_STATES)
                     fsm_state      = FSM_STATES[mock_fsm_index]
                     mock_fsm_timer = time.time()
-                    log_message("Drone→PC", f"FSM transition → {fsm_state}")
+                    log_message("Drone>PC", f"FSM transition > {fsm_state}")
 
                 # Mock p_values slowly drifting
                 if time.time() - mock_p_timer > 2:
@@ -231,14 +229,14 @@ def serial_reader():
                         f"gyro=({gyro['x']},{gyro['y']},{gyro['z']}) "
                         f"bat={battery_level:.2f}"
                     )
-                    log_message("Drone→PC", mock_msg)
+                    log_message("Drone>PC", mock_msg)
 
                     # Also mock a PC→Drone command
                     cmd = (f"ManualInput pitch={joystick['pitch']:.2f} "
                            f"roll={joystick['roll']:.2f} "
                            f"lift={joystick['lift']:.2f} "
                            f"yaw={joystick['yaw']:.2f}")
-                    log_message("PC→Drone", cmd)
+                    log_message("PC>Drone", cmd)
                     mock_msg_timer = time.time()
 
                 time.sleep(0.05)
@@ -373,11 +371,8 @@ with dpg.window(label="Drone Ground Station", tag="main_window", width=900, heig
 # Update loop
 # ---------------------------------------
 
-# Track how many rows are currently in the message table
-_msg_table_rows = 0
-
 def update_gui():
-    global _msg_table_rows
+    last_rendered_messages = None
 
     while True:
         if len(time_data) > 0:
@@ -421,20 +416,20 @@ def update_gui():
             for axis in ["x", "y", "z"]:
                 dpg.set_value(f"{sensor}_{axis}", str(data[axis]))
 
-        # Message log — only append new rows
+        # Message log: only rebuild when the visible messages actually change,
+        # otherwise the table keeps fighting the user's scroll position.
         with message_log_lock:
-            current_len = len(message_log)
+            current_messages = tuple(message_log)
 
-        if current_len > _msg_table_rows:
-            with message_log_lock:
-                new_msgs = list(message_log)[_msg_table_rows:]
-            for ts, direction, msg in new_msgs:
-                color = [100, 220, 255] if direction == "Drone→PC" else [220, 180, 100]
+        if current_messages != last_rendered_messages:
+            dpg.delete_item("msg_table", children_only=True, slot=1)
+            for ts, direction, msg in current_messages:
+                color = [100, 220, 255] if direction == "Drone>PC" else [220, 180, 100]
                 with dpg.table_row(parent="msg_table"):
                     dpg.add_text(ts)
                     dpg.add_text(direction, color=color)
                     dpg.add_text(msg)
-            _msg_table_rows = current_len
+            last_rendered_messages = current_messages
 
         time.sleep(0.05)
 

@@ -38,7 +38,7 @@ use serde_json;
 
 
 const PRINT_DRONE_DATA: bool = false;
-const DEBUG_BOARD_MODE: bool = false;
+const DEBUG_BOARD_MODE: bool = true;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
@@ -132,7 +132,7 @@ fn main() {
             let cmd = combine_inputs(&keyboard_trim, &joystick_input);
             let cmd_for_ui = cmd.clone();
 
-            println!("{:?}\r", cmd);
+            // println!("{:?}\r", cmd);
             let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );
@@ -189,9 +189,9 @@ fn main() {
             }
 
 
-            if PRINT_DRONE_DATA {
-                println!("{:?}\r", msg);
-            }
+            // if PRINT_DRONE_DATA {
+            //     println!("{:?}\r", msg);
+            // }
         } else {
             iterations_without_message += 1;
         }
