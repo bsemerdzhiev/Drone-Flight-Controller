@@ -127,13 +127,15 @@ pub fn main_loop() -> ! {
 
         // run the loop of the state
         current_state = current_state.run_state_loop(&mut ctx);
+        let dt = now.duration_since(current_time);
+
         if i % 10 == 0 {
-            send_drone_data(&mut ctx.trv, current_state.get_state());
+            send_drone_data(&mut ctx.trv, current_state.get_state(), dt);
             Green.off();
         }
         put_telemetry_data_on_flash(
             &mut ctx.flash_head,
-            now.duration_since(current_time),
+            dt,
             current_state.get_state(),
         );
         current_time = now;
@@ -157,11 +159,9 @@ pub fn main_loop() -> ! {
 /*
 * Sends data to the drone
 */
-fn send_drone_data(transceiver: &mut HdlcTransceiver, curent_state: FSMState) {
-    let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
-        curent_state,
-        read_battery(),
-    )));
+fn send_drone_data(transceiver: &mut HdlcTransceiver, curent_state: FSMState, dt: Duration) {
+    let data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state);
+    let msg = transceiver.write_structure(&DeviceCommand::Telemetry(data));
     Green.on();
 
     send_bytes(&msg.0[0..msg.1]);
