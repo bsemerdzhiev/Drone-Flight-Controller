@@ -104,12 +104,14 @@ def serial_reader():
                 if "state" in t and "bat_level" in t:
                     fsm_state = t["state"]
                     battery_level = t["bat_level"] / 100.0  # convert 0–100 to 0.0–1.0
+                    log_message("Drone→PC", f"DroneInfo state={fsm_state} bat={battery_level * 100:.1f}%")
                     continue
                 
                 if "DebugRpms" in t:
                     rpms = t["DebugRpms"]["rpms"]
                     for i in range(4):
                         motor_values[i] = rpms[i]
+                    log_message("Drone→PC", f"DebugRpms rpms={rpms}")
                     continue 
 
                 if "ManualInput" in t:
@@ -118,6 +120,10 @@ def serial_reader():
                     joystick["roll"]  = mi["roll"]
                     joystick["pitch"] = mi["pitch"]
                     joystick["yaw"]   = mi["yaw"]
+                    log_message(
+                        "PC→Drone",
+                        f"ManualInput pitch={mi['pitch']} roll={mi['roll']} lift={mi['lift']} yaw={mi['yaw']}"
+                    )
                     continue
 
                 if "accel_x" in t and "gyro_x" in t:
@@ -139,9 +145,19 @@ def serial_reader():
                     p_values["yaw"] = t.get("p_yaw", p_values["yaw"])
                     p_values["pitch"] = t.get("p_pitch", p_values["pitch"])
                     p_values["roll"] = t.get("p_roll", p_values["roll"])
+                    log_message(
+                        "Drone→PC",
+                        (
+                            f"Telemetry accel=({accel['x']},{accel['y']},{accel['z']}) "
+                            f"gyro=({gyro['x']},{gyro['y']},{gyro['z']}) "
+                            f"p=({p_values['yaw']:.1f},{p_values['pitch']:.1f},{p_values['roll']:.1f})"
+                        )
+                    )
 
                     if "cur_state" in t: # In case DroneInfo message is missed, get current state from telemetry
                         fsm_state = t["cur_state"]
+                        log_message("Drone→PC", f"DroneInfo state={fsm_state}")
+
                     continue
 
                 yaw_data.append(t["yaw_rate"])
