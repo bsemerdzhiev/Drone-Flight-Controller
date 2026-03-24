@@ -87,7 +87,7 @@ impl PIDController {
          *            measured drone         |             calculated
          *               weight              v               correction
          */
-        result.lift = DRONE_WEIGHT * (GRAVITY_CONSTANT + result.pressure);
+        result.lift = DRONE_WEIGHT * (GRAVITY_CONSTANT - result.pressure);
 
         return result;
     }
