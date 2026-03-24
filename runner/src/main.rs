@@ -157,11 +157,22 @@ fn main() {
         if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
             rcv.add_bytes(&buf[0..num]);
         }
-        if let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
-            iterations_without_message = 0;
-
+        // Drains all queued drone decoded messages --------
+        let mut received_message = false;
+        while let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
+            received_message = true;
+        // ----------------
             match &msg {
                 DeviceCommand::DroneInfo(info) => {
+                    let reported_state = info.state();
+                    if current_mode != reported_state {
+                        println!(
+                            "Drone reported state update: {:?} -> {:?}",
+                            current_mode, reported_state
+                        );
+                        current_mode = reported_state;
+                    }
+
                     let json = serde_json::to_string(info).unwrap();
 
                     // Send JSON + newline to Python
@@ -188,10 +199,13 @@ fn main() {
                 _ => {}
             }
 
-
             // if PRINT_DRONE_DATA {
             //     println!("{:?}\r", msg);
             // }
+        }
+
+        if received_message { //Reset iterations without message when a message is read
+            iterations_without_message = 0;
         } else {
             iterations_without_message += 1;
         }
