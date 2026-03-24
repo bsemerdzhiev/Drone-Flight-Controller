@@ -70,13 +70,13 @@ pub fn actuate_motors_with_rates(
     let omega_three: i32 = (((-Nb + (2.0 * Md) - Zd) / (four_times_bd)) as i32).max(0);
     let omega_four: i32 = (((Nb + (2.0 * Ld) - Zd) / (four_times_bd)) as i32).max(0);
 
-    let to_write = my_hdlc.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&[
-        omega_one,
-        omega_two,
-        omega_three,
-        omega_four,
-    ])));
-    send_bytes(&to_write.0[0..to_write.1]);
+    // let to_write = my_hdlc.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&[
+    //     omega_one,
+    //     omega_two,
+    //     omega_three,
+    //     omega_four,
+    // ])));
+    // send_bytes(&to_write.0[0..to_write.1]);
 
     map_rpm_square_to_pwm(
         lift_is_zero,
