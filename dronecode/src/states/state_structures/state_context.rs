@@ -6,4 +6,5 @@ pub struct StateContext<'a> {
     pub calibration_state: &'a mut CalibrationState,
     pub trv: &'a mut HdlcTransceiver,
     pub input_from_controller: &'a mut Option<ManualInput>,
+    pub wireless_toggle: bool,
 }

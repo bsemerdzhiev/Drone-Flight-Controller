@@ -56,11 +56,13 @@ pub fn main_loop() -> ! {
     let mut transceiver: HdlcTransceiver = HdlcTransceiver::new();
     let mut received_manual_input: Option<ManualInput> = None;
     let mut calibration_state: CalibrationState = CalibrationState::new();
+    let mut wireless_toggle = false; 
 
     let mut ctx = StateContext {
         calibration_state: &mut calibration_state,
         trv: &mut transceiver,
         input_from_controller: &mut received_manual_input,
+        wireless_toggle,
     };
 
     // -------------------------------------------------------------------------
@@ -73,7 +75,6 @@ pub fn main_loop() -> ! {
 
     // radio object
     let radio = wireless_setup::radio_init();
-    let mut wireless_toggle = false; 
 
     radio_start_rx(&radio);
     // -------------------------------------------------------------------------
@@ -92,17 +93,13 @@ pub fn main_loop() -> ! {
         }
         // -------------------------------------------------------------------------
 
-        if wireless_toggle {
+        if ctx.wireless_toggle {
             // radio stuff
             if let Some(command) = radio_poll_rx(&radio, &mut ctx.trv) {
                 match command {
                     DeviceCommand::ChangeMode(new_mode) => {
-                        if new_mode == FSMState::WirelessMode {
-                            wireless_toggle = !wireless_toggle;
-                        } else {
-                            current_state = current_state.step(new_mode, &mut ctx);
-                            send_ack(&mut ctx.trv, wireless_toggle, &radio);
-                        }
+                        current_state = current_state.step(new_mode, &mut ctx);
+                        send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
                     }
                     DeviceCommand::ManualInput(manual_input) => {
                         *ctx.input_from_controller = Some(manual_input);
@@ -129,12 +126,8 @@ pub fn main_loop() -> ! {
                 if let Some(command) = deserialized_command {
                     match command {
                         DeviceCommand::ChangeMode(new_mode) => {
-                            if new_mode == FSMState::WirelessMode {
-                                wireless_toggle = !wireless_toggle;
-                            } else {
-                                current_state = current_state.step(new_mode, &mut ctx);
-                                send_ack(&mut ctx.trv, wireless_toggle, &radio);
-                            }
+                            current_state = current_state.step(new_mode, &mut ctx);
+                            send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
                         }               
                         DeviceCommand::ManualInput(manual_input) => {
                             *ctx.input_from_controller = Some(manual_input);
@@ -154,7 +147,7 @@ pub fn main_loop() -> ! {
         // run the loop of the state
         current_state = current_state.run_state_loop(&mut ctx);
         if i % 10 == 0 {
-            send_drone_data(&mut ctx.trv, current_state.get_state(), wireless_toggle, &radio);
+            send_drone_data(&mut ctx.trv, current_state.get_state(), ctx.wireless_toggle, &radio);
             Green.off();
         }
 
@@ -167,7 +160,7 @@ pub fn main_loop() -> ! {
                 read_battery(),
             )));
 
-        if wireless_toggle {
+        if ctx.wireless_toggle {
             wireless_setup::radio_send(&radio, &to_write.0[0..to_write.1]);
         } else {
             send_bytes(&to_write.0[0..to_write.1]);
