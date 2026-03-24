@@ -44,6 +44,14 @@ impl DroneInfo {
     pub fn new(state: FSMState, bat_level: u16) -> Self {
         DroneInfo { state, bat_level }
     }
+
+    pub fn state(&self) -> FSMState {
+        self.state
+    }
+
+    pub fn bat_level(&self) -> u16 {
+        self.bat_level
+    }
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug)]

@@ -19,6 +19,8 @@ pub fn send_transition(
     cur_mode: &mut FSMState,
     serial: &mut SerialPort,
 ) {
+    println!("Requested mode transition: {:?} -> {:?}", *cur_mode, state);
+
     //TODO: Only try this transition if its possible
     //In other words, try to perform it in the runner first, and only then send it
     const LATENCY_WAIT_TIME: Duration = Duration::from_millis(30);
@@ -53,6 +55,7 @@ pub fn send_transition(
             if let Some(x) = rcv.read_structure::<DeviceCommand>() {
                 match x {
                     DeviceCommand::Ack => {
+                        println!("Received ACK for mode transition to {:?}", state);
                         to_break = true;
                     }
                     _ => {}
@@ -76,6 +79,7 @@ pub fn read_keyboard(
 ) {
     while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
+            println!("Keyboard event: {:?}", key.code);
             match key.code {
                 KeyCode::Char('0') => {
                     send_transition(my_hdlc::command::FSMState::SafeMode, rcv, cur_mode, serial);
@@ -88,6 +92,8 @@ pub fn read_keyboard(
                             cur_mode,
                             serial,
                         );
+                    } else {
+                        println!("Ignored ManualMode request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('3') => {
@@ -106,6 +112,8 @@ pub fn read_keyboard(
                             cur_mode,
                             serial,
                         );
+                    } else {
+                        println!("Ignored YawControl request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('5') => {
@@ -116,6 +124,8 @@ pub fn read_keyboard(
                             cur_mode,
                             serial,
                         );
+                    } else {
+                        println!("Ignored FullControlMode request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('6') => {
@@ -126,6 +136,8 @@ pub fn read_keyboard(
                             cur_mode,
                             serial,
                         );
+                    } else {
+                        println!("Ignored RawSensorsFullControlMode request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('7') => {
@@ -136,6 +148,8 @@ pub fn read_keyboard(
                             cur_mode,
                             serial,
                         );
+                    } else {
+                        println!("Ignored HeightControlMode request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('8') => {
@@ -146,6 +160,8 @@ pub fn read_keyboard(
                             cur_mode,
                             serial,
                         );
+                    } else {
+                        println!("Ignored WirelessMode request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('e') => {

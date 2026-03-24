@@ -152,10 +152,6 @@ def serial_reader():
                         )
                     )
 
-                    if "cur_state" in t: # In case DroneInfo message is missed, get current state from telemetry
-                        fsm_state = t["cur_state"]
-                        log_message("Drone>PC", f"DroneInfo state={fsm_state}")
-
                     continue
 
                 yaw_data.append(t["yaw_rate"])
