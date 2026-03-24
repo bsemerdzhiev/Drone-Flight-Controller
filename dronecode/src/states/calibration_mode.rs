@@ -23,16 +23,16 @@ impl FSMControl for FSMCalibration {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         *ctx.live_controller_values = Default::default();
         let (accel, gyro) = read_raw().unwrap();
-        let dmp_data = block!(read_dmp_bytes()); //
-        let ypr = if (dmp_data.is_ok()) {
-            YawPitchRoll::from(dmp_data.unwrap())
-        } else {
-            YawPitchRoll::new()
-        };//
-        // let ypr = match read_dmp_bytes() {
-        //     Ok(quaternion) => YawPitchRoll::from(quaternion),
-        //     Err(_) => YawPitchRoll::new(),
-        // };
+        // let dmp_data = block!(read_dmp_bytes()); //
+        // let ypr = if (dmp_data.is_ok()) {
+        //     YawPitchRoll::from(dmp_data.unwrap())
+        // } else {
+        //     YawPitchRoll::new()
+        // };//
+        let ypr = match read_dmp_bytes() {
+            Ok(quaternion) => YawPitchRoll::from(quaternion),
+            Err(_) => YawPitchRoll::new(),
+        };
 
         // read new sample
         ctx.calibration_state.read_new_sample(accel, gyro, ypr);
