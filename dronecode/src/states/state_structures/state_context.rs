@@ -8,4 +8,5 @@ pub struct StateContext<'a> {
     pub input_from_controller: &'a mut Option<ManualInput>,
     pub flash_head: &'a mut u32,
     pub flash_tail: &'a mut u32,
+    pub wireless_toggle: &'a mut bool,
 }

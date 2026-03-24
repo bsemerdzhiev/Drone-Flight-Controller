@@ -13,7 +13,7 @@ pub fn radio_init() -> RADIO {
     // set to 1Mbps mode
     radio.mode.write(|w| w.mode().nrf_1mbit());
 
-    // set the RF channel to 7
+    // set the frequency to 2407MHz
     radio.frequency.write(|w| unsafe {
         w.frequency().bits(7)
     });
