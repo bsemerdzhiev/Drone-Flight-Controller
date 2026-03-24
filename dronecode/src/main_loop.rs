@@ -4,6 +4,7 @@ use crate::telemetry_read::TelemetryRead;
 use alloc::boxed::Box;
 use alloc::format;
 use my_hdlc::telemetry_data::*;
+use nrf51_pac::RADIO;
 use tudelft_quadrupel::flash::flash_write_bytes;
 
 use crate::states::fsm_base_class::FSMControl;
@@ -11,6 +12,8 @@ use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::states::state_structures::state_context::StateContext;
+use crate::telemetry_read::TelemetryRead;
+use crate::wireless_setup::{self, *};
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
@@ -78,6 +81,12 @@ pub fn main_loop() -> ! {
 
     // used to determine whether battery voltage is too low
     let mut battery_panic = false;
+
+    // radio object
+    let radio = wireless_setup::radio_init();
+    let mut wireless_toggle = false;
+
+    radio_start_rx(&radio);
     // -------------------------------------------------------------------------
     for i in 0.. {
         let _ = Blue.toggle();
@@ -94,29 +103,57 @@ pub fn main_loop() -> ! {
         }
         // -------------------------------------------------------------------------
 
-        // Read Uart Buff
-        let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
-
-        if num_received != 0usize {
-            //read the sent bytes
-            ctx.trv.add_bytes(&uart_buf[..num_received]);
-
-            //try to deserialize the command
-            let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
-
-            // if there is a command
-            if let Some(command) = deserialized_command {
+        if wireless_toggle {
+            // radio stuff
+            if let Some(command) = radio_poll_rx(&radio, &mut ctx.trv) {
                 match command {
                     DeviceCommand::ChangeMode(new_mode) => {
-                        current_state = current_state.step(new_mode, &mut ctx);
-                        send_ack(&mut ctx.trv);
+                        if new_mode == FSMState::WirelessMode {
+                            wireless_toggle = !wireless_toggle;
+                        } else {
+                            current_state = current_state.step(new_mode, &mut ctx);
+                            send_ack(&mut ctx.trv, wireless_toggle, &radio);
+                        }
                     }
                     DeviceCommand::ManualInput(manual_input) => {
                         *ctx.input_from_controller = Some(manual_input);
                     }
-                    _ => continue,
+                    _ => {}
                 }
+
                 time_for_last_received_message = Instant::now();
+            }
+
+            radio_start_rx(&radio);
+        } else {
+            // Read Uart Buff
+            let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
+
+            if num_received != 0usize {
+                //read the sent bytes
+                ctx.trv.add_bytes(&uart_buf[..num_received]);
+
+                //try to deserialize the command
+                let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
+
+                // if there is a command
+                if let Some(command) = deserialized_command {
+                    match command {
+                        DeviceCommand::ChangeMode(new_mode) => {
+                            if new_mode == FSMState::WirelessMode {
+                                wireless_toggle = !wireless_toggle;
+                            } else {
+                                current_state = current_state.step(new_mode, &mut ctx);
+                                send_ack(&mut ctx.trv, wireless_toggle, &radio);
+                            }
+                        }
+                        DeviceCommand::ManualInput(manual_input) => {
+                            *ctx.input_from_controller = Some(manual_input);
+                        }
+                        _ => continue,
+                    }
+                    time_for_last_received_message = Instant::now();
+                }
             }
         }
         if Instant::now().duration_since(time_for_last_received_message)
@@ -128,7 +165,12 @@ pub fn main_loop() -> ! {
         // run the loop of the state
         current_state = current_state.run_state_loop(&mut ctx);
         if i % 10 == 0 {
-            send_drone_data(&mut ctx.trv, current_state.get_state());
+            send_drone_data(
+                &mut ctx.trv,
+                current_state.get_state(),
+                wireless_toggle,
+                &radio,
+            );
             Green.off();
         }
         put_telemetry_data_on_flash(
@@ -147,7 +189,11 @@ pub fn main_loop() -> ! {
                 read_battery(),
             )));
 
-        send_bytes(&to_write.0[0..to_write.1]);
+        if wireless_toggle {
+            wireless_setup::radio_send(&radio, &to_write.0[0..to_write.1]);
+        } else {
+            send_bytes(&to_write.0[0..to_write.1]);
+        }
 
         wait_for_next_tick();
     }
@@ -157,23 +203,36 @@ pub fn main_loop() -> ! {
 /*
 * Sends data to the drone
 */
-fn send_drone_data(transceiver: &mut HdlcTransceiver, curent_state: FSMState) {
+fn send_drone_data(
+    transceiver: &mut HdlcTransceiver,
+    current_state: FSMState,
+    wireless: bool,
+    radio: &RADIO,
+) {
     let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
-        curent_state,
+        current_state,
         read_battery(),
     )));
     Green.on();
 
-    send_bytes(&msg.0[0..msg.1]);
+    if wireless {
+        wireless_setup::radio_send(radio, &msg.0[0..msg.1]);
+    } else {
+        send_bytes(&msg.0[0..msg.1]);
+    }
 }
 
 /*
 * Sends ACKs to the drone after a state change
 */
-fn send_ack(transceiver: &mut HdlcTransceiver) {
+fn send_ack(transceiver: &mut HdlcTransceiver, wireless: bool, radio: &RADIO) {
     let ack_cmd = DeviceCommand::Ack;
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
-    send_bytes(&msg.0[0..msg.1]);
+    if wireless {
+        wireless_setup::radio_send(radio, &msg.0[0..msg.1]);
+    } else {
+        send_bytes(&msg.0[0..msg.1]);
+    }
 }
 
 fn put_telemetry_data_on_flash(flash_head: &mut u32, dt: Duration, curent_state: FSMState) {

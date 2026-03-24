@@ -1141,8 +1141,8 @@ dependencies = [
  "libm",
  "micromath",
  "my-hdlc",
- "postcard",
  "nrf51-pac",
+ "postcard",
  "tudelft-quadrupel",
 ]
 

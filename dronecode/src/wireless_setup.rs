@@ -1,11 +1,14 @@
-use nrf51_pac::Peripherals;
+use nrf51_pac::{Peripherals, RADIO};
+use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
+use my_hdlc::pc_command::ManualInput;
+use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 
-static mut RX_BUF: [u8; 32] = [0; 32];
-static mut TX_BUF: [u8; 32] = [0; 32];
+static mut RX_BUF: [u8; 130] = [0; 130];
+static mut TX_BUF: [u8; 130] = [0; 130];
 
-pub fn radio_init() {
+pub fn radio_init() -> RADIO {
     let p = Peripherals::take().unwrap();
-    let radio = &p.RADIO;
+    let radio = p.RADIO;
 
     // set to 1Mbps mode
     radio.mode.write(|w| w.mode().nrf_1mbit());
@@ -35,31 +38,33 @@ pub fn radio_init() {
     });
 
     radio.pcnf0.write(|w| unsafe {
-        w.lflen().bits(0).s0len().bit(true).s1len().bits(0)
+        w.lflen().bits(8).s0len().bit(false).s1len().bits(0)
     });
 
     radio.pcnf1.write(|w| unsafe {
-        w.maxlen().bits(16)
-         .statlen().bits(16)
+        w.maxlen().bits(130)
+         .statlen().bits(0)
          .balen().bits(3)
          .endian().little()
          .whiteen().enabled()
     });
 
-    radio.crccnf.write(|w| w.len().two()); // 2 byte crc
-    radio.crcpoly.write(|w| unsafe {
-        w.crcpoly().bits(0x11021)
-    });
-    radio.crcinit.write(|w| unsafe {
-        w.crcinit().bits(0xFFFF)
-    });
+    // radio.crccnf.write(|w| w.len().two()); // 2 byte crc
+    // radio.crcpoly.write(|w| unsafe {
+    //     w.crcpoly().bits(0x11021)
+    // });
+    // radio.crcinit.write(|w| unsafe {
+    //     w.crcinit().bits(0xFFFF)
+    // });
 
     radio.shorts.write(|w| w.ready_start().enabled());
+
+    radio
 }
 
-pub fn radio_start_rx() {
-    let p = unsafe { Peripherals::steal() };
-    let radio = &p.RADIO;
+pub fn radio_start_rx(radio: &RADIO) {
+    // let p = unsafe { Peripherals::steal() };
+    // let radio = &p.RADIO;
 
     unsafe {
         radio.packetptr.write(|w| w.bits(RX_BUF.as_ptr() as u32));
@@ -73,21 +78,37 @@ pub fn radio_start_rx() {
     });
 }
 
-pub fn radio_poll_rx() -> Option<&'static [u8]> {
-    let p = unsafe{ Peripherals::steal() };
-    let radio = &p.RADIO;
+pub fn radio_poll_rx(radio: &RADIO, transceiver: &mut HdlcTransceiver) -> Option<DeviceCommand> {
+    // let p = unsafe{ Peripherals::steal() };
+    // let radio = &p.RADIO;
 
-    if radio.events_end.read().bits() != 0 {
-        radio.events_end.reset();
-        unsafe { return Some(&RX_BUF[..16]); }
+    if radio.events_end.read().bits() == 0 {
+        return None
     }
 
-    None
+    radio.events_end.reset();
+
+    let len = unsafe { RX_BUF[0] as usize };
+    let payload = unsafe { &RX_BUF[1..1 + len] };
+
+    transceiver.add_bytes(payload);
+    transceiver.read_structure::<DeviceCommand>()
 }
 
-pub fn radio_send(payload: &[u8]) {
-    let p = unsafe { Peripherals::steal() };
-    let radio = &p.RADIO;
+pub fn radio_send_command(radio: &RADIO, transceiver: &mut HdlcTransceiver, cmd: &DeviceCommand) {
+    let (frame, len) = transceiver.write_structure(cmd);
+
+    if len == 0 {
+        //frame too large
+        return;
+    }
+
+    radio_send(radio, &frame[..len]);
+}
+
+pub fn radio_send(radio: &RADIO, payload: &[u8]) {
+    // let p = unsafe { Peripherals::steal() };
+    // let radio = &p.RADIO;
 
     unsafe {
         TX_BUF[..payload.len()].copy_from_slice(payload);
