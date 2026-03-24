@@ -14,8 +14,10 @@ use crate::{
         yaw_pitch_roll::YawPitchRoll,
     },
 };
+// TODO: Tune the parameters
+// Order of parameters: Yaw - Pitch - Roll
 
-const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 0f32];
+const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 5f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -82,21 +84,25 @@ impl FSMControl for FSMHeightControl {
             ControllerFlags::AddP as u8,
         );
 
-        let to_write =
-            ctx.trv
-                .write_structure(&DeviceCommand::DebugYawPitchRoll(DebugYawPitchRoll {
-                    info: [
-                        correction.lift,
-                        correction.yaw,
-                        correction.pitch,
-                        correction.roll,
-                        correction.pressure,
-                    ],
-                }));
-
-        send_bytes(&to_write.0[0..to_write.1]);
-
+        // let to_write =
+        //     ctx.trv
+        //         .write_structure(&DeviceCommand::DebugYawPitchRoll(DebugYawPitchRoll {
+        //             info: [
+        //                 correction.lift,
+        //                 correction.yaw,
+        //                 correction.pitch,
+        //                 correction.roll,
+        //                 correction.pressure,
+        //             ],
+        //         }));
+        //
+        // send_bytes(&to_write.0[0..to_write.1]);
+        //
         // add to current input
+        ctx.input_from_controller
+            .as_mut()
+            .unwrap()
+            .increment_lift(correction.lift as i32);
         ctx.input_from_controller
             .as_mut()
             .unwrap()
