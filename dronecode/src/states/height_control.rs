@@ -1,6 +1,8 @@
 use alloc::boxed::Box;
 use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand, FSMState};
-use tudelft_quadrupel::{barometer::read_pressure, once_cell, time::Instant, uart::send_bytes};
+use tudelft_quadrupel::{
+    barometer::read_pressure, mpu::read_raw, once_cell, time::Instant, uart::send_bytes,
+};
 
 use crate::{
     filters::sensors_handler::ImuHandler,
@@ -32,6 +34,8 @@ pub struct FSMHeightControl {
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         //TODO: Implement going back to the state from which we came
+
+        self.imu_sampler.append_new_reading(read_raw().unwrap());
 
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
@@ -127,7 +131,6 @@ impl FSMControl for FSMHeightControl {
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
-            FSMState::SafeMode => Box::new(FSMSafe {}),
             _ => self,
         }
     }

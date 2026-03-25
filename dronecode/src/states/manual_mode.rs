@@ -29,7 +29,6 @@ impl FSMControl for FSMManual {
 
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
-            FSMState::SafeMode => return Box::new(FSMSafe {}),
             FSMState::PanicMode => return Box::new(FSMPanic {}),
             _ => return self,
         }

@@ -47,7 +47,7 @@ pub struct CalibrationState {
     sample_cnt: i32,
     pub start_time: Instant,
     pub accelerometer_offset: Accel,
-    // pub gyro_offset: Gyro,
+    pub gyro_offset: Gyro,
     pub ypr_offset: YawPitchRoll,
 }
 
@@ -60,7 +60,7 @@ impl CalibrationState {
             sample_cnt: 0,
             start_time: Instant::now(),
             accelerometer_offset: Accel { x: 0, y: 0, z: 0 },
-            // gyro_offset: Gyro { x: 0, y: 0, z: 0 },
+            gyro_offset: Gyro { x: 0, y: 0, z: 0 },
             ypr_offset: YawPitchRoll {
                 yaw: 0.0,
                 pitch: 0.0,
@@ -91,6 +91,11 @@ impl CalibrationState {
             x: (self.accelerometer_sum.x / self.sample_cnt) as i16,
             y: (self.accelerometer_sum.y / self.sample_cnt) as i16,
             z: (self.accelerometer_sum.z / self.sample_cnt) as i16,
+        };
+        self.gyro_offset = Gyro {
+            x: (self.gyro_sum.x / self.sample_cnt) as i16,
+            y: (self.gyro_sum.y / self.sample_cnt) as i16,
+            z: (self.gyro_sum.z / self.sample_cnt) as i16,
         };
 
         self.ypr_offset = YawPitchRoll {
