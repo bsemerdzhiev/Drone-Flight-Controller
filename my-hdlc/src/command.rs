@@ -31,7 +31,14 @@ pub enum FSMState {
     FullControlMode,
     RawSensorsFullControlMode,
     HeightControlMode,
-    WirelessMode,
+    WirelessMode(WirelessOptions),
+}
+
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+#[repr(u8)]
+pub enum WirelessOptions {
+    DroneSide,
+    PCSide,
 }
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]

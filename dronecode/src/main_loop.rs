@@ -12,10 +12,9 @@ use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::states::state_structures::state_context::StateContext;
-use crate::telemetry_read::TelemetryRead;
 use crate::wireless_setup::{self, *};
 
-use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
+use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState, WirelessOptions};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
@@ -66,6 +65,7 @@ pub fn main_loop() -> ! {
     let mut flash_head = 0u32;
     let mut flash_tail = 0u32;
     let mut wireless_toggle = false;
+    let mut wireless_option = WirelessOptions::PCSide;
 
     let mut ctx = StateContext {
         calibration_state: &mut calibration_state,
@@ -74,6 +74,7 @@ pub fn main_loop() -> ! {
         flash_head: &mut flash_head,
         flash_tail: &mut flash_tail,
         wireless_toggle: &mut wireless_toggle,
+        wireless_option: &mut wireless_option,
     };
 
     // -------------------------------------------------------------------------
@@ -110,7 +111,7 @@ pub fn main_loop() -> ! {
                 match command {
                     DeviceCommand::ChangeMode(new_mode) => {
                         current_state = current_state.step(new_mode, &mut ctx);
-                        send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
+                        send_ack(&mut ctx.trv, &ctx.wireless_toggle, &radio);
                     }
                     DeviceCommand::ManualInput(manual_input) => {
                         *ctx.input_from_controller = Some(manual_input);
@@ -182,7 +183,7 @@ pub fn main_loop() -> ! {
                 read_battery(),
             )));
 
-        if ctx.wireless_toggle {
+        if *ctx.wireless_toggle {
             wireless_setup::radio_send(&radio, &to_write.0[0..to_write.1]);
         } else {
             send_bytes(&to_write.0[0..to_write.1]);
@@ -218,10 +219,10 @@ fn send_drone_data(
 /*
 * Sends ACKs to the drone after a state change
 */
-fn send_ack(transceiver: &mut HdlcTransceiver, wireless: bool, radio: &RADIO) {
+fn send_ack(transceiver: &mut HdlcTransceiver, wireless: &bool, radio: &RADIO) {
     let ack_cmd = DeviceCommand::Ack;
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
-    if wireless {
+    if *wireless {
         wireless_setup::radio_send(radio, &msg.0[0..msg.1]);
     } else {
         send_bytes(&msg.0[0..msg.1]);

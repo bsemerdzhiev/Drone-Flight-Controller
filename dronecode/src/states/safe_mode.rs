@@ -62,8 +62,9 @@ impl FSMControl for FSMSafe {
                 })
             }
             FSMState::PanicMode => return Box::new(FSMPanic {}),
-            FSMState::WirelessMode => {
-                ctx.wireless_toggle = !ctx.wireless_toggle;
+            FSMState::WirelessMode(option) => {
+                *ctx.wireless_toggle = !*ctx.wireless_toggle;
+                *ctx.wireless_option = option;
                 self
             }
             _ => self,
