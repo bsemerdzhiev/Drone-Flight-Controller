@@ -18,16 +18,16 @@ pub trait TelemetryRead {
 impl TelemetryRead for TelemetryData {
     fn read_telemetry(dt: Duration, cur_state: FSMState, live_controller_values: &LiveControllerValues) -> Self {
         let motors = get_motors();
-        // let quaternion = block!(read_dmp_bytes());//
-        // let ypr = if quaternion.is_ok() {
-        //     YawPitchRoll::from(quaternion.unwrap())
-        // } else {
-        //     YawPitchRoll::new()
-        // }; //
-        let ypr = match read_dmp_bytes() {
-            Ok(quaternion) => YawPitchRoll::from(quaternion),
-            Err(_) => YawPitchRoll::new(),
-        };
+        let quaternion = block!(read_dmp_bytes());//
+        let ypr = if quaternion.is_ok() {
+            YawPitchRoll::from(quaternion.unwrap())
+        } else {
+            YawPitchRoll::new()
+        }; //
+        // let ypr = match read_dmp_bytes() {
+        //     Ok(quaternion) => YawPitchRoll::from(quaternion),
+        //     Err(_) => YawPitchRoll::new(),
+        // };
 
 
         // let ypr = YawPitchRoll::from(quaternion);

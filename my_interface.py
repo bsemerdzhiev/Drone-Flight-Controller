@@ -37,7 +37,7 @@ accel = {"x": 0, "y": 0, "z": 0}
 gyro  = {"x": 0, "y": 0, "z": 0}
 
 # Message log: keep only the most recent entries visible in the GUI
-message_log = deque(maxlen=50)
+message_log = deque(maxlen=50 )
 message_log_lock = threading.Lock()
 
 FSM_STATES = ["SafeMode", "PanicMode", "ManualMode", "CalibrationMode",
