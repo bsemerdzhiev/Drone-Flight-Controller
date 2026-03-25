@@ -374,13 +374,21 @@ def update_gui():
         if len(time_data) > 0:
             t_list = list(time_data)
             x_min, x_max = t_list[0], t_list[-1]
+            rate_series = {
+                "yaw": list(yaw_data),
+                "pitch": list(pitch_data),
+                "roll": list(roll_data),
+            }
 
-            dpg.set_value("yaw_series",   [t_list, list(yaw_data)])
-            dpg.set_value("pitch_series", [t_list, list(pitch_data)])
-            dpg.set_value("roll_series",  [t_list, list(roll_data)])
+            dpg.set_value("yaw_series",   [t_list, rate_series["yaw"]])
+            dpg.set_value("pitch_series", [t_list, rate_series["pitch"]])
+            dpg.set_value("roll_series",  [t_list, rate_series["roll"]])
 
             for axis in ["yaw", "pitch", "roll"]:
                 dpg.set_axis_limits(f"x_axis_{axis}", x_min, x_max)
+                max_abs_rate = max((abs(v) for v in rate_series[axis]), default=1.0)
+                y_limit = max(1.0, max_abs_rate * 1.1)
+                dpg.set_axis_limits(f"y_axis_{axis}", -y_limit, y_limit)
 
         # Motors
         for i in range(4):
