@@ -123,7 +123,7 @@ pub fn main_loop() -> ! {
                             match command {
                                 DeviceCommand::ChangeMode(new_mode) => {
                                     current_state = current_state.step(new_mode, &mut ctx);
-                                    send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
+                                    send_ack(&mut ctx.trv, ctx.wireless_option, &radio);
                                 }
                                 DeviceCommand::ManualInput(manual_input) => {
                                     *ctx.input_from_controller = Some(manual_input);
@@ -140,7 +140,7 @@ pub fn main_loop() -> ! {
                         match command {
                             DeviceCommand::ChangeMode(new_mode) => {
                                 current_state = current_state.step(new_mode, &mut ctx);
-                                send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
+                                send_ack(&mut ctx.trv, ctx.wireless_option, &radio);
                             }
                             DeviceCommand::ManualInput(manual_input) => {
                                 *ctx.input_from_controller = Some(manual_input);
@@ -168,7 +168,7 @@ pub fn main_loop() -> ! {
                     match command {
                         DeviceCommand::ChangeMode(new_mode) => {
                             current_state = current_state.step(new_mode, &mut ctx);
-                            send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
+                            send_ack(&mut ctx.trv, ctx.wireless_option, &radio);
                         }
                         DeviceCommand::ManualInput(manual_input) => {
                             *ctx.input_from_controller = Some(manual_input);
@@ -191,7 +191,7 @@ pub fn main_loop() -> ! {
             send_drone_data(
                 &mut ctx.trv,
                 current_state.get_state(),
-                &ctx.wireless_toggle,
+                ctx.wireless_option,
                 &radio,
             );
             Green.off();
@@ -229,7 +229,7 @@ pub fn main_loop() -> ! {
 fn send_drone_data(
     transceiver: &mut HdlcTransceiver,
     current_state: FSMState,
-    wireless: &bool,
+    wireless_mode: &WirelessOptions,
     radio: &RADIO,
 ) {
     let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
@@ -238,23 +238,26 @@ fn send_drone_data(
     )));
     Green.on();
 
-    if *wireless {
-        wireless_setup::radio_send(radio, &msg.0[0..msg.1]);
-    } else {
-        send_bytes(&msg.0[0..msg.1]);
+    match *wireless_mode {
+        WirelessOptions::PCSide => {
+            let _ = send_bytes(&msg.0[0..msg.1]);
+        }
+        WirelessOptions::DroneSide => wireless_setup::radio_send(radio, &msg.0[0..msg.1]),
     }
 }
 
 /*
 * Sends ACKs to the drone after a state change
 */
-fn send_ack(transceiver: &mut HdlcTransceiver, wireless: &bool, radio: &RADIO) {
+fn send_ack(transceiver: &mut HdlcTransceiver, wireless_mode: &WirelessOptions, radio: &RADIO) {
     let ack_cmd = DeviceCommand::Ack;
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
-    if *wireless {
-        wireless_setup::radio_send(radio, &msg.0[0..msg.1]);
-    } else {
-        send_bytes(&msg.0[0..msg.1]);
+
+    match *wireless_mode {
+        WirelessOptions::PCSide => {
+            let _ = send_bytes(&msg.0[0..msg.1]);
+        }
+        WirelessOptions::DroneSide => wireless_setup::radio_send(radio, &msg.0[0..msg.1]),
     }
 }
 
