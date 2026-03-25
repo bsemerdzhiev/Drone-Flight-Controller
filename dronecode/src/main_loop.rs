@@ -96,23 +96,52 @@ pub fn main_loop() -> ! {
         // -------------------------------------------------------------------------
 
         if ctx.wireless_toggle {
-            // radio stuff
-            if let Some(command) = radio_poll_rx(&radio, &mut ctx.trv) {
-                match command {
-                    DeviceCommand::ChangeMode(new_mode) => {
-                        current_state = current_state.step(new_mode, &mut ctx);
-                        send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
+            match ctx.wireless_option {
+                WirelessOptions::PCSide => {
+                    // Read Uart Buff
+                    let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
+
+                    if num_received != 0usize {
+                        //read the sent bytes
+                        ctx.trv.add_bytes(&uart_buf[..num_received]);
+
+                        //try to deserialize the command
+                        let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
+
+                        // if there is a command
+                        if let Some(command) = deserialized_command {
+                            match command {
+                                DeviceCommand::ChangeMode(new_mode) => {
+                                    current_state = current_state.step(new_mode, &mut ctx);
+                                    send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
+                                }               
+                                DeviceCommand::ManualInput(manual_input) => {
+                                    *ctx.input_from_controller = Some(manual_input);
+                                }
+                                _ => continue,
+                            }
+                            time_for_last_received_message = Instant::now();
+                        }
                     }
-                    DeviceCommand::ManualInput(manual_input) => {
-                        *ctx.input_from_controller = Some(manual_input);
-                    }
-                    _ => {}
                 }
 
-                time_for_last_received_message = Instant::now();
+                WirelessOptions::DroneSide => {
+                    if let Some(command) = radio_poll_rx(&radio, &mut ctx.trv) {
+                        match command {
+                            DeviceCommand::ChangeMode(new_mode) => {
+                                current_state = current_state.step(new_mode, &mut ctx);
+                                send_ack(&mut ctx.trv, ctx.wireless_toggle, &radio);
+                            }               
+                            DeviceCommand::ManualInput(manual_input) => {
+                                *ctx.input_from_controller = Some(manual_input);
+                            }
+                            _ => continue,
+                        }
+                        time_for_last_received_message = Instant::now();
+                    }
+                    radio_start_rx(&radio);
+                }
             }
-
-            radio_start_rx(&radio);
         } else {
             // Read Uart Buff
             let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
