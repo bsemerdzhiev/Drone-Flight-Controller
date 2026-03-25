@@ -172,7 +172,9 @@ pub fn main_loop() -> ! {
         if Instant::now().duration_since(time_for_last_received_message)
             >= WATCHDOG_TIMER_FOR_PANICKING
         {
-            current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
+            if ctx.wireless_option == WirelessOptions::PCSide {
+                current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
+            }
         }
 
         // run the loop of the state
