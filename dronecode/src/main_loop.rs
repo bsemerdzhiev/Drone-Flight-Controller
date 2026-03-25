@@ -112,27 +112,16 @@ pub fn main_loop() -> ! {
                     let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
 
                     if num_received != 0usize {
-                        //read the sent bytes
-                        ctx.trv.add_bytes(&uart_buf[..num_received]);
-
-                        //try to deserialize the command
-                        let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
-
-                        // if there is a command
-                        if let Some(command) = deserialized_command {
-                            match command {
-                                DeviceCommand::ChangeMode(new_mode) => {
-                                    current_state = current_state.step(new_mode, &mut ctx);
-                                    send_ack(&mut ctx.trv, ctx.wireless_option, &radio);
-                                }
-                                DeviceCommand::ManualInput(manual_input) => {
-                                    *ctx.input_from_controller = Some(manual_input);
-                                }
-                                _ => continue,
-                            }
-                            time_for_last_received_message = Instant::now();
-                        }
+                        wireless_setup::radio_send(&radio, &uart_buf[..num_received]);
+                        time_for_last_received_message = Instant::now();
                     }
+
+                    if let Some(telemetry) = radio_poll_rx(&radio, &mut ctx.trv) {
+                        let (buf, len) = ctx.trv.write_structure(&telemetry);
+                        send_bytes(&buf[..len]);
+                    }
+
+                    radio_start_rx(&radio);
                 }
 
                 WirelessOptions::DroneSide => {
@@ -182,7 +171,7 @@ pub fn main_loop() -> ! {
         if Instant::now().duration_since(time_for_last_received_message)
             >= WATCHDOG_TIMER_FOR_PANICKING
         {
-            if ctx.wireless_option == WirelessOptions::PCSide {
+            if *ctx.wireless_option == WirelessOptions::PCSide {
                 current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
             }
         }
@@ -214,10 +203,17 @@ pub fn main_loop() -> ! {
                 read_battery(),
             )));
 
-        if *ctx.wireless_toggle {
-            wireless_setup::radio_send(&radio, &to_write.0[0..to_write.1]);
+        if !*ctx.wireless_toggle {
+            send_bytes(&to_write.0[..to_write.1]);
         } else {
-            send_bytes(&to_write.0[0..to_write.1]);
+            match ctx.wireless_option {
+                WirelessOptions::PCSide => {
+                    send_bytes(&to_write.0[..to_write.1]);
+                }
+                WirelessOptions::DroneSide => {
+                    wireless_setup::radio_send(&radio, &to_write.0[..to_write.1]);
+                }
+            }
         }
 
         wait_for_next_tick();
