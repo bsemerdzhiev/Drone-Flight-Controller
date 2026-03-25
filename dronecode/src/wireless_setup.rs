@@ -78,6 +78,7 @@ pub fn radio_start_rx(radio: &RADIO) {
     });
 }
 
+// poll the receiving end
 pub fn radio_poll_rx(radio: &RADIO, transceiver: &mut HdlcTransceiver) -> Option<DeviceCommand> {
     // let p = unsafe{ Peripherals::steal() };
     // let radio = &p.RADIO;
@@ -106,6 +107,7 @@ pub fn radio_send_command(radio: &RADIO, transceiver: &mut HdlcTransceiver, cmd:
     radio_send(radio, &frame[..len]);
 }
 
+// Function is blocking (no interrupts implemented currently)
 pub fn radio_send(radio: &RADIO, payload: &[u8]) {
     // let p = unsafe { Peripherals::steal() };
     // let radio = &p.RADIO;
