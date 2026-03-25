@@ -31,7 +31,7 @@ mod read_joystick;
 mod read_keyboard;
 
 const PRINT_DRONE_DATA: bool = true;
-const DEBUG_BOARD_MODE: bool = false;
+const DEBUG_BOARD_MODE: bool = true;
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
