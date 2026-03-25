@@ -8,7 +8,7 @@ use crossterm::{
     terminal::disable_raw_mode,
 };
 use my_hdlc::{
-    command::{DeviceCommand, FSMState},
+    command::{DeviceCommand, FSMState, WirelessOptions},
     pc_command::ManualInput,
 };
 use tudelft_serial_upload::serial2::SerialPort;
@@ -141,7 +141,17 @@ pub fn read_keyboard(
                 KeyCode::Char('8') => {
                     if joystick_info.is_zeroed() {
                         send_transition(
-                            my_hdlc::command::FSMState::WirelessMode,
+                            my_hdlc::command::FSMState::WirelessMode(WirelessOptions::PCSide),
+                            rcv,
+                            cur_mode,
+                            serial,
+                        );
+                    }
+                }
+                KeyCode::Char('9') => {
+                    if joystick_info.is_zeroed() {
+                        send_transition(
+                            my_hdlc::command::FSMState::WirelessMode(WirelessOptions::DroneSide),
                             rcv,
                             cur_mode,
                             serial,

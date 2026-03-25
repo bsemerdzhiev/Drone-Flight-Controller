@@ -12,7 +12,7 @@ use crate::states::state_structures::state_context::StateContext;
 use crate::telemetry_read::TelemetryRead;
 use crate::wireless_setup::{self, *};
 
-use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
+use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState, WirelessOptions};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
@@ -57,12 +57,14 @@ pub fn main_loop() -> ! {
     let mut received_manual_input: Option<ManualInput> = None;
     let mut calibration_state: CalibrationState = CalibrationState::new();
     let mut wireless_toggle = false; 
+    let mut wireless_option = WirelessOptions::PCSide;
 
     let mut ctx = StateContext {
         calibration_state: &mut calibration_state,
         trv: &mut transceiver,
         input_from_controller: &mut received_manual_input,
         wireless_toggle,
+        wireless_option,
     };
 
     // -------------------------------------------------------------------------
