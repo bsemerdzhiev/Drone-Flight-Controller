@@ -38,7 +38,7 @@ impl DmpReadings {
 
 impl ImuHandler for DmpReadings {
     fn get_reading(&mut self) -> Option<YawPitchRoll> {
-        let sampled_dmp_res = read_dmp_bytes();
+        let sampled_dmp_res = block!(read_dmp_bytes());
 
         if sampled_dmp_res.is_err() {
             return None;
