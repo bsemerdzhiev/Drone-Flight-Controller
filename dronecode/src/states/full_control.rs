@@ -20,7 +20,7 @@ use tudelft_quadrupel::mpu::{self, read_raw};
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
 
-const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 0f32];
+const K_P: [f32; 4] = [20f32, 1000f32, 1200f32, 0f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
