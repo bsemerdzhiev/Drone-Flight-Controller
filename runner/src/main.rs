@@ -266,7 +266,7 @@ fn start_interface(port: &PathBuf) {
     let mut cmd = Command::new("python");
     cmd
         // there must be a `my_interface.py` file of course
-        .arg("./ui/main.py")
+        .arg("ui/main.py")
         // pass the serial port as a command line parameter to the python program
         .arg(port.to_str().unwrap());
 
