@@ -263,12 +263,15 @@ fn check_for_panic(
 
 #[allow(unused)]
 fn start_interface(port: &PathBuf) {
+    let project_root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+        .parent()
+        .unwrap();
+
     let mut cmd = Command::new("python");
-    cmd
-        // there must be a `my_interface.py` file of course
-        .arg("ui/main.py")
-        // pass the serial port as a command line parameter to the python program
-        .arg(port.to_str().unwrap());
+    cmd.arg("ui/main.py")
+        .arg(port.to_str().unwrap())
+        .current_dir(&project_root);
+    // pass the serial port as a command line parameter to the python program
 
     // match cmd.output() {
     //     Err(e) => {

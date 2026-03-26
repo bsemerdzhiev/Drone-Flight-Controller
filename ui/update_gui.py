@@ -1,21 +1,30 @@
 import time
 import dearpygui.dearpygui as dpg
 
+import data as stored_data
+from states import FSM_COLORS
+
 # Update loop
 # ---------------------------------------
+
+
+def manual_value_to_bar(val: float, axis: str):
+    if axis == "lift":
+        return max(0.0, min(1.0, val / 1000.0))
+    return max(0.0, min(1.0, (val + 1000.0) / 2000.0))
 
 
 def update_gui():
     last_rendered_messages = None
 
     while True:
-        if len(time_data) > 0:
-            t_list = list(time_data)
+        if len(stored_data.time_data) > 0:
+            t_list = list(stored_data.time_data)
             x_min, x_max = t_list[0], t_list[-1]
             rate_series = {
-                "yaw": list(yaw_data),
-                "pitch": list(pitch_data),
-                "roll": list(roll_data),
+                "yaw": list(stored_data.yaw_data),
+                "pitch": list(stored_data.pitch_data),
+                "roll": list(stored_data.roll_data),
             }
 
             dpg.set_value("yaw_series", [t_list, rate_series["yaw"]])
@@ -30,40 +39,41 @@ def update_gui():
 
         # Motors
         for i in range(4):
-            val = motor_values[i]
+            val = stored_data.motor_values[i]
             dpg.set_value(f"motor{i}", val / 800)
             dpg.set_value(f"motor{i}_val", str(val))
 
         # Joystick
         for axis in ["pitch", "roll", "lift", "yaw"]:
-            val = joystick[axis]
+            val = stored_data.joystick[axis]
             dpg.set_value(f"{axis}_val", f"{val:.3f}")
             dpg.set_value(f"{axis}_bar", manual_value_to_bar(val, axis))
 
         # Battery
-        dpg.set_value("battery_bar", battery_level)
-        dpg.set_value("battery_text", f"{battery_level * 100:.1f}%")
-        dpg.configure_item("battery_bar", overlay=f"{battery_level * 100:.1f}%")
-
-        # FSM
-        dpg.set_value("fsm_display", fsm_state)
+        dpg.set_value("battery_bar", stored_data.battery_level)
+        dpg.set_value("battery_text", f"{stored_data.battery_level * 100:.1f}%")
         dpg.configure_item(
-            "fsm_display", color=FSM_COLORS.get(fsm_state, [255, 255, 255])
+            "battery_bar", overlay=f"{stored_data.battery_level * 100:.1f}%"
         )
 
-        # P values
-        for axis in ["yaw", "pitch", "roll"]:
-            dpg.set_value(f"p_{axis}_display", f"{p_values[axis]:.3f}")
+        # FSM
+        dpg.set_value("fsm_display", stored_data.fsm_state)
+        dpg.configure_item(
+            "fsm_display", color=FSM_COLORS.get(stored_data.fsm_state, [255, 255, 255])
+        )
 
         # Accel & Gyro
-        for sensor, data in [("accel", accel), ("gyro", gyro)]:
+        for sensor, data in [
+            ("accel", stored_data.accel_raw),
+            ("gyro", stored_data.gyro_raw),
+        ]:
             for axis in ["x", "y", "z"]:
                 dpg.set_value(f"{sensor}_{axis}", str(data[axis]))
 
         # Message log: only rebuild when the visible messages actually change,
         # otherwise the table keeps fighting the user's scroll position.
-        with message_log_lock:
-            current_messages = tuple(message_log)
+        with stored_data.message_log_lock:
+            current_messages = tuple(stored_data.message_log)
 
         if current_messages != last_rendered_messages:
             dpg.delete_item("msg_table", children_only=True, slot=1)
