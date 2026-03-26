@@ -30,12 +30,11 @@ use my_hdlc::STUFFED_MESSAGE_SIZE;
 mod read_joystick;
 mod read_keyboard;
 
+use serde_json;
+use std::fs;
+use std::io::Write;
 use std::os::unix::net::UnixListener;
 use std::os::unix::net::UnixStream;
-use std::io::Write;
-use std::fs;
-use serde_json;
-
 
 const PRINT_DRONE_DATA: bool = false;
 const DEBUG_BOARD_MODE: bool = true;
@@ -69,7 +68,9 @@ fn main() {
     let _ = fs::remove_file(socket_path);
     let listener = UnixListener::bind(socket_path).expect("Failed to bind UDS socket");
     println!("Waiting for Python GUI to connect…");
-    let (mut python_stream, _) = listener.accept().expect("Failed to accept Python connection");
+    let (mut python_stream, _) = listener
+        .accept()
+        .expect("Failed to accept Python connection");
     println!("Python GUI connected!");
 
     let mut keyboard_trim = ManualInput::zero();
@@ -146,7 +147,8 @@ fn main() {
                     "pitch": cmd_for_ui.get_pitch(),
                     "yaw": cmd_for_ui.get_yaw(),
                 }
-            })).unwrap();
+            }))
+            .unwrap();
 
             let _ = python_stream.write_all(json.as_bytes());
             let _ = python_stream.write_all(b"\n");
@@ -161,7 +163,7 @@ fn main() {
         let mut received_message = false;
         while let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
             received_message = true;
-        // ----------------
+            // ----------------
             match &msg {
                 DeviceCommand::DroneInfo(info) => {
                     let reported_state = info.state();
@@ -185,7 +187,8 @@ fn main() {
                 DeviceCommand::DebugRpms(rpms) => {
                     let json = serde_json::to_string(&serde_json::json!({
                         "DebugRpms": { "rpms": rpms.rpms }
-                    })).unwrap();
+                    }))
+                    .unwrap();
                     let _ = python_stream.write_all(json.as_bytes());
                     let _ = python_stream.write_all(b"\n");
                 }
@@ -213,7 +216,8 @@ fn main() {
             // }
         }
 
-        if received_message { //Reset iterations without message when a message is read
+        if received_message {
+            //Reset iterations without message when a message is read
             iterations_without_message = 0;
         } else {
             iterations_without_message += 1;
@@ -262,7 +266,7 @@ fn start_interface(port: &PathBuf) {
     let mut cmd = Command::new("python");
     cmd
         // there must be a `my_interface.py` file of course
-        .arg("my_interface.py")
+        .arg("./ui/main.py")
         // pass the serial port as a command line parameter to the python program
         .arg(port.to_str().unwrap());
 
