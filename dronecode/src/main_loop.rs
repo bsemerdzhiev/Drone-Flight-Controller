@@ -30,7 +30,7 @@ const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 // in ms
 const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(300);
 
-const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
+const SHOULD_CHECK_BATTERY_LEVEL: bool = true;
 const MIN_BAT_LEVEL: u16 = 1050;
 
 // -------------------------------------------------------------------------
