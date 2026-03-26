@@ -12,6 +12,11 @@ pub struct DebugYawPitchRoll {
     pub info: [f32; 5],
 }
 
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
+pub struct DebugCalibration {
+    pub ypr_offset: [f32; 3],
+}
+
 impl DebugRpms {
     pub fn new(rpms: &[i32; 4]) -> Self {
         return Self {
@@ -63,4 +68,5 @@ pub enum DeviceCommand {
     Ack,
     DebugRpms(DebugRpms),
     DebugYawPitchRoll(DebugYawPitchRoll),
+    DebugCalibration(DebugCalibration),
 }
