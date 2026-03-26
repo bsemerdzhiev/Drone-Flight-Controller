@@ -1,7 +1,7 @@
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
-use crate::util::pid_controller::{self, ControllerFlags, PIDController};
+use crate::util::pid_controller::{ControllerFlags, PIDController};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 

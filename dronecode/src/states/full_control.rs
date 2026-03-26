@@ -1,15 +1,12 @@
-use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand};
-use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::command::FSMState;
 use tudelft_quadrupel::barometer::read_pressure;
-use tudelft_quadrupel::uart::send_bytes;
-
-use crate::filters::dmp_readings::DmpReadings;
-use crate::filters::sensors_handler::ImuHandler;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
+use crate::filters::dmp_readings::DmpReadings;
+use crate::filters::sensors_handler::ImuHandler;
 use crate::util::pid_controller::{ControllerFlags, PIDController};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;

@@ -190,6 +190,15 @@ fn main() {
                     let _ = python_stream.write_all(b"\n");
                 }
 
+                DeviceCommand::DebugCalibration(calibration) => {
+                    println!(
+                        "Calibration ypr_offset: yaw={:.6}, pitch={:.6}, roll={:.6}",
+                        calibration.ypr_offset[0],
+                        calibration.ypr_offset[1],
+                        calibration.ypr_offset[2]
+                    );
+                }
+
                 DeviceCommand::Telemetry(telemetry) => {
                     let json = serde_json::to_string(telemetry).unwrap();
                     let _ = python_stream.write_all(json.as_bytes());

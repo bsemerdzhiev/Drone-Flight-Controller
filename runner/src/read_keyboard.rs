@@ -58,6 +58,14 @@ pub fn send_transition(
                         println!("Received ACK for mode transition to {:?}", state);
                         to_break = true;
                     }
+                    DeviceCommand::DebugCalibration(calibration) => {
+                        println!(
+                            "Calibration ypr_offset during transition: yaw={:.6}, pitch={:.6}, roll={:.6}",
+                            calibration.ypr_offset[0],
+                            calibration.ypr_offset[1],
+                            calibration.ypr_offset[2]
+                        );
+                    }
                     _ => {}
                 }
             }
@@ -66,6 +74,11 @@ pub fn send_transition(
         if to_break {
             break;
         }
+
+        println!(
+            "No ACK received yet for transition to {:?}; resending request",
+            state
+        );
     }
     *cur_mode = state;
 }

@@ -1,4 +1,3 @@
-use crate::filters::dmp_readings::DmpReadings;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::full_control::FSMFullControl;
@@ -7,6 +6,7 @@ use crate::states::panic_mode::FSMPanic;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::yaw_control::FSMYaw;
 use crate::util::pid_controller::PIDController;
+use crate::filters::dmp_readings::DmpReadings;
 use alloc::boxed::Box;
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::telemetry_data::*;

@@ -9,6 +9,7 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
+use my_hdlc::command::{DebugCalibration, DeviceCommand};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::block;
@@ -16,6 +17,7 @@ use tudelft_quadrupel::mpu::{
     read_dmp_bytes, read_raw,
     structs::{Accel, Gyro},
 };
+use tudelft_quadrupel::uart::send_bytes;
 
 pub struct FSMCalibration {}
 
@@ -39,6 +41,14 @@ impl FSMControl for FSMCalibration {
 
         if ctx.calibration_state.should_finish() {
             ctx.calibration_state.finalize_calibration();
+            let msg = ctx.trv.write_structure(&DeviceCommand::DebugCalibration(DebugCalibration {
+                ypr_offset: [
+                    ctx.calibration_state.ypr_offset.yaw,
+                    ctx.calibration_state.ypr_offset.pitch,
+                    ctx.calibration_state.ypr_offset.roll,
+                ],
+            }));
+            send_bytes(&msg.0[0..msg.1]);
 
             return Box::new(FSMSafe {});
         }
