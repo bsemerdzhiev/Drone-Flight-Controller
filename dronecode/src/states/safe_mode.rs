@@ -1,3 +1,4 @@
+use crate::filters::dmp_readings::DmpReadings;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::full_control::FSMFullControl;
@@ -6,7 +7,6 @@ use crate::states::panic_mode::FSMPanic;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::yaw_control::FSMYaw;
 use crate::util::pid_controller::PIDController;
-use crate::filters::dmp_readings::DmpReadings;
 use alloc::boxed::Box;
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::telemetry_data::*;
@@ -21,7 +21,6 @@ pub struct FSMSafe {}
 
 impl FSMControl for FSMSafe {
     fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        *ctx.live_controller_values = Default::default();
         set_motors([0, 0, 0, 0]);
         if *ctx.flash_head != *ctx.flash_tail {
             send_flash_data(ctx.flash_tail, ctx.trv);
@@ -75,12 +74,14 @@ fn is_throttle_zero() -> bool {
     let speed = get_motors();
     return speed[0] == 0 && speed[1] == 0 && speed[2] == 0 && speed[3] == 0;
 }
+
 fn send_flash_data(flash_tail: &mut u32, my_hdlc: &mut HdlcTransceiver) {
     let mut buffer = [0u8; (TELEMETERY_DATA_SIZE + 50) as usize];
     Yellow.on();
     _ = flash_read_bytes(*flash_tail, &mut buffer);
     Yellow.off();
     Green.on();
+
     let data: TelemetryData = from_bytes(&buffer).unwrap();
     let cmd = DeviceCommand::Telemetry(data);
     // send_bytes(&buffer);/

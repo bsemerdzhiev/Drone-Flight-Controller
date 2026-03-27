@@ -16,7 +16,6 @@ pub struct FSMManual {}
 
 impl FSMControl for FSMManual {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        *ctx.live_controller_values = Default::default();
         // check if there is a new command from the controller to run
         if ctx.input_from_controller.is_none() {
             return self;

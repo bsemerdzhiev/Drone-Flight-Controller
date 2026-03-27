@@ -1,16 +1,16 @@
-use my_hdlc::command::FSMState;
-use tudelft_quadrupel::barometer::read_pressure;
+use crate::filters::dmp_readings::DmpReadings;
+use crate::filters::sensors_handler::ImuHandler;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
-use crate::filters::dmp_readings::DmpReadings;
-use crate::filters::sensors_handler::ImuHandler;
 use crate::util::pid_controller::{ControllerFlags, PIDController};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
+use my_hdlc::command::FSMState;
+use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::motor::set_motors;
 use tudelft_quadrupel::mpu;
 
@@ -65,9 +65,6 @@ impl FSMControl for FSMFullControl {
             .as_ref()
             .unwrap()
             .roll_pitch_p_trim;
-        ctx.live_controller_values.p_yaw = k_p[0];
-        ctx.live_controller_values.p_pitch = k_p[1];
-        ctx.live_controller_values.p_roll = k_p[2];
 
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
