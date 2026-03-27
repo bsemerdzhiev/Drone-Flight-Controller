@@ -51,6 +51,5 @@ pub fn uplink_main_loop(
                 _ => {}
             }
         }
-        sleep(Duration::from_micros(10));
     }
 }

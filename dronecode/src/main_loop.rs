@@ -10,7 +10,7 @@ use crate::states::fsm_base_class::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::calibration_state::CalibrationState;
-use crate::states::state_structures::state_context::{LiveControllerValues, StateContext};
+use crate::states::state_structures::state_context::StateContext;
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
@@ -54,7 +54,7 @@ pub fn main_loop() -> ! {
     // -------------------------------------------------------------------------
 
     // Time data for telemetry data
-    let mut current_time = Instant::now();
+    let current_time = Instant::now();
     // -------------------------------------------------------------------------
 
     // fields for the context
@@ -64,7 +64,6 @@ pub fn main_loop() -> ! {
     let mut calibration_state: CalibrationState = CalibrationState::new();
     let mut flash_head = 0u32;
     let mut flash_tail = 0u32;
-    let mut live_controller_values = LiveControllerValues::default();
 
     let mut ctx = StateContext {
         calibration_state: &mut calibration_state,
@@ -72,7 +71,6 @@ pub fn main_loop() -> ! {
         input_from_controller: &mut received_manual_input,
         flash_head: &mut flash_head,
         flash_tail: &mut flash_tail,
-        live_controller_values: &mut live_controller_values,
     };
 
     // -------------------------------------------------------------------------
@@ -136,22 +134,10 @@ pub fn main_loop() -> ! {
 
         if now.duration_since(last_send_message) >= DRONE_STATE_TIMER {
             last_send_message = now;
-            send_drone_data(
-                &mut ctx.trv,
-                current_state.get_state(),
-                dt,
-                ctx.live_controller_values,
-            );
-            Green.off();
+            send_drone_data(&mut ctx.trv, current_state.get_state(), dt);
         }
 
-        put_telemetry_data_on_flash(
-            &mut ctx.flash_head,
-            dt,
-            current_state.get_state(),
-            ctx.live_controller_values,
-        );
-        current_time = now;
+        put_telemetry_data_on_flash(&mut ctx.flash_head, dt, current_state.get_state());
 
         // -------------------------------------------------------------------------
 
@@ -163,18 +149,15 @@ pub fn main_loop() -> ! {
 /*
 * Sends data to the drone
 */
-fn send_drone_data(
-    transceiver: &mut HdlcTransceiver,
-    curent_state: FSMState,
-    dt: Duration,
-    live_controller_values: &LiveControllerValues,
-) {
-    let data: TelemetryData =
-        TelemetryRead::read_telemetry(dt, curent_state, live_controller_values);
-    let msg = transceiver.write_structure(&DeviceCommand::Telemetry(data));
+fn send_drone_data(transceiver: &mut HdlcTransceiver, curent_state: FSMState, dt: Duration) {
     Green.on();
 
+    let data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state, false);
+
+    let msg = transceiver.write_structure(&DeviceCommand::Telemetry(data));
+
     send_bytes(&msg.0[0..msg.1]);
+    Green.off();
 }
 
 /*
@@ -186,20 +169,13 @@ fn send_ack(transceiver: &mut HdlcTransceiver) {
     send_bytes(&msg.0[0..msg.1]);
 }
 
-fn put_telemetry_data_on_flash(
-    flash_head: &mut u32,
-    dt: Duration,
-    curent_state: FSMState,
-    live_controller_values: &LiveControllerValues,
-) {
+fn put_telemetry_data_on_flash(flash_head: &mut u32, dt: Duration, curent_state: FSMState) {
     if (*flash_head + TELEMETERY_DATA_SIZE) > 0x01FFFF {
         return;
     }
-    let data: TelemetryData =
-        TelemetryRead::read_telemetry(dt, curent_state, live_controller_values);
-    // Green.on();
 
-    // let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&cmd);
+    let data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state, true);
+
     let mut buf = [0u8; (TELEMETERY_DATA_SIZE + 20) as usize];
     let ser: &mut [u8] = postcard::to_slice(&data, &mut buf).unwrap();
 
