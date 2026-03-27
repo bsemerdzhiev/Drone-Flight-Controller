@@ -1,4 +1,5 @@
 use std::{
+    sync::Mutex,
     thread::sleep,
     time::{Duration, Instant},
 };
@@ -10,100 +11,79 @@ use crossterm::{
 use my_hdlc::{
     command::{DeviceCommand, FSMState},
     pc_command::ManualInput,
+    HdlcTransceiver,
 };
+use std::sync::Arc;
 use tudelft_serial_upload::serial2::SerialPort;
 
 pub fn send_transition(
     state: my_hdlc::command::FSMState,
-    rcv: &mut my_hdlc::HdlcTransceiver,
-    cur_mode: &mut FSMState,
-    serial: &mut SerialPort,
+    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
+    serial_mut: &Arc<Mutex<SerialPort>>,
 ) {
-    println!("Requested mode transition: {:?} -> {:?}", *cur_mode, state);
-
-    //TODO: Only try this transition if its possible
-    //In other words, try to perform it in the runner first, and only then send it
-    const LATENCY_WAIT_TIME: Duration = Duration::from_millis(30);
-    const WAIT_TIME: Duration = Duration::from_micros(100);
+    const WAIT_TIME: Duration = Duration::from_millis(1000);
 
     let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
-    loop {
-        let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
 
-        serial.write(&send_buffer.0[0..send_buffer.1]);
-
-        let mut to_break = false;
-
-        let mut cur_time: Instant = Instant::now();
+    println!("Started\r");
+    {
+        let mut rcv = rcv_mut.lock().unwrap();
+        let mut serial = serial_mut.lock().unwrap();
         loop {
-            if cur_time.elapsed() >= LATENCY_WAIT_TIME {
-                break;
-            }
-        }
-        //wait for ack
-        if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
-            rcv.add_bytes(&buf[0..num]);
-        }
+            let send_buffer =
+                rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
+            println!("Send a message\r");
 
-        // the number of loop iterations below is chosen at random
-        cur_time = Instant::now();
+            serial.write(&send_buffer.0[0..send_buffer.1]);
 
-        loop {
-            if cur_time.elapsed() >= WAIT_TIME {
-                break;
-            }
-            if let Some(x) = rcv.read_structure::<DeviceCommand>() {
-                match x {
-                    DeviceCommand::Ack => {
-                        println!("Received ACK for mode transition to {:?}", state);
-                        to_break = true;
+            let mut to_break = false;
+
+            let mut cur_time: Instant = Instant::now();
+
+            // the number of loop iterations below is chosen at random
+            cur_time = Instant::now();
+
+            loop {
+                if cur_time.elapsed() >= WAIT_TIME {
+                    break;
+                }
+                if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
+                    rcv.add_bytes(&buf[0..num]);
+                }
+
+                if let Some(x) = rcv.read_structure::<DeviceCommand>() {
+                    match x {
+                        DeviceCommand::Ack => {
+                            println!("Received ACK for mode transition to {:?}", state);
+                            return;
+                        }
+                        _ => {}
                     }
-                    DeviceCommand::DebugCalibration(calibration) => {
-                        println!(
-                            "Calibration ypr_offset during transition: yaw={:.6}, pitch={:.6}, roll={:.6}",
-                            calibration.ypr_offset[0],
-                            calibration.ypr_offset[1],
-                            calibration.ypr_offset[2]
-                        );
-                    }
-                    _ => {}
                 }
             }
         }
-
-        if to_break {
-            break;
-        }
-
-        println!(
-            "No ACK received yet for transition to {:?}; resending request",
-            state
-        );
     }
-    *cur_mode = state;
 }
 
 pub fn read_keyboard(
     keyboard_trim: &mut ManualInput,
     joystick_info: &mut ManualInput,
-    rcv: &mut my_hdlc::HdlcTransceiver,
-    cur_mode: &mut FSMState,
-    serial: &mut SerialPort,
+    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
+    serial_mut: &Arc<Mutex<SerialPort>>,
 ) {
     while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             println!("Keyboard event: {:?}", key.code);
             match key.code {
                 KeyCode::Char('0') => {
-                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv, cur_mode, serial);
+                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv_mut, serial_mut);
                 }
                 KeyCode::Char('2') => {
                     if joystick_info.is_zeroed() {
                         send_transition(
                             my_hdlc::command::FSMState::ManualMode,
-                            rcv,
-                            cur_mode,
-                            serial,
+                            rcv_mut,
+                            serial_mut,
                         );
                     } else {
                         println!("Ignored ManualMode request because joystick input is not zeroed");
@@ -112,18 +92,16 @@ pub fn read_keyboard(
                 KeyCode::Char('3') => {
                     send_transition(
                         my_hdlc::command::FSMState::CalibrationMode,
-                        rcv,
-                        cur_mode,
-                        serial,
+                        rcv_mut,
+                        serial_mut,
                     );
                 }
                 KeyCode::Char('4') => {
                     if joystick_info.is_zeroed() {
                         send_transition(
                             my_hdlc::command::FSMState::YawControl,
-                            rcv,
-                            cur_mode,
-                            serial,
+                            rcv_mut,
+                            serial_mut,
                         );
                     } else {
                         println!("Ignored YawControl request because joystick input is not zeroed");
@@ -133,21 +111,21 @@ pub fn read_keyboard(
                     if joystick_info.is_zeroed() {
                         send_transition(
                             my_hdlc::command::FSMState::FullControlMode,
-                            rcv,
-                            cur_mode,
-                            serial,
+                            rcv_mut,
+                            serial_mut,
                         );
                     } else {
-                        println!("Ignored FullControlMode request because joystick input is not zeroed");
+                        println!(
+                            "Ignored FullControlMode request because joystick input is not zeroed"
+                        );
                     }
                 }
                 KeyCode::Char('6') => {
                     if joystick_info.is_zeroed() {
                         send_transition(
                             my_hdlc::command::FSMState::RawSensorsFullControlMode,
-                            rcv,
-                            cur_mode,
-                            serial,
+                            rcv_mut,
+                            serial_mut,
                         );
                     } else {
                         println!("Ignored RawSensorsFullControlMode request because joystick input is not zeroed");
@@ -157,9 +135,8 @@ pub fn read_keyboard(
                     if joystick_info.is_zeroed() {
                         send_transition(
                             my_hdlc::command::FSMState::HeightControlMode,
-                            rcv,
-                            cur_mode,
-                            serial,
+                            rcv_mut,
+                            serial_mut,
                         );
                     } else {
                         println!("Ignored HeightControlMode request because joystick input is not zeroed");
@@ -169,12 +146,13 @@ pub fn read_keyboard(
                     if joystick_info.is_zeroed() {
                         send_transition(
                             my_hdlc::command::FSMState::WirelessMode,
-                            rcv,
-                            cur_mode,
-                            serial,
+                            rcv_mut,
+                            serial_mut,
                         );
                     } else {
-                        println!("Ignored WirelessMode request because joystick input is not zeroed");
+                        println!(
+                            "Ignored WirelessMode request because joystick input is not zeroed"
+                        );
                     }
                 }
                 KeyCode::Char('e') => {

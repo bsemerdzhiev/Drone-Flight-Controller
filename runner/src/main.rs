@@ -1,43 +1,37 @@
-use crate::read_joystick::combine_inputs;
-use crate::read_joystick::read_joystick;
-use crate::read_keyboard::read_keyboard;
-use crate::read_keyboard::send_transition;
+use crate::downlink_comm::downlink_main_loop;
+use crate::uplink_comm::uplink_main_loop;
 
-use crossterm::terminal::disable_raw_mode;
-use crossterm::terminal::enable_raw_mode;
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::command::FSMState;
-use my_hdlc::pc_command::ManualInput;
-use rand;
-
-use crossterm::event::{self, Event, KeyCode};
-use evdev::{enumerate, AbsoluteAxisCode, Device};
 pub use my_hdlc::pc_command;
-use rand::RngExt;
-use std::env::args;
-
-use std::path::PathBuf;
-use std::process::exit;
-use std::process::Command;
-use std::time::Duration;
-use std::time::Instant;
-use tudelft_serial_upload::serial2::SerialPort;
-use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
-
+use my_hdlc::pc_command::ManualInput;
 pub use my_hdlc::HdlcTransceiver;
 use my_hdlc::STUFFED_MESSAGE_SIZE;
 
-mod read_joystick;
-mod read_keyboard;
+use tudelft_serial_upload::serial2::SerialPort;
+use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 
-use serde_json;
+use std::env::args;
 use std::fs;
 use std::io::Write;
 use std::os::unix::net::UnixListener;
 use std::os::unix::net::UnixStream;
+use std::path::PathBuf;
+use std::process::exit;
+use std::process::Command;
+use std::sync::Arc;
+use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
+use std::time::Instant;
 
-const PRINT_DRONE_DATA: bool = false;
-const DEBUG_BOARD_MODE: bool = true;
+use serde_json;
+
+mod downlink_comm;
+mod read_joystick;
+mod read_keyboard;
+mod uplink_comm;
+
 fn main() {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
@@ -48,20 +42,17 @@ fn main() {
     let file = args().nth(1);
     let port = upload_file_or_stop(PortSelector::AutoManufacturer, file);
 
-    // The code below shows a very simple start to a PC-side receiver of data from the drone.
-    // You can extend this into an entire interface to the drone written in Rust. However,
-    // if you are more comfortable writing such an interface in any other programming language
-    // you like (for example, python isn't a bad choice), you can also call that here. The
-    // commented function below gives an example of how to do that with python, but again
-    // you don't need to choose python.
-
     start_interface(&port);
 
     // open the serial port we got back from `upload_file_or_stop`. This is the same port
     // as the upload occurred on, so we know that we can communicate with the drone over
     // this port.
-    let mut serial = SerialPort::open(port, 115200).unwrap();
-    serial.set_read_timeout(Duration::from_millis(400)).unwrap();
+    let mut serial_mut = Arc::new(Mutex::new(SerialPort::open(port, 115200).unwrap()));
+
+    {
+        let mut serial = serial_mut.lock().unwrap();
+        serial.set_read_timeout(Duration::from_millis(400));
+    }
 
     // --- Unix domain socket setup for Python GUI ---
     let socket_path = "/tmp/drone_telemetry.sock";
@@ -73,192 +64,25 @@ fn main() {
         .expect("Failed to accept Python connection");
     println!("Python GUI connected!");
 
-    let mut keyboard_trim = ManualInput::zero();
-    let mut joystick_input = ManualInput::zero();
+    let mut python_stream_mut = Arc::new(Mutex::new(python_stream));
+    let mut rcv_mut = Arc::new(Mutex::new(HdlcTransceiver::new()));
 
-    // let mut device = find_flight_stick().expect("Cannot find flight stick"); //comment this when testing without stick
-    let mut device: Option<Device> = None;
+    let rcv_clone = Arc::clone(&rcv_mut);
+    let serial_clone = Arc::clone(&serial_mut);
+    let python_clone = Arc::clone(&python_stream_mut);
+    let h1 = thread::spawn(move || {
+        downlink_main_loop(&rcv_clone, &serial_clone, &python_clone);
+    });
 
-    if !DEBUG_BOARD_MODE {
-        device = Some(find_flight_stick().expect("Cannot find flight stick"));
-    }
+    let rcv_clone = Arc::clone(&rcv_mut);
+    let serial_clone = Arc::clone(&serial_mut);
+    let python_clone = Arc::clone(&python_stream_mut);
+    let h2 = thread::spawn(move || {
+        uplink_main_loop(&rcv_clone, &serial_clone, &python_clone);
+    });
 
-    // for timing and sending inputs at fixed rate
-    let send_period = Duration::from_millis(40);
-    let mut last_send = Instant::now();
-
-    let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
-
-    let mut rcv = my_hdlc::HdlcTransceiver::new();
-
-    let mut rng = rand::rng();
-    // infinitely print whatever the drone sends us
-    let mut rcv: HdlcTransceiver = HdlcTransceiver::new();
-
-    // infinitely print whatever the drone sends us
-
-    enable_raw_mode().unwrap();
-    let mut iterations_without_message = 0u16;
-    let mut current_mode = FSMState::SafeMode;
-    let mut joystick_disconnected = false;
-    loop {
-        let dev_stat = find_flight_stick();
-        if dev_stat.is_some() || DEBUG_BOARD_MODE {
-            if joystick_disconnected {
-                device = dev_stat;
-                joystick_disconnected = false;
-            }
-            read_joystick(&mut device, &mut joystick_input);
-
-            read_keyboard(
-                &mut keyboard_trim,
-                &mut joystick_input,
-                &mut rcv,
-                &mut current_mode,
-                &mut serial,
-            );
-        } else {
-            println!("Joystick disconnected!");
-            joystick_disconnected = true;
-        }
-        check_for_panic(
-            &mut joystick_input,
-            &mut keyboard_trim,
-            &mut current_mode,
-            &mut joystick_disconnected,
-            &mut rcv,
-            &mut serial,
-        );
-        if last_send.elapsed() >= send_period {
-            let cmd = combine_inputs(&keyboard_trim, &joystick_input);
-            let cmd_for_ui = cmd.clone();
-
-            // println!("{:?}\r", cmd);
-            let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
-                &my_hdlc::command::DeviceCommand::ManualInput(cmd),
-            );
-
-            serial.write(&send_buffer.0[0..send_buffer.1]);
-
-            let json = serde_json::to_string(&serde_json::json!({
-                "ManualInput": {
-                    "lift": cmd_for_ui.get_lift(),
-                    "roll": cmd_for_ui.get_roll(),
-                    "pitch": cmd_for_ui.get_pitch(),
-                    "yaw": cmd_for_ui.get_yaw(),
-                }
-            }))
-            .unwrap();
-
-            let _ = python_stream.write_all(json.as_bytes());
-            let _ = python_stream.write_all(b"\n");
-
-            last_send += send_period;
-        }
-
-        if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
-            rcv.add_bytes(&buf[0..num]);
-        }
-        // Drains all queued drone decoded messages --------
-        let mut received_message = false;
-        while let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
-            received_message = true;
-            // ----------------
-            match &msg {
-                DeviceCommand::DroneInfo(info) => {
-                    let reported_state = info.state();
-                    if current_mode != reported_state {
-                        println!(
-                            "Drone reported state update: {:?} -> {:?}",
-                            current_mode, reported_state
-                        );
-                        current_mode = reported_state;
-                    }
-
-                    let json = serde_json::to_string(info).unwrap();
-
-                    // Send JSON + newline to Python
-                    if let Err(e) = python_stream.write_all(json.as_bytes()) {
-                        eprintln!("Error writing JSON to Python: {}", e);
-                    }
-                    let _ = python_stream.write_all(b"\n");
-                }
-
-                DeviceCommand::DebugRpms(rpms) => {
-                    let json = serde_json::to_string(&serde_json::json!({
-                        "DebugRpms": { "rpms": rpms.rpms }
-                    }))
-                    .unwrap();
-                    let _ = python_stream.write_all(json.as_bytes());
-                    let _ = python_stream.write_all(b"\n");
-                }
-
-                DeviceCommand::DebugCalibration(calibration) => {
-                    println!(
-                        "Calibration ypr_offset: yaw={:.6}, pitch={:.6}, roll={:.6}",
-                        calibration.ypr_offset[0],
-                        calibration.ypr_offset[1],
-                        calibration.ypr_offset[2]
-                    );
-                }
-
-                DeviceCommand::Telemetry(telemetry) => {
-                    let json = serde_json::to_string(telemetry).unwrap();
-                    let _ = python_stream.write_all(json.as_bytes());
-                    let _ = python_stream.write_all(b"\n");
-                }
-
-                _ => {}
-            }
-
-            // if PRINT_DRONE_DATA {
-            //     println!("{:?}\r", msg);
-            // }
-        }
-
-        if received_message {
-            //Reset iterations without message when a message is read
-            iterations_without_message = 0;
-        } else {
-            iterations_without_message += 1;
-        }
-        if iterations_without_message == 200u16 {
-            println!("Board Disconnected!!");
-            break;
-        }
-    }
-}
-
-fn find_flight_stick() -> Option<Device> {
-    for (path, _) in enumerate() {
-        if let Ok(dev) = Device::open(&path) {
-            let name = dev.name().unwrap_or("Unknown");
-            if name.contains("Logitech") {
-                dev.set_nonblocking(true)
-                    .expect("Failed to set joystick to nonblocking");
-                return Some(dev);
-            }
-        }
-    }
-    None
-}
-
-fn check_for_panic(
-    joy: &mut ManualInput,
-    keyboard: &mut ManualInput,
-    current_mode: &mut FSMState,
-    joystick_disconnected: &mut bool,
-    rcv: &mut HdlcTransceiver,
-    serial: &mut SerialPort,
-) {
-    if joy.is_panic_triggered() | keyboard.is_panic_triggered() | *joystick_disconnected {
-        let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
-            &my_hdlc::command::DeviceCommand::ChangeMode(my_hdlc::command::FSMState::PanicMode),
-        );
-        send_transition(FSMState::PanicMode, rcv, current_mode, serial);
-        joy.set_panic(false);
-        keyboard.set_panic(false);
-    }
+    h1.join().unwrap();
+    h2.join().unwrap();
 }
 
 #[allow(unused)]
@@ -270,16 +94,7 @@ fn start_interface(port: &PathBuf) {
     let mut cmd = Command::new("python");
     cmd.arg("ui/main.py")
         .arg(port.to_str().unwrap())
-        .current_dir(&project_root);
-    // pass the serial port as a command line parameter to the python program
-
-    // match cmd.output() {
-    //     Err(e) => {
-    //         eprintln!("{}", e);
-    //         exit(1);
-    //     }
-    //     Ok(i) if !i.status.success() => exit(i.status.code().unwrap_or(1)),
-    //     Ok(_) => {}
-    // }
-    cmd.spawn().expect("cannot open UI");
+        .current_dir(&project_root)
+        .spawn()
+        .expect("cannot open UI");
 }
