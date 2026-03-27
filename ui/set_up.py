@@ -149,9 +149,3 @@ def set_up_gui():
                         label="Direction", width_fixed=True, init_width_or_weight=90
                     )
                     dpg.add_table_column(label="Message")
-
-    dpg.create_viewport(title="Drone UI", width=1920, height=1080)
-    dpg.setup_dearpygui()
-    dpg.show_viewport()
-    dpg.start_dearpygui()
-    dpg.destroy_context()

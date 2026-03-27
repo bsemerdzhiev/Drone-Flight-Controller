@@ -38,16 +38,16 @@ def update_gui():
                 dpg.set_axis_limits(f"y_axis_{axis}", -y_limit, y_limit)
 
         # Motors
-        for i in range(4):
-            val = stored_data.motor_values[i]
-            dpg.set_value(f"motor{i}", val / 800)
-            dpg.set_value(f"motor{i}_val", str(val))
-
+        # for i in range(4):
+        #     val = stored_data.motor_values[i]
+        #     dpg.set_value(f"motor{i}", val / 800)
+        #     dpg.set_value(f"motor{i}_val", str(val))
+        #
         # Joystick
-        for axis in ["pitch", "roll", "lift", "yaw"]:
-            val = stored_data.joystick[axis]
-            dpg.set_value(f"{axis}_val", f"{val:.3f}")
-            dpg.set_value(f"{axis}_bar", manual_value_to_bar(val, axis))
+        # for axis in ["pitch", "roll", "lift", "yaw"]:
+        #     val = stored_data.joystick[axis]
+        #     dpg.set_value(f"{axis}_val", f"{val:.3f}")
+        #     dpg.set_value(f"{axis}_bar", manual_value_to_bar(val, axis))
 
         # Battery
         dpg.set_value("battery_bar", stored_data.battery_level)
