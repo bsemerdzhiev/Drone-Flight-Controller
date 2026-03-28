@@ -132,7 +132,7 @@ impl YawPitchRoll {
         Self {
             lift: input.get_lift() as f32,
             yaw: input.get_yaw() as f32,
-            pitch: input.get_roll() as f32,
+            pitch: input.get_pitch() as f32,
             roll: input.get_roll() as f32,
             pressure: 0f32,
         }

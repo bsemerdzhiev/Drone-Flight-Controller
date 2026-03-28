@@ -15,7 +15,7 @@ use tudelft_quadrupel::uart::send_bytes;
 
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
-const K_P: [f32; 4] = [20f32, 0f32, 0f32, 0f32];
+const K_P: [f32; 4] = [1f32, 0f32, 0f32, 0f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
