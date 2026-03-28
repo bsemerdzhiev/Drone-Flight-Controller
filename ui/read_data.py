@@ -47,6 +47,7 @@ def serial_reader():
                     f"yaw={t['yaw']:.3f} pitch={t['pitch']:.3f} roll={t['roll']:.3f} "
                     f"accel=({t['accel_x']},{t['accel_y']},{t['accel_z']}) "
                     f"gyro=({t['gyro_x']},{t['gyro_y']},{t['gyro_z']}) "
+                    f"battery=({t['bat']}) "
                     f"pres={t['pres']} flash={t['logged_in_flash']}",
                 )
 
@@ -57,10 +58,7 @@ def serial_reader():
 
                     fsm_state = t.get("cur_state", "Unknown")
 
-                    battery_level = t.get("bat_level", 0.0) / 100.0
-
                     stored_data.fsm_state = fsm_state
-                    stored_data.battery_level = battery_level
 
                 to_add_to.yaw_data.append(math.degrees(t.get("yaw", 0.0)))
                 to_add_to.pitch_data.append(math.degrees(t.get("pitch", 0.0)))
@@ -80,6 +78,7 @@ def serial_reader():
                 to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
 
                 to_add_to.pres_data.append(t.get("pres", 0.0))
+                to_add_to.battery_level.append(t.get("bat", 0))
 
         except Exception as e:
             print(f"Serial error: {e}")
