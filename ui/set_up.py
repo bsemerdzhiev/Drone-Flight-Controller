@@ -122,16 +122,30 @@ def set_up_gui():
         with dpg.group(horizontal=True):
             dpg.add_text("Current State:", color=[180, 180, 180])
             dpg.add_text("SafeMode", tag="fsm_display", color=FSM_COLORS["SafeMode"])
-
         dpg.add_separator()
-
         # --- Battery ---
         dpg.add_text("Battery Level", color=[255, 255, 100])
         dpg.add_progress_bar(
             tag="battery_bar", default_value=1.0, width=400, overlay="100%"
         )
         dpg.add_text("100%", tag="battery_text")
+        dpg.add_separator()
 
+        # --- Joystick ---
+        dpg.add_text("Joystick", color=[255, 255, 100])
+        with dpg.group(horizontal=True):
+            dpg.add_text("Pitch / Roll", color=[180, 180, 180])
+        with dpg.drawlist(width=200, height=200, tag="joystick_draw"):
+            dpg.draw_circle([100, 100], 90, color=[80, 80, 80], fill=[30, 30, 30])
+            dpg.draw_line([10, 100], [190, 100], color=[60, 60, 60])
+            dpg.draw_line([100, 10], [100, 190], color=[60, 60, 60])
+            dpg.draw_circle(
+                [100, 100],
+                8,
+                color=[0, 200, 255],
+                fill=[0, 200, 255],
+                tag="joystick_dot",
+            )
         dpg.add_separator()
 
         set_up_sensors("_live")

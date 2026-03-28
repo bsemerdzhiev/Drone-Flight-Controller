@@ -65,10 +65,7 @@ def serial_reader():
                 to_add_to.roll_data.append(math.degrees(t.get("roll", 0.0)))
                 to_add_to.time_data.append(time.time() - start_time)
 
-                # motors = t.get("motors", to_add_to.motor_values)
-
-                # for i in range(4):
-                # to_add_to.motor_values[i] = motors[i]
+                to_add_to.motors.append(t.get("motors", [0, 0, 0, 0]))
 
                 to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0))
                 to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0))
@@ -79,6 +76,17 @@ def serial_reader():
 
                 to_add_to.pres_data.append(t.get("pres", 0.0))
                 to_add_to.battery_level.append(t.get("bat", 0))
+            if "ManualInput" in t:
+                t = t["ManualInput"]
+
+                log_message(
+                    "PC>Drone",
+                    f"ManualInput lift={t['lift']:.3f} roll={t['roll']:.3f} "
+                    f"pitch={t['pitch']:.3f} yaw={t['yaw']:.3f}",
+                )
+
+                for space_pos in ["pitch", "yaw", "roll", "lift"]:
+                    stored_data.joystick[space_pos].append(t[space_pos])
 
         except Exception as e:
             print(f"Serial error: {e}")

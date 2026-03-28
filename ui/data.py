@@ -17,8 +17,7 @@ class ReadData:
         self.time_data = deque(maxlen=MAX_SIZE)
 
         # motor_values = [0, 0, 0, 0]
-
-        # joystick = {"pitch": 0.0, "roll": 0.0, "lift": 0.0, "yaw": 0.0}
+        self.motors = deque(maxlen=MAX_SIZE)
 
         self.accel_raw = {
             "x": deque(maxlen=MAX_SIZE),
@@ -36,6 +35,13 @@ class ReadData:
 
         self.battery_level = deque(maxlen=MAX_SIZE)
 
+
+joystick = {
+    "pitch": deque(maxlen=MAX_SIZE),
+    "roll": deque(maxlen=MAX_SIZE),
+    "lift": deque(maxlen=MAX_SIZE),
+    "yaw": deque(maxlen=MAX_SIZE),
+}
 
 live_data = ReadData()
 logged_data = ReadData()
