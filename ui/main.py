@@ -19,7 +19,13 @@ def run_dpg():
     dpg.destroy_context()
 
 
-def qt_update(arms, arms2, prop_dots, arm_verts):
+def qt_update(
+    arms,
+    arms2,
+    prop_dots,
+    arm_verts,
+    motor_labels,
+):
     if len(stored_data.live_data.time_data) == 0:
         return
     update_drone_view(
@@ -27,6 +33,7 @@ def qt_update(arms, arms2, prop_dots, arm_verts):
         arms2,
         prop_dots,
         arm_verts,
+        motor_labels,
         stored_data.live_data.yaw_data[-1],
         stored_data.live_data.pitch_data[-1],
         stored_data.live_data.roll_data[-1],
@@ -36,13 +43,15 @@ def qt_update(arms, arms2, prop_dots, arm_verts):
 
 if __name__ == "__main__":
     qt_app = QtWidgets.QApplication(sys.argv)
-    view, arms, arms2, prop_dots, arm_verts = make_drone_view()
+    view, arms, arms2, prop_dots, arm_verts, motor_labels = make_drone_view()
 
     threading.Thread(target=serial_reader, daemon=True).start()
     threading.Thread(target=run_dpg, daemon=True).start()
 
     timer = QtCore.QTimer()
-    timer.timeout.connect(lambda: qt_update(arms, arms2, prop_dots, arm_verts))
+    timer.timeout.connect(
+        lambda: qt_update(arms, arms2, prop_dots, arm_verts, motor_labels)
+    )
     timer.start(50)
 
     qt_app.exec()

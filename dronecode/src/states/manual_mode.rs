@@ -20,10 +20,11 @@ impl FSMControl for FSMManual {
         if ctx.input_from_controller.is_none() {
             return self;
         }
+
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
 
         // consume the command and set it to None
-        *ctx.input_from_controller = None;
+        // *ctx.input_from_controller = None;
         self
     }
 
