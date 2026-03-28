@@ -86,7 +86,7 @@ def make_drone_view():
     return view, arms, arms2, prop_dots, arm_verts, motor_labels
 
 
-def rpm_to_color(rpm: int, max_rpm: int = 800):
+def rpm_to_color(rpm: int, max_rpm: int = 400):
     t = max(0.0, min(1.0, rpm / max_rpm))
     # green -> yellow -> red
     if t < 0.5:

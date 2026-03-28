@@ -41,6 +41,9 @@ joystick = {
     "roll": deque(maxlen=MAX_SIZE),
     "lift": deque(maxlen=MAX_SIZE),
     "yaw": deque(maxlen=MAX_SIZE),
+    "yaw_p_trim": deque(maxlen=MAX_SIZE),
+    "roll_pitch_p_trim": deque(maxlen=MAX_SIZE),
+    "roll_pitch_d_trim": deque(maxlen=MAX_SIZE),
 }
 
 live_data = ReadData()

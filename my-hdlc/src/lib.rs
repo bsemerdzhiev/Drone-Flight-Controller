@@ -16,7 +16,19 @@ use serde::{Deserialize, Serialize};
 * payload, and adding the two framing bytes, we can end up with at most (2*3 + 2)8 bytes. In total,
 * we can fit 128/8 ~ 16 messages in the buffer.
 */
+
+#[cfg(feature = "pc")]
+pub static MAX_BYTES_PER_TICK: usize = STUFFED_MESSAGE_SIZE;
+
+#[cfg(not(feature = "pc"))]
+pub static MAX_BYTES_PER_TICK: usize = STUFFED_MESSAGE_SIZE;
+
+#[cfg(feature = "pc")]
+pub static BUFFER_SIZE: usize = 1 << 15;
+
+#[cfg(not(feature = "pc"))]
 pub static BUFFER_SIZE: usize = 1 << 8;
+
 pub static MESSAGE_SIZE: usize = 1 << 6;
 // used as return size when serializing a structure
 pub static STUFFED_MESSAGE_SIZE: usize = MESSAGE_SIZE * 2 + 2;
@@ -263,6 +275,10 @@ impl HdlcTransceiver {
 
     pub fn fifo_is_empty(&mut self) -> bool {
         return self.remaining_bytes == BUFFER_SIZE;
+    }
+
+    pub fn bytes_to_read(&mut self) -> usize {
+        return self.remaining_bytes.min(MAX_BYTES_PER_TICK);
     }
 }
 

@@ -2,6 +2,10 @@ use tudelft_quadrupel::time::Instant;
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
+pub const K_P: [f32; 4] = [0.08f32, 0.005f32, 0.005f32, 0f32];
+pub const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
+pub const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
+
 /*
 * Selects the type of error correction
 * we want to perform

@@ -5,7 +5,7 @@ use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
-use crate::util::pid_controller::{ControllerFlags, PIDController};
+use crate::util::pid_controller::{ControllerFlags, PIDController, K_D, K_I, K_P};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
@@ -16,10 +16,6 @@ use tudelft_quadrupel::mpu::{self, read_raw};
 
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
-
-const K_P: [f32; 4] = [1f32, 0.005f32, 0.005f32, 0f32];
-const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
 pub struct FSMFullControl {
     pub imu_sampler: Box<dyn ImuHandler>,
@@ -89,7 +85,7 @@ impl FSMControl for FSMFullControl {
         ctx.input_from_controller
             .as_mut()
             .unwrap()
-            .increment_roll(correction.roll as i32);
+            .increment_roll(-correction.roll as i32);
 
         // output to motors
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);

@@ -10,7 +10,7 @@ use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
-use crate::util::pid_controller::{ControllerFlags, PIDController};
+use crate::util::pid_controller::{ControllerFlags, PIDController, K_D, K_I, K_P};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
@@ -19,10 +19,6 @@ use tudelft_quadrupel::mpu::{self, read_raw};
 
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
-
-const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 0f32];
-const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
 pub struct FSMRawFullControl {
     pub imu_sampler: Box<dyn ImuHandler>,
@@ -63,12 +59,12 @@ impl FSMControl for FSMRawFullControl {
             .input_from_controller
             .as_ref()
             .unwrap()
-            .roll_pitch_p_trim;
+            .roll_pitch_d_trim;
         k_d[2] += ctx
             .input_from_controller
             .as_ref()
             .unwrap()
-            .roll_pitch_p_trim;
+            .roll_pitch_d_trim;
 
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
@@ -96,8 +92,6 @@ impl FSMControl for FSMRawFullControl {
 
         // output to motors
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
-
-        *ctx.input_from_controller = None;
 
         return self;
     }

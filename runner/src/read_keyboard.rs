@@ -23,7 +23,7 @@ pub fn send_transition(
 ) {
     const WAIT_TIME: Duration = Duration::from_millis(1000);
 
-    let mut buf = [0u8; my_hdlc::BUFFER_SIZE];
+    let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
 
     println!("Started\r");
     {
@@ -171,12 +171,12 @@ pub fn read_keyboard(
                 KeyCode::Char('z') => keyboard_trim.increment_lift(-1), //throttle down
                 //
                 // // Roll trim
-                KeyCode::Right => keyboard_trim.increment_roll(-2), //roll down  right arrow key
-                KeyCode::Left => keyboard_trim.increment_roll(2),   //roll up     left arrow key
+                KeyCode::Right => keyboard_trim.increment_roll(-1), //roll down  right arrow key
+                KeyCode::Left => keyboard_trim.increment_roll(1),   //roll up     left arrow key
                 //
                 // // Pitch trim
-                KeyCode::Up => keyboard_trim.increment_pitch(2), // pitch up  down arrow key
-                KeyCode::Down => keyboard_trim.increment_pitch(-2), // pitch down up arrow key
+                KeyCode::Up => keyboard_trim.increment_pitch(1), // pitch up  down arrow key
+                KeyCode::Down => keyboard_trim.increment_pitch(-1), // pitch down up arrow key
                 //
                 // // Yaw trim
                 KeyCode::Char('q') => keyboard_trim.increment_yaw(-2), //yaw down
@@ -184,10 +184,10 @@ pub fn read_keyboard(
                 //
                 KeyCode::Char('u') => keyboard_trim.increment_yaw_p_trim(0.01f32), //yaw up
                 KeyCode::Char('j') => keyboard_trim.increment_yaw_p_trim(-0.01f32), //yaw up
-                KeyCode::Char('i') => keyboard_trim.increment_roll_pitch_p_trim(0.05f32), //yaw up
-                KeyCode::Char('k') => keyboard_trim.increment_roll_pitch_p_trim(-0.05f32), //yaw up
-                KeyCode::Char('o') => keyboard_trim.increment_roll_pitch_d_trim(10f32), //yaw up
-                KeyCode::Char('l') => keyboard_trim.increment_roll_pitch_d_trim(-10f32), //yaw up
+                KeyCode::Char('i') => keyboard_trim.increment_roll_pitch_p_trim(0.005f32), //yaw up
+                KeyCode::Char('k') => keyboard_trim.increment_roll_pitch_p_trim(-0.005f32), //yaw up
+                KeyCode::Char('o') => keyboard_trim.increment_roll_pitch_d_trim(0.01f32), //yaw up
+                KeyCode::Char('l') => keyboard_trim.increment_roll_pitch_d_trim(-0.01f32), //yaw up
                 //TODO: missing the reset of the maps of page
                 // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
                 _ => {}

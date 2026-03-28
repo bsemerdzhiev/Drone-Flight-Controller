@@ -70,6 +70,11 @@ def serial_reader():
                 to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0))
                 to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0))
                 to_add_to.accel_raw["z"].append(t.get("accel_z", 0.0))
+
+                to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
+                to_add_to.gyro_raw["y"].append(t.get("gyro_y", 0.0))
+                to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
+
                 to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
                 to_add_to.gyro_raw["y"].append(t.get("gyro_y", 0.0))
                 to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
@@ -85,7 +90,15 @@ def serial_reader():
                     f"pitch={t['pitch']:.3f} yaw={t['yaw']:.3f}",
                 )
 
-                for space_pos in ["pitch", "yaw", "roll", "lift"]:
+                for space_pos in [
+                    "pitch",
+                    "yaw",
+                    "roll",
+                    "lift",
+                    "yaw_p_trim",
+                    "roll_pitch_p_trim",
+                    "roll_pitch_d_trim",
+                ]:
                     stored_data.joystick[space_pos].append(t[space_pos])
 
         except Exception as e:

@@ -30,8 +30,8 @@ const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 // -------------------------------------------------------------------------
 
 // in ms
-const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(500);
-const DRONE_STATE_TIMER: Duration = Duration::from_millis(10);
+const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(1500);
+const DRONE_STATE_TIMER: Duration = Duration::from_millis(1);
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
 const MIN_BAT_LEVEL: u16 = 1050;
@@ -40,7 +40,7 @@ const MIN_BAT_LEVEL: u16 = 1050;
 
 pub fn main_loop() -> ! {
     // processor tick frequency
-    set_tick_frequency(5000);
+    set_tick_frequency(100);
     // -------------------------------------------------------------------------
 
     // buffer for receiving bytes from PC
@@ -97,7 +97,7 @@ pub fn main_loop() -> ! {
         // -------------------------------------------------------------------------
 
         // Read Uart Buff
-        let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
+        let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.bytes_to_read()]);
 
         if num_received != 0usize {
             //read the sent bytes
@@ -117,7 +117,7 @@ pub fn main_loop() -> ! {
                     DeviceCommand::ManualInput(manual_input) => {
                         *ctx.input_from_controller = Some(manual_input);
                     }
-                    _ => continue,
+                    _ => {}
                 }
                 time_for_last_received_message = Instant::now();
             }
@@ -125,7 +125,7 @@ pub fn main_loop() -> ! {
 
         let now = Instant::now();
         if now.duration_since(time_for_last_received_message) >= WATCHDOG_TIMER_FOR_PANICKING {
-            // current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
+            current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
         }
 
         // run the loop of the state
