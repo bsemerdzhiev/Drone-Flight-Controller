@@ -45,8 +45,8 @@ def make_drone_view():
     prop_positions = np.array(
         [
             [-arm_length, -arm_length, 0],  # M0
-            [arm_length, arm_length, 0],  # M1
             [-arm_length, arm_length, 0],  # M2
+            [arm_length, arm_length, 0],  # M1
             [arm_length, -arm_length, 0],  # M3
         ]
     )
@@ -72,8 +72,8 @@ def make_drone_view():
     motor_labels = []
     label_offsets = [
         [-arm_length - 0.1, -arm_length - 0.1, 0.05],  # M0
-        [arm_length + 0.1, arm_length + 0.1, 0.05],  # M1
         [-arm_length - 0.1, arm_length + 0.1, 0.05],  # M2
+        [arm_length + 0.1, arm_length + 0.1, 0.05],  # M1
         [arm_length + 0.1, -arm_length - 0.1, 0.05],  # M3
     ]
     for i, offset in enumerate(label_offsets):
@@ -111,6 +111,10 @@ def update_drone_view(
 
     arms.setData(pos=np.array([rotated[0], rotated[1]]))
     arms2.setData(pos=np.array([rotated[2], rotated[3]]))
+
+    tmp_val = motor_values[1]
+    motor_values[1] = motor_values[2]
+    motor_values[2] = tmp_val
 
     for i, dot in enumerate(prop_dots):
         dot.setData(pos=rotated[i].reshape(1, 3), color=rpm_to_color(motor_values[i]))

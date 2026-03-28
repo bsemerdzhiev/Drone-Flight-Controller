@@ -40,7 +40,7 @@ const MIN_BAT_LEVEL: u16 = 1050;
 
 pub fn main_loop() -> ! {
     // processor tick frequency
-    set_tick_frequency(500);
+    set_tick_frequency(5000);
     // -------------------------------------------------------------------------
 
     // buffer for receiving bytes from PC
