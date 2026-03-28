@@ -69,7 +69,21 @@ def make_drone_view():
     )
     view.addItem(center)
 
-    return view, arms, arms2, prop_dots, arm_verts
+    motor_labels = []
+    label_offsets = [
+        [-arm_length - 0.1, -arm_length - 0.1, 0.05],  # M0
+        [arm_length + 0.1, arm_length + 0.1, 0.05],  # M1
+        [-arm_length - 0.1, arm_length + 0.1, 0.05],  # M2
+        [arm_length + 0.1, -arm_length - 0.1, 0.05],  # M3
+    ]
+    for i, offset in enumerate(label_offsets):
+        label = gl.GLTextItem(
+            pos=np.array(offset), text=f"M{i}: 0", color=(255, 255, 255, 255)
+        )
+        view.addItem(label)
+        motor_labels.append(label)
+
+    return view, arms, arms2, prop_dots, arm_verts, motor_labels
 
 
 def rpm_to_color(rpm: int, max_rpm: int = 800):
@@ -82,7 +96,15 @@ def rpm_to_color(rpm: int, max_rpm: int = 800):
 
 
 def update_drone_view(
-    arms, arms2, prop_dots, arm_verts, yaw, pitch, roll, motor_values
+    arms,
+    arms2,
+    prop_dots,
+    arm_verts,
+    motor_labels,
+    yaw,
+    pitch,
+    roll,
+    motor_values,
 ):
     r = Rotation.from_euler("ZYX", [yaw, pitch, roll], degrees=True)
     rotated = r.apply(arm_verts)
@@ -92,3 +114,7 @@ def update_drone_view(
 
     for i, dot in enumerate(prop_dots):
         dot.setData(pos=rotated[i].reshape(1, 3), color=rpm_to_color(motor_values[i]))
+        motor_labels[i].setData(
+            pos=rotated[i] + np.array([0.05, 0.05, 0.05]),
+            text=f"M{i}: {motor_values[i]}",
+        )

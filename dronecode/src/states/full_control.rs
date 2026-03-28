@@ -93,7 +93,7 @@ impl FSMControl for FSMFullControl {
         // output to motors
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
 
-        *ctx.input_from_controller = None;
+        // *ctx.input_from_controller = None;
 
         return self;
     }
