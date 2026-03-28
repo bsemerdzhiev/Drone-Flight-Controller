@@ -73,22 +73,22 @@ pub fn downlink_main_loop(
             serial.write(&send_buffer.0[0..send_buffer.1]);
         }
 
-        // let json = serde_json::to_string(&serde_json::json!({
-        //     "ManualInput": {
-        //         "lift": cmd_for_ui.get_lift(),
-        //         "roll": cmd_for_ui.get_roll(),
-        //         "pitch": cmd_for_ui.get_pitch(),
-        //         "yaw": cmd_for_ui.get_yaw(),
-        //     }
-        // }))
-        // .unwrap();
-        //
-        // {
-        //     let mut python_stream = python_stream_mut.lock().unwrap();
-        //
-        //     let _ = python_stream.write_all(json.as_bytes());
-        //     let _ = python_stream.write_all(b"\n");
-        // }
+        let json = serde_json::to_string(&serde_json::json!({
+            "ManualInput": {
+                "lift": cmd_for_ui.get_lift(),
+                "roll": cmd_for_ui.get_roll(),
+                "pitch": cmd_for_ui.get_pitch(),
+                "yaw": cmd_for_ui.get_yaw(),
+            }
+        }))
+        .unwrap();
+
+        {
+            let mut python_stream = python_stream_mut.lock().unwrap();
+
+            let _ = python_stream.write_all(json.as_bytes());
+            let _ = python_stream.write_all(b"\n");
+        }
 
         sleep(Duration::from_millis(200));
     }

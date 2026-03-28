@@ -108,7 +108,17 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
     fit_with_margin("y_axis_battery" + label_suffix, list(read_data.battery_level))
 
 
+def update_joystick():
+    if len(stored_data.joystick["roll"]) == 0:
+        return
+
+    cx = 100 + (stored_data.joystick["roll"][-1] / 180) * 90
+    cy = 100 - (stored_data.joystick["pitch"][-1] / 180) * 90
+    dpg.configure_item("joystick_dot", center=[cx, cy])
+
+
 def update_step():
+    update_joystick()
     update_sensor_plots(stored_data.live_data, "_live")
     update_sensor_plots(stored_data.logged_data, "_logged")
 
