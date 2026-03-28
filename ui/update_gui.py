@@ -7,6 +7,8 @@ from states import FSM_COLORS
 # Update loop
 # ---------------------------------------
 
+last_rendered_messages = None
+
 
 def manual_value_to_bar(val: float, axis: str):
     if axis == "lift":
@@ -14,29 +16,121 @@ def manual_value_to_bar(val: float, axis: str):
     return max(0.0, min(1.0, (val + 1000.0) / 2000.0))
 
 
+def update_battery_and_fsm():
+    # Battery
+    dpg.set_value("battery_bar", stored_data.battery_level)
+    dpg.set_value("battery_text", f"{stored_data.battery_level * 100:.1f}%")
+    dpg.configure_item("battery_bar", overlay=f"{stored_data.battery_level * 100:.1f}%")
+
+    # FSM
+    dpg.set_value("fsm_display", stored_data.fsm_state)
+    dpg.configure_item(
+        "fsm_display", color=FSM_COLORS.get(stored_data.fsm_state, [255, 255, 255])
+    )
+
+
+def update_message_log():
+    global last_rendered_messages
+
+    if stored_data.pause_logs:
+        return
+    # Message log: only rebuild when the visible messages actually change,
+    # otherwise the table keeps fighting the user's scroll position.
+    with stored_data.message_log_lock:
+        current_messages = tuple(stored_data.message_log)
+
+    if current_messages != last_rendered_messages:
+        dpg.delete_item("msg_table", children_only=True, slot=1)
+        for ts, direction, msg in current_messages:
+            color = [100, 220, 255] if direction == "Drone>PC" else [220, 180, 100]
+            with dpg.table_row(parent="msg_table"):
+                dpg.add_text(ts)
+                dpg.add_text(direction, color=color)
+                dpg.add_text(msg)
+        last_rendered_messages = current_messages
+
+
+def fit_with_margin(y_axis_tag: str, data: list, margin: float = 0.2):
+    if not data:
+        return
+    lo, hi = min(data), max(data)
+    span = hi - lo
+    if span == 0:
+        span = abs(lo) if lo != 0 else 1.0
+    pad = span * margin
+
+    dpg.set_axis_limits(y_axis_tag, lo - pad, hi + pad)
+
+
+def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
+    t = list(read_data.time_data)
+
+    if len(t) == 0 or read_data.is_paused:
+        return
+
+    # Position
+    dpg.set_value("yaw_series" + label_suffix, [t, list(read_data.yaw_data)])
+    dpg.set_value("pitch_series" + label_suffix, [t, list(read_data.pitch_data)])
+    dpg.set_value("roll_series" + label_suffix, [t, list(read_data.roll_data)])
+    dpg.fit_axis_data("x_axis_yaw" + label_suffix)
+    dpg.fit_axis_data("x_axis_pitch" + label_suffix)
+    dpg.fit_axis_data("x_axis_roll" + label_suffix)
+
+    # Accel
+    dpg.set_value("accel_x_series" + label_suffix, [t, list(read_data.accel_raw["x"])])
+    dpg.set_value("accel_y_series" + label_suffix, [t, list(read_data.accel_raw["y"])])
+    dpg.set_value("accel_z_series" + label_suffix, [t, list(read_data.accel_raw["z"])])
+    dpg.fit_axis_data("x_axis_accel_x" + label_suffix)
+    dpg.fit_axis_data("x_axis_accel_y" + label_suffix)
+    dpg.fit_axis_data("x_axis_accel_z" + label_suffix)
+
+    fit_with_margin("y_axis_accel_x" + label_suffix, list(read_data.accel_raw["x"]))
+    fit_with_margin("y_axis_accel_y" + label_suffix, list(read_data.accel_raw["y"]))
+    fit_with_margin("y_axis_accel_z" + label_suffix, list(read_data.accel_raw["z"]))
+
+    # Gyro
+    dpg.set_value("gyro_x_series" + label_suffix, [t, list(read_data.gyro_raw["x"])])
+    dpg.set_value("gyro_y_series" + label_suffix, [t, list(read_data.gyro_raw["y"])])
+    dpg.set_value("gyro_z_series" + label_suffix, [t, list(read_data.gyro_raw["z"])])
+    dpg.fit_axis_data("x_axis_gyro_x" + label_suffix)
+    dpg.fit_axis_data("x_axis_gyro_y" + label_suffix)
+    dpg.fit_axis_data("x_axis_gyro_z" + label_suffix)
+
+    fit_with_margin("y_axis_gyro_x" + label_suffix, list(read_data.gyro_raw["x"]))
+    fit_with_margin("y_axis_gyro_y" + label_suffix, list(read_data.gyro_raw["y"]))
+    fit_with_margin("y_axis_gyro_z" + label_suffix, list(read_data.gyro_raw["z"]))
+
+    # Barometer
+    dpg.set_value("baro_series" + label_suffix, [t, list(read_data.pres_data)])
+    dpg.fit_axis_data("x_axis_baro" + label_suffix)
+
+    fit_with_margin("y_axis_baro" + label_suffix, list(read_data.pres_data))
+
+
 def update_gui():
-    last_rendered_messages = None
-
     while True:
-        if len(stored_data.time_data) > 0:
-            t_list = list(stored_data.time_data)
-            x_min, x_max = t_list[0], t_list[-1]
-            rate_series = {
-                "yaw": list(stored_data.yaw_data),
-                "pitch": list(stored_data.pitch_data),
-                "roll": list(stored_data.roll_data),
-            }
+        update_sensor_plots(stored_data.live_data, "_live")
+        update_sensor_plots(stored_data.logged_data, "_logged")
 
-            dpg.set_value("yaw_series", [t_list, rate_series["yaw"]])
-            dpg.set_value("pitch_series", [t_list, rate_series["pitch"]])
-            dpg.set_value("roll_series", [t_list, rate_series["roll"]])
-
-            for axis in ["yaw", "pitch", "roll"]:
-                dpg.set_axis_limits(f"x_axis_{axis}", x_min, x_max)
-                max_abs_rate = max((abs(v) for v in rate_series[axis]), default=1.0)
-                y_limit = max(1.0, max_abs_rate * 1.1)
-                dpg.set_axis_limits(f"y_axis_{axis}", -y_limit, y_limit)
-
+        # if len(stored_data.time_data) > 0:
+        #     t_list = list(stored_data.time_data)
+        #     x_min, x_max = t_list[0], t_list[-1]
+        #     rate_series = {
+        #         "yaw": list(stored_data.yaw_data),
+        #         "pitch": list(stored_data.pitch_data),
+        #         "roll": list(stored_data.roll_data),
+        #     }
+        #
+        #     dpg.set_value("yaw_series", [t_list, rate_series["yaw"]])
+        #     dpg.set_value("pitch_series", [t_list, rate_series["pitch"]])
+        #     dpg.set_value("roll_series", [t_list, rate_series["roll"]])
+        #
+        #     for axis in ["yaw", "pitch", "roll"]:
+        #         dpg.set_axis_limits(f"x_axis_{axis}", x_min, x_max)
+        #         max_abs_rate = max((abs(v) for v in rate_series[axis]), default=1.0)
+        #         y_limit = max(1.0, max_abs_rate * 1.1)
+        #         dpg.set_axis_limits(f"y_axis_{axis}", -y_limit, y_limit)
+        #
         # Motors
         # for i in range(4):
         #     val = stored_data.motor_values[i]
@@ -48,41 +142,18 @@ def update_gui():
         #     val = stored_data.joystick[axis]
         #     dpg.set_value(f"{axis}_val", f"{val:.3f}")
         #     dpg.set_value(f"{axis}_bar", manual_value_to_bar(val, axis))
+        #
 
-        # Battery
-        dpg.set_value("battery_bar", stored_data.battery_level)
-        dpg.set_value("battery_text", f"{stored_data.battery_level * 100:.1f}%")
-        dpg.configure_item(
-            "battery_bar", overlay=f"{stored_data.battery_level * 100:.1f}%"
-        )
+        update_battery_and_fsm()
+        #
+        # # Accel & Gyro
+        # for sensor, data in [
+        #     ("accel", stored_data.accel_raw),
+        #     ("gyro", stored_data.gyro_raw),
+        # ]:
+        #     for axis in ["x", "y", "z"]:
+        #         dpg.set_value(f"{sensor}_{axis}", str(data[axis]))
+        #
 
-        # FSM
-        dpg.set_value("fsm_display", stored_data.fsm_state)
-        dpg.configure_item(
-            "fsm_display", color=FSM_COLORS.get(stored_data.fsm_state, [255, 255, 255])
-        )
-
-        # Accel & Gyro
-        for sensor, data in [
-            ("accel", stored_data.accel_raw),
-            ("gyro", stored_data.gyro_raw),
-        ]:
-            for axis in ["x", "y", "z"]:
-                dpg.set_value(f"{sensor}_{axis}", str(data[axis]))
-
-        # Message log: only rebuild when the visible messages actually change,
-        # otherwise the table keeps fighting the user's scroll position.
-        with stored_data.message_log_lock:
-            current_messages = tuple(stored_data.message_log)
-
-        if current_messages != last_rendered_messages:
-            dpg.delete_item("msg_table", children_only=True, slot=1)
-            for ts, direction, msg in current_messages:
-                color = [100, 220, 255] if direction == "Drone>PC" else [220, 180, 100]
-                with dpg.table_row(parent="msg_table"):
-                    dpg.add_text(ts)
-                    dpg.add_text(direction, color=color)
-                    dpg.add_text(msg)
-            last_rendered_messages = current_messages
-
+        update_message_log()
         time.sleep(0.05)

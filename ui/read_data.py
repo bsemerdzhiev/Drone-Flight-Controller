@@ -3,6 +3,7 @@
 import json
 import socket
 import time
+import math
 
 import data as stored_data
 
@@ -10,7 +11,8 @@ import data as stored_data
 def log_message(direction: str, msg: str):
     """direction: 'PC>Drone' or 'Drone>PC'"""
     ts = time.strftime("%H:%M:%S")
-    stored_data.message_log.append((ts, direction, msg))
+    with stored_data.message_log_lock:
+        stored_data.message_log.append((ts, direction, msg))
 
 
 def serial_reader():
@@ -38,41 +40,46 @@ def serial_reader():
             if "Telemetry" in t:
                 t = t["Telemetry"]
 
-                fsm_state = t.get("cur_state", "Unknown")
-                battery_level = (
-                    t.get("bat_level", 0.0) / 100.0
-                )  # convert 0–100 to 0.0–1.0
                 log_message(
                     "Drone>PC",
-                    f"DroneInfo state={fsm_state} bat={battery_level * 100:.1f}%",
+                    f"Telemetry dt={t['dt']} state={t['cur_state']} bat={t['bat']} "
+                    f"motors=[{t['motors'][0]},{t['motors'][1]},{t['motors'][2]},{t['motors'][3]}] "
+                    f"yaw={t['yaw']:.3f} pitch={t['pitch']:.3f} roll={t['roll']:.3f} "
+                    f"accel=({t['accel_x']},{t['accel_y']},{t['accel_z']}) "
+                    f"gyro=({t['gyro_x']},{t['gyro_y']},{t['gyro_z']}) "
+                    f"pres={t['pres']} flash={t['logged_in_flash']}",
                 )
 
-                stored_data.yaw_data.append(t.get("yaw", 0.0))
-                stored_data.pitch_data.append(t.get("pitch", 0.0))
-                stored_data.roll_data.append(t.get("roll", 0.0))
-                stored_data.time_data.append(time.time() - start_time)
+                to_add_to = stored_data.logged_data
 
-                motors = t.get("motors", stored_data.motor_values)
+                if not t["logged_in_flash"]:
+                    to_add_to = stored_data.live_data
 
-                for i in range(4):
-                    stored_data.motor_values[i] = motors[i]
+                    fsm_state = t.get("cur_state", "Unknown")
 
-                stored_data.accel_raw["x"] = t.get("accel_x", 0.0)
-                stored_data.accel_raw["y"] = t.get("accel_y", 0.0)
-                stored_data.accel_raw["z"] = t.get("accel_z", 0.0)
-                stored_data.gyro_raw["x"] = t.get("gyro_x", 0.0)
-                stored_data.gyro_raw["y"] = t.get("gyro_y", 0.0)
-                stored_data.gyro_raw["z"] = t.get("gyro_z", 0.0)
+                    battery_level = t.get("bat_level", 0.0) / 100.0
 
-                stored_data.fsm_state = fsm_state
-                stored_data.battery_level = battery_level
+                    stored_data.fsm_state = fsm_state
+                    stored_data.battery_level = battery_level
 
-                log_message(
-                    "Drone>PC",
-                    (
-                        f"Telemetry accel=({stored_data.accel_raw['x']},{stored_data.accel_raw['y']},{stored_data.accel_raw['z']}) "
-                        f"gyro=({stored_data.gyro_raw['x']},{stored_data.gyro_raw['y']},{stored_data.gyro_raw['z']}) "
-                    ),
-                )
+                to_add_to.yaw_data.append(math.degrees(t.get("yaw", 0.0)))
+                to_add_to.pitch_data.append(math.degrees(t.get("pitch", 0.0)))
+                to_add_to.roll_data.append(math.degrees(t.get("roll", 0.0)))
+                to_add_to.time_data.append(time.time() - start_time)
+
+                # motors = t.get("motors", to_add_to.motor_values)
+
+                # for i in range(4):
+                # to_add_to.motor_values[i] = motors[i]
+
+                to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0))
+                to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0))
+                to_add_to.accel_raw["z"].append(t.get("accel_z", 0.0))
+                to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
+                to_add_to.gyro_raw["y"].append(t.get("gyro_y", 0.0))
+                to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
+
+                to_add_to.pres_data.append(t.get("pres", 0.0))
+
         except Exception as e:
             print(f"Serial error: {e}")

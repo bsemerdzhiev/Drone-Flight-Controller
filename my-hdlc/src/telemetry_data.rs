@@ -10,15 +10,19 @@ pub struct TelemetryData {
     pub logged_in_flash: bool,
     pub dt: u32,
     pub motors: [u16; 4],
+
     pub yaw: f32,
     pub pitch: f32,
     pub roll: f32,
+
     pub accel_x: i16,
     pub accel_y: i16,
     pub accel_z: i16,
+
     pub gyro_x: i16,
     pub gyro_y: i16,
     pub gyro_z: i16,
+
     pub bat: u16,
     pub pres: u32,
     pub cur_state: FSMState,

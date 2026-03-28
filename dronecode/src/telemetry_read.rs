@@ -26,21 +26,27 @@ impl TelemetryRead for TelemetryData {
         };
 
         let (accel_raw, gyro_raw) = read_raw().unwrap();
+
         let bat = read_battery();
         let pres = read_pressure();
+
         return TelemetryData {
             logged_in_flash: logged_in_flash,
             dt: dt.as_millis() as u32,
             motors,
+
             yaw: ypr.yaw,
             pitch: ypr.pitch,
             roll: ypr.roll,
+
             accel_x: accel_raw.x,
             accel_y: accel_raw.y,
             accel_z: accel_raw.z,
+
             gyro_x: gyro_raw.x,
             gyro_y: gyro_raw.y,
             gyro_z: gyro_raw.z,
+
             bat,
             pres,
             cur_state,
