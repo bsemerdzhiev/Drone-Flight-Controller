@@ -17,11 +17,6 @@ def manual_value_to_bar(val: float, axis: str):
 
 
 def update_battery_and_fsm():
-    # Battery
-    dpg.set_value("battery_bar", stored_data.battery_level)
-    dpg.set_value("battery_text", f"{stored_data.battery_level * 100:.1f}%")
-    dpg.configure_item("battery_bar", overlay=f"{stored_data.battery_level * 100:.1f}%")
-
     # FSM
     dpg.set_value("fsm_display", stored_data.fsm_state)
     dpg.configure_item(
@@ -106,54 +101,60 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
 
     fit_with_margin("y_axis_baro" + label_suffix, list(read_data.pres_data))
 
+    # Battery
+    dpg.set_value("battery_series" + label_suffix, [t, list(read_data.battery_level)])
+    dpg.fit_axis_data("x_axis_battery" + label_suffix)
 
-def update_gui():
-    while True:
-        update_sensor_plots(stored_data.live_data, "_live")
-        update_sensor_plots(stored_data.logged_data, "_logged")
+    fit_with_margin("y_axis_battery" + label_suffix, list(read_data.battery_level))
 
-        # if len(stored_data.time_data) > 0:
-        #     t_list = list(stored_data.time_data)
-        #     x_min, x_max = t_list[0], t_list[-1]
-        #     rate_series = {
-        #         "yaw": list(stored_data.yaw_data),
-        #         "pitch": list(stored_data.pitch_data),
-        #         "roll": list(stored_data.roll_data),
-        #     }
-        #
-        #     dpg.set_value("yaw_series", [t_list, rate_series["yaw"]])
-        #     dpg.set_value("pitch_series", [t_list, rate_series["pitch"]])
-        #     dpg.set_value("roll_series", [t_list, rate_series["roll"]])
-        #
-        #     for axis in ["yaw", "pitch", "roll"]:
-        #         dpg.set_axis_limits(f"x_axis_{axis}", x_min, x_max)
-        #         max_abs_rate = max((abs(v) for v in rate_series[axis]), default=1.0)
-        #         y_limit = max(1.0, max_abs_rate * 1.1)
-        #         dpg.set_axis_limits(f"y_axis_{axis}", -y_limit, y_limit)
-        #
-        # Motors
-        # for i in range(4):
-        #     val = stored_data.motor_values[i]
-        #     dpg.set_value(f"motor{i}", val / 800)
-        #     dpg.set_value(f"motor{i}_val", str(val))
-        #
-        # Joystick
-        # for axis in ["pitch", "roll", "lift", "yaw"]:
-        #     val = stored_data.joystick[axis]
-        #     dpg.set_value(f"{axis}_val", f"{val:.3f}")
-        #     dpg.set_value(f"{axis}_bar", manual_value_to_bar(val, axis))
-        #
 
-        update_battery_and_fsm()
-        #
-        # # Accel & Gyro
-        # for sensor, data in [
-        #     ("accel", stored_data.accel_raw),
-        #     ("gyro", stored_data.gyro_raw),
-        # ]:
-        #     for axis in ["x", "y", "z"]:
-        #         dpg.set_value(f"{sensor}_{axis}", str(data[axis]))
-        #
+def update_step():
+    update_sensor_plots(stored_data.live_data, "_live")
+    update_sensor_plots(stored_data.logged_data, "_logged")
 
-        update_message_log()
-        time.sleep(0.05)
+    # if len(stored_data.time_data) > 0:
+    #     t_list = list(stored_data.time_data)
+    #     x_min, x_max = t_list[0], t_list[-1]
+    #     rate_series = {
+    #         "yaw": list(stored_data.yaw_data),
+    #         "pitch": list(stored_data.pitch_data),
+    #         "roll": list(stored_data.roll_data),
+    #     }
+    #
+    #     dpg.set_value("yaw_series", [t_list, rate_series["yaw"]])
+    #     dpg.set_value("pitch_series", [t_list, rate_series["pitch"]])
+    #     dpg.set_value("roll_series", [t_list, rate_series["roll"]])
+    #
+    #     for axis in ["yaw", "pitch", "roll"]:
+    #         dpg.set_axis_limits(f"x_axis_{axis}", x_min, x_max)
+    #         max_abs_rate = max((abs(v) for v in rate_series[axis]), default=1.0)
+    #         y_limit = max(1.0, max_abs_rate * 1.1)
+    #         dpg.set_axis_limits(f"y_axis_{axis}", -y_limit, y_limit)
+    #
+    # Motors
+    # for i in range(4):
+    #     val = stored_data.motor_values[i]
+    #     dpg.set_value(f"motor{i}", val / 800)
+    #     dpg.set_value(f"motor{i}_val", str(val))
+    #
+    # Joystick
+    # for axis in ["pitch", "roll", "lift", "yaw"]:
+    #     val = stored_data.joystick[axis]
+    #     dpg.set_value(f"{axis}_val", f"{val:.3f}")
+    #     dpg.set_value(f"{axis}_bar", manual_value_to_bar(val, axis))
+    #
+
+    update_battery_and_fsm()
+    #
+    # # Accel & Gyro
+    # for sensor, data in [
+    #     ("accel", stored_data.accel_raw),
+    #     ("gyro", stored_data.gyro_raw),
+    # ]:
+    #     for axis in ["x", "y", "z"]:
+    #         dpg.set_value(f"{sensor}_{axis}", str(data[axis]))
+    #
+
+    update_message_log()
+
+    dpg.set_frame_callback(dpg.get_frame_count() + 3, update_step)

@@ -4,42 +4,45 @@
 from collections import deque
 import threading
 
+MAX_SIZE = 200
+MAX_LOG_QUEUE_SIZE = 500
+
 
 class ReadData:
     def __init__(self) -> None:
-        self.yaw_data = deque(maxlen=200)
-        self.pitch_data = deque(maxlen=200)
-        self.roll_data = deque(maxlen=200)
+        self.yaw_data = deque(maxlen=MAX_SIZE)
+        self.pitch_data = deque(maxlen=MAX_SIZE)
+        self.roll_data = deque(maxlen=MAX_SIZE)
 
-        self.time_data = deque(maxlen=200)
+        self.time_data = deque(maxlen=MAX_SIZE)
 
         # motor_values = [0, 0, 0, 0]
 
         # joystick = {"pitch": 0.0, "roll": 0.0, "lift": 0.0, "yaw": 0.0}
 
         self.accel_raw = {
-            "x": deque(maxlen=200),
-            "y": deque(maxlen=200),
-            "z": deque(maxlen=200),
+            "x": deque(maxlen=MAX_SIZE),
+            "y": deque(maxlen=MAX_SIZE),
+            "z": deque(maxlen=MAX_SIZE),
         }
         self.gyro_raw = {
-            "x": deque(maxlen=200),
-            "y": deque(maxlen=200),
-            "z": deque(maxlen=200),
+            "x": deque(maxlen=MAX_SIZE),
+            "y": deque(maxlen=MAX_SIZE),
+            "z": deque(maxlen=MAX_SIZE),
         }
-
-        self.pres_data = deque(maxlen=200)
+        self.pres_data = deque(maxlen=MAX_SIZE)
 
         self.is_paused = False
+
+        self.battery_level = deque(maxlen=MAX_SIZE)
 
 
 live_data = ReadData()
 logged_data = ReadData()
 
-battery_level = 0.0
 fsm_state = "SafeMode"
 
 # Message log: keep only the most recent entries visible in the GUI
 pause_logs = False
-message_log = deque(maxlen=500)
+message_log = deque(maxlen=MAX_LOG_QUEUE_SIZE)
 message_log_lock = threading.Lock()

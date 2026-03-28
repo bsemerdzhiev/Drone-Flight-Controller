@@ -72,6 +72,18 @@ def set_up_sensors(label_suffix: str):
                 ("Pressure", "x_axis_baro", "y_axis_baro", "baro_series", "hPa"),
             ],
         ),
+        (
+            "Battery readings",
+            [
+                (
+                    "Battery",
+                    "x_axis_battery",
+                    "y_axis_battery",
+                    "battery_series",
+                    "Voltage * 10^-2",
+                )
+            ],
+        ),
     ]:
         dpg.add_text(sensor_label, color=[180, 180, 180])
         with dpg.group(horizontal=True):
@@ -91,19 +103,14 @@ def set_up_sensors(label_suffix: str):
                     )
         dpg.add_separator()
 
-    dpg.set_axis_limits("y_axis_yaw" + label_suffix, -180, 180)
-    dpg.set_axis_limits("y_axis_pitch" + label_suffix, -180, 180)
-    dpg.set_axis_limits("y_axis_roll" + label_suffix, -180, 180)
+    dpg.set_axis_limits("y_axis_yaw" + label_suffix, -210, 210)
+    dpg.configure_item("y_axis_yaw" + label_suffix, no_initial_fit=True)
 
-    # dpg.fit_axis_data("y_axis_accel_x" + label_suffix)
-    # dpg.fit_axis_data("y_axis_accel_y" + label_suffix)
-    # dpg.fit_axis_data("y_axis_accel_z" + label_suffix)
-    #
-    # dpg.fit_axis_data("y_axis_gyro_x" + label_suffix)
-    # dpg.fit_axis_data("y_axis_gyro_y" + label_suffix)
-    # dpg.fit_axis_data("y_axis_gyro_z" + label_suffix)
-    #
-    # dpg.fit_axis_data("y_axis_baro" + label_suffix)
+    dpg.set_axis_limits("y_axis_pitch" + label_suffix, -210, 210)
+    dpg.configure_item("y_axis_pitch" + label_suffix, no_initial_fit=True)
+
+    dpg.set_axis_limits("y_axis_roll" + label_suffix, -210, 210)
+    dpg.configure_item("y_axis_roll" + label_suffix, no_initial_fit=True)
 
 
 def set_up_gui():
