@@ -12,12 +12,12 @@ use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::motor::set_motors;
-use tudelft_quadrupel::mpu;
+use tudelft_quadrupel::mpu::{self, read_raw};
 
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
 
-const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 0f32];
+const K_P: [f32; 4] = [20f32, 1000f32, 1200f32, 0f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -28,6 +28,7 @@ pub struct FSMFullControl {
 
 impl FSMControl for FSMFullControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
+        self.imu_sampler.append_new_reading(read_raw().unwrap());
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
 
@@ -101,7 +102,6 @@ impl FSMControl for FSMFullControl {
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
-            FSMState::SafeMode => Box::new(FSMSafe {}),
             FSMState::HeightControlMode => Box::new(FSMHeightControl {
                 imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
                 pid_controller: Box::new(PIDController::new()),
