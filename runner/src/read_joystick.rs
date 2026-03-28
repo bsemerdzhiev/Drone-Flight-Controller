@@ -17,7 +17,7 @@ pub const MAX_LIFT: f32 = 750f32;
 
 //------------------------------------------------------
 
-const YAW_RATE: f32 = 20f32;
+const YAW_RATE: f32 = 80f32;
 const PITCH_DEGREE: f32 = 75f32;
 const ROLL_DEGREE: f32 = 300f32;
 

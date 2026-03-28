@@ -58,7 +58,6 @@ impl FSMControl for FSMCalibration {
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
-            FSMState::SafeMode => Box::new(FSMSafe {}),
             _ => return self,
         }
     }

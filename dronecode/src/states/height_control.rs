@@ -1,6 +1,8 @@
 use alloc::boxed::Box;
 use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand, FSMState};
-use tudelft_quadrupel::{barometer::read_pressure, once_cell, time::Instant, uart::send_bytes};
+use tudelft_quadrupel::{
+    barometer::read_pressure, mpu::read_raw, once_cell, time::Instant, uart::send_bytes,
+};
 
 use crate::{
     filters::sensors_handler::ImuHandler,
@@ -14,8 +16,10 @@ use crate::{
         yaw_pitch_roll::YawPitchRoll,
     },
 };
+// TODO: Tune the parameters
+// Order of parameters: Yaw - Pitch - Roll
 
-const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 0f32];
+const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 100f32];
 const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -30,6 +34,8 @@ pub struct FSMHeightControl {
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         //TODO: Implement going back to the state from which we came
+
+        self.imu_sampler.append_new_reading(read_raw().unwrap());
 
         // read sensor data
         let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
@@ -82,21 +88,25 @@ impl FSMControl for FSMHeightControl {
             ControllerFlags::AddP as u8,
         );
 
-        let to_write =
-            ctx.trv
-                .write_structure(&DeviceCommand::DebugYawPitchRoll(DebugYawPitchRoll {
-                    info: [
-                        correction.lift,
-                        correction.yaw,
-                        correction.pitch,
-                        correction.roll,
-                        correction.pressure,
-                    ],
-                }));
-
-        send_bytes(&to_write.0[0..to_write.1]);
-
+        // let to_write =
+        //     ctx.trv
+        //         .write_structure(&DeviceCommand::DebugYawPitchRoll(DebugYawPitchRoll {
+        //             info: [
+        //                 correction.lift,
+        //                 correction.yaw,
+        //                 correction.pitch,
+        //                 correction.roll,
+        //                 correction.pressure,
+        //             ],
+        //         }));
+        //
+        // send_bytes(&to_write.0[0..to_write.1]);
+        //
         // add to current input
+        ctx.input_from_controller
+            .as_mut()
+            .unwrap()
+            .increment_lift(correction.lift as i32);
         ctx.input_from_controller
             .as_mut()
             .unwrap()
@@ -121,7 +131,6 @@ impl FSMControl for FSMHeightControl {
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
-            FSMState::SafeMode => Box::new(FSMSafe {}),
             _ => self,
         }
     }
