@@ -99,8 +99,10 @@ impl From<Quaternion> for YawPitchRoll {
         let gz = w * w - x * x - y * y + z * z;
 
         // yaw: (about Z axis)
+        // let yaw =
+        // micromath::F32Ext::atan2(2.0 * x * y - 2.0 * w * z, 2.0 * w * w + 2.0 * x * x - 1.0);
         let yaw =
-            micromath::F32Ext::atan2(2.0 * x * y - 2.0 * w * z, 2.0 * w * w + 2.0 * x * x - 1.0);
+            micromath::F32Ext::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)) / 2.0;
 
         // pitch: (nose up/down, about Y axis)
         let pitch = micromath::F32Ext::atan2(gx, micromath::F32Ext::sqrt(gy * gy + gz * gz));
@@ -138,11 +140,13 @@ impl YawPitchRoll {
         }
     }
     pub fn calculate_rate_per_sec(&self, prev_sample: YawPitchRoll, duration_in_sec: f32) -> Self {
+        let PI: f32 = micromath::F32Ext::acos(-1.0);
+        let TO_DEGREES: f32 = 180.0 / PI;
         YawPitchRoll {
             lift: 0f32,
-            yaw: (self.yaw - prev_sample.yaw) / duration_in_sec,
-            pitch: (self.pitch - prev_sample.pitch),
-            roll: (self.roll - prev_sample.roll),
+            yaw: (TO_DEGREES * (self.yaw - prev_sample.yaw)) / duration_in_sec,
+            pitch: (TO_DEGREES * self.pitch),
+            roll: (TO_DEGREES * self.roll),
             pressure: self.pressure,
         }
     }

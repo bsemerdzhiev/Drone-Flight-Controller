@@ -79,6 +79,10 @@ pub fn downlink_main_loop(
                 "roll": cmd_for_ui.get_roll(),
                 "pitch": cmd_for_ui.get_pitch(),
                 "yaw": cmd_for_ui.get_yaw(),
+
+                "yaw_p_trim": cmd_for_ui.yaw_p_trim,
+                "roll_pitch_p_trim": cmd_for_ui.roll_pitch_p_trim,
+                "roll_pitch_d_trim": cmd_for_ui.roll_pitch_d_trim,
             }
         }))
         .unwrap();
@@ -90,7 +94,7 @@ pub fn downlink_main_loop(
             let _ = python_stream.write_all(b"\n");
         }
 
-        sleep(Duration::from_millis(100));
+        sleep(Duration::from_millis(50));
     }
 }
 

@@ -103,13 +103,13 @@ def set_up_sensors(label_suffix: str):
                     )
         dpg.add_separator()
 
-    dpg.set_axis_limits("y_axis_yaw" + label_suffix, -210, 210)
+    dpg.set_axis_limits("y_axis_yaw" + label_suffix, -150, 150)
     dpg.configure_item("y_axis_yaw" + label_suffix, no_initial_fit=True)
 
-    dpg.set_axis_limits("y_axis_pitch" + label_suffix, -210, 210)
+    dpg.set_axis_limits("y_axis_pitch" + label_suffix, -150, 150)
     dpg.configure_item("y_axis_pitch" + label_suffix, no_initial_fit=True)
 
-    dpg.set_axis_limits("y_axis_roll" + label_suffix, -210, 210)
+    dpg.set_axis_limits("y_axis_roll" + label_suffix, -150, 150)
     dpg.configure_item("y_axis_roll" + label_suffix, no_initial_fit=True)
 
 
@@ -133,21 +133,93 @@ def set_up_gui():
 
         # --- Joystick ---
         dpg.add_text("Joystick", color=[255, 255, 100])
-        with dpg.group(horizontal=True):
-            dpg.add_text("Pitch / Roll", color=[180, 180, 180])
-        with dpg.drawlist(width=200, height=200, tag="joystick_draw"):
-            dpg.draw_circle([100, 100], 90, color=[80, 80, 80], fill=[30, 30, 30])
-            dpg.draw_line([10, 100], [190, 100], color=[60, 60, 60])
-            dpg.draw_line([100, 10], [100, 190], color=[60, 60, 60])
-            dpg.draw_circle(
-                [100, 100],
-                8,
-                color=[0, 200, 255],
-                fill=[0, 200, 255],
-                tag="joystick_dot",
-            )
-        dpg.add_separator()
 
+        with dpg.group(horizontal=True):
+            # Pitch / Roll 2D pad
+            with dpg.group():
+                dpg.add_text("Pitch / Roll", color=[180, 180, 180])
+                with dpg.drawlist(width=200, height=200, tag="joystick_draw"):
+                    dpg.draw_circle(
+                        [100, 100], 90, color=[80, 80, 80], fill=[30, 30, 30]
+                    )
+                    dpg.draw_line([10, 100], [190, 100], color=[60, 60, 60])
+                    dpg.draw_line([100, 10], [100, 190], color=[60, 60, 60])
+                    dpg.draw_circle(
+                        [100, 100],
+                        8,
+                        color=[0, 200, 255],
+                        fill=[0, 200, 255],
+                        tag="joystick_dot",
+                    )
+
+            # Lift bar (vertical)
+            with dpg.group():
+                dpg.add_text("Lift", color=[180, 180, 180])
+                with dpg.drawlist(width=40, height=200, tag="lift_draw"):
+                    dpg.draw_rectangle(
+                        [10, 10], [30, 190], color=[80, 80, 80], fill=[30, 30, 30]
+                    )
+                    dpg.draw_rectangle(
+                        [10, 190],
+                        [30, 190],
+                        color=[0, 200, 255],
+                        fill=[0, 200, 255],
+                        tag="lift_bar",
+                    )
+
+            # Yaw compass
+            with dpg.group():
+                dpg.add_text("Yaw", color=[180, 180, 180])
+                with dpg.drawlist(width=200, height=200, tag="yaw_draw"):
+                    dpg.draw_circle(
+                        [100, 100], 90, color=[80, 80, 80], fill=[30, 30, 30]
+                    )
+                    # cardinal marks
+                    for angle, label, pos in [
+                        (0, "N", [97, 8]),
+                        (90, "E", [183, 97]),
+                        (180, "S", [97, 183]),
+                        (270, "W", [5, 97]),
+                    ]:
+                        dpg.draw_text(pos, label, color=[150, 150, 150], size=13)
+                    # tick marks
+                    import math
+
+                    for deg in range(0, 360, 30):
+                        rad = math.radians(deg)
+                        x1 = 100 + 80 * math.sin(rad)
+                        y1 = 100 - 80 * math.cos(rad)
+                        x2 = 100 + 90 * math.sin(rad)
+                        y2 = 100 - 90 * math.cos(rad)
+                        dpg.draw_line([x1, y1], [x2, y2], color=[80, 80, 80])
+                    # needle
+                    dpg.draw_arrow(
+                        [100, 100 - 70],
+                        [100, 100],
+                        color=[0, 200, 255],
+                        thickness=2,
+                        tag="yaw_needle",
+                    )
+
+            # P/D trim columns
+            with dpg.group():
+                dpg.add_text("Trim Values", color=[180, 180, 180])
+                with dpg.table(
+                    header_row=True,
+                    borders_innerV=True,
+                    borders_outerV=True,
+                    borders_innerH=True,
+                    borders_outerH=True,
+                ):
+                    dpg.add_table_column(label="Yaw P")
+                    dpg.add_table_column(label="Roll/Pitch P")
+                    dpg.add_table_column(label="Roll/Pitch D")
+                    with dpg.table_row():
+                        dpg.add_text("0.000", tag="yaw_p_trim")
+                        dpg.add_text("0.000", tag="roll_pitch_p_trim")
+                        dpg.add_text("0.000", tag="roll_pitch_d_trim")
+
+        dpg.add_separator()
         set_up_sensors("_live")
     with dpg.window(
         label="Drone Logged Feed", tag="logged_feed", width=900, height=800

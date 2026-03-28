@@ -1,7 +1,7 @@
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
-use crate::util::pid_controller::{ControllerFlags, PIDController};
+use crate::util::pid_controller::{ControllerFlags, PIDController, K_D, K_I, K_P};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
@@ -12,12 +12,6 @@ use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::battery::read_battery;
 use tudelft_quadrupel::mpu::is_dmp_enabled;
 use tudelft_quadrupel::uart::send_bytes;
-
-// TODO: Tune the parameters
-// Order of parameters: Yaw - Pitch - Roll
-const K_P: [f32; 4] = [1f32, 0f32, 0f32, 0f32];
-const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
 pub struct FSMYaw {
     pub imu_sampler: Box<dyn ImuHandler>,
@@ -59,15 +53,6 @@ impl FSMControl for FSMYaw {
             .as_mut()
             .unwrap()
             .increment_yaw(correction.yaw as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_pitch(correction.pitch as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_roll(correction.roll as i32);
-
         // output to motors
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
 

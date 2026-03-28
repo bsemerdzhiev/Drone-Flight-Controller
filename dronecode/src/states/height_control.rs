@@ -11,17 +11,11 @@ use crate::{
         state_structures::state_context::StateContext,
     },
     util::{
-        pid_controller::{ControllerFlags, PIDController},
+        pid_controller::{ControllerFlags, PIDController, K_D, K_I, K_P},
         rpm_calculator::actuate_motors_with_rates,
         yaw_pitch_roll::YawPitchRoll,
     },
 };
-// TODO: Tune the parameters
-// Order of parameters: Yaw - Pitch - Roll
-
-const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 100f32];
-const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
 pub struct FSMHeightControl {
     pub imu_sampler: Box<dyn ImuHandler>,
@@ -51,6 +45,7 @@ impl FSMControl for FSMHeightControl {
         let mut k_d: [f32; 4] = K_D;
 
         k_p[0] += ctx.input_from_controller.as_ref().unwrap().yaw_p_trim;
+
         k_p[1] += ctx
             .input_from_controller
             .as_ref()
@@ -66,12 +61,12 @@ impl FSMControl for FSMHeightControl {
             .input_from_controller
             .as_ref()
             .unwrap()
-            .roll_pitch_p_trim;
+            .roll_pitch_d_trim;
         k_d[2] += ctx
             .input_from_controller
             .as_ref()
             .unwrap()
-            .roll_pitch_p_trim;
+            .roll_pitch_d_trim;
 
         // the target
         let mut target: YawPitchRoll =
