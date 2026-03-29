@@ -182,20 +182,6 @@ pub fn main_loop() -> ! {
                 read_battery(),
             )));
 
-        if !ctx.wireless_toggle {
-            send_bytes(&to_write.0[..to_write.1]);
-        } else {
-            match ctx.wireless_option {
-                WirelessOptions::PCSide => {
-                    send_bytes(&to_write.0[..to_write.1]);
-                }
-                WirelessOptions::DroneSide => {
-                    wireless_setup::radio_send(&radio, &to_write.0[..to_write.1]);
-                }
-            }
-        }
-
-        
         wait_for_next_tick();
     }
     unreachable!();
