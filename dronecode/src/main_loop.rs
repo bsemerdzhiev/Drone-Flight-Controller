@@ -1,15 +1,18 @@
 use core::time::Duration;
 
+use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::telemetry_read::TelemetryRead;
 use alloc::boxed::Box;
 use alloc::format;
 use my_hdlc::telemetry_data::*;
+use template_project::filters::kalman_filter::{self, KalmanFilter};
+use template_project::filters::sensors_handler::ImuHandler;
+use template_project::util::yaw_pitch_roll::YawPitchRoll;
 use tudelft_quadrupel::flash::flash_write_bytes;
 
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
-use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::states::state_structures::state_context::StateContext;
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
@@ -79,6 +82,9 @@ pub fn main_loop() -> ! {
     let mut time_for_last_received_message: Instant = Instant::now();
     let mut last_send_message: Instant = Instant::now();
 
+    let cal = CalibrationState::new();
+    let mut kalman_readings = KalmanFilter::new((cal.accelerometer_offset, cal.gyro_offset));
+
     // used to determine whether battery voltage is too low
     let mut battery_panic = false;
     // -------------------------------------------------------------------------
@@ -98,6 +104,11 @@ pub fn main_loop() -> ! {
 
         // Read Uart Buff
         let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.bytes_to_read()]);
+
+        kalman_readings.calibration_offset = (
+            ctx.calibration_state.accelerometer_offset,
+            ctx.calibration_state.gyro_offset,
+        );
 
         if num_received != 0usize {
             //read the sent bytes
@@ -134,7 +145,15 @@ pub fn main_loop() -> ! {
 
         if now.duration_since(last_send_message) >= DRONE_STATE_TIMER {
             last_send_message = now;
-            send_drone_data(&mut ctx.trv, current_state.get_state(), dt);
+
+            kalman_readings.append_new_reading(read_raw().unwrap());
+
+            send_drone_data(
+                &mut ctx.trv,
+                current_state.get_state(),
+                dt,
+                &mut kalman_readings,
+            );
         }
 
         put_telemetry_data_on_flash(&mut ctx.flash_head, dt, current_state.get_state());
@@ -149,10 +168,21 @@ pub fn main_loop() -> ! {
 /*
 * Sends data to the drone
 */
-fn send_drone_data(transceiver: &mut HdlcTransceiver, curent_state: FSMState, dt: Duration) {
+fn send_drone_data(
+    transceiver: &mut HdlcTransceiver,
+    curent_state: FSMState,
+    dt: Duration,
+    kalman_filter: &mut KalmanFilter,
+) {
     Green.on();
 
-    let data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state, false);
+    let mut data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state, false);
+
+    let kalman_read = kalman_filter.get_reading().unwrap();
+
+    data.yaw_kalman = kalman_read.yaw;
+    data.pitch_kalman = kalman_read.pitch;
+    data.roll_kalman = kalman_read.roll;
 
     let msg = transceiver.write_structure(&DeviceCommand::Telemetry(data));
 

@@ -5,6 +5,7 @@ use crate::states::fsm_base_class::FSMControl;
 use crate::states::full_control::FSMFullControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
+use crate::states::raw_sensor_full_control::FSMRawFullControl;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::yaw_control::FSMYaw;
 use crate::util::pid_controller::PIDController;
@@ -63,8 +64,11 @@ impl FSMControl for FSMSafe {
                 })
             }
             FSMState::RawSensorsFullControlMode => {
-                return Box::new(FSMFullControl {
-                    imu_sampler: Box::new(KalmanFilter::new(ctx.calibration_state.ypr_offset)),
+                return Box::new(FSMRawFullControl {
+                    imu_sampler: Box::new(KalmanFilter::new((
+                        ctx.calibration_state.accelerometer_offset,
+                        ctx.calibration_state.gyro_offset,
+                    ))),
                     pid_controller: Box::new(PIDController::new()),
                 })
             }

@@ -40,6 +40,7 @@ impl Add<Gyro> for Axis<i32> {
 
 const CALIBRATION_TIME: Duration = Duration::from_secs(5);
 
+#[derive(Copy, Clone, Debug)]
 pub struct CalibrationState {
     accelerometer_sum: Axis<i32>,
     gyro_sum: Axis<i32>,
@@ -82,6 +83,7 @@ impl CalibrationState {
     ) {
         self.accelerometer_sum = self.accelerometer_sum + accel_sample;
         self.gyro_sum = self.gyro_sum + gyro_sample;
+
         self.ypr_sum = self.ypr_sum + ypr_sample;
         self.sample_cnt += 1;
     }

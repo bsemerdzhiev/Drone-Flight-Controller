@@ -88,7 +88,7 @@ impl FSMControl for FSMRawFullControl {
         ctx.input_from_controller
             .as_mut()
             .unwrap()
-            .increment_roll(correction.roll as i32);
+            .increment_roll(-correction.roll as i32);
 
         // output to motors
         actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);

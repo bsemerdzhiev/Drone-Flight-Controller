@@ -34,9 +34,9 @@ def qt_update(
         prop_dots,
         arm_verts,
         motor_labels,
-        stored_data.live_data.yaw_data[-1],
-        stored_data.live_data.pitch_data[-1],
-        stored_data.live_data.roll_data[-1],
+        stored_data.live_data.yaw_kalman[-1],
+        stored_data.live_data.pitch_kalman[-1],
+        stored_data.live_data.roll_kalman[-1],
         stored_data.live_data.motors[-1],
     )
 

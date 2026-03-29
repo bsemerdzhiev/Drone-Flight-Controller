@@ -45,6 +45,7 @@ def serial_reader():
                     f"Telemetry dt={t['dt']} state={t['cur_state']} bat={t['bat']} "
                     f"motors=[{t['motors'][0]},{t['motors'][1]},{t['motors'][2]},{t['motors'][3]}] "
                     f"yaw={t['yaw']:.3f} pitch={t['pitch']:.3f} roll={t['roll']:.3f} "
+                    f"yaw_kalman={t['yaw_kalman']:.3f} pitch_kalman={t['pitch_kalman']:.3f} roll_kalman={t['roll_kalman']:.3f} "
                     f"accel=({t['accel_x']},{t['accel_y']},{t['accel_z']}) "
                     f"gyro=({t['gyro_x']},{t['gyro_y']},{t['gyro_z']}) "
                     f"battery=({t['bat']}) "
@@ -60,26 +61,36 @@ def serial_reader():
 
                     stored_data.fsm_state = fsm_state
 
+                # DMP Data
                 to_add_to.yaw_data.append(math.degrees(t.get("yaw", 0.0)))
                 to_add_to.pitch_data.append(math.degrees(t.get("pitch", 0.0)))
                 to_add_to.roll_data.append(math.degrees(t.get("roll", 0.0)))
+
+                # Kalman data
+                to_add_to.yaw_kalman.append(t.get("yaw_kalman", 0.0))
+                to_add_to.pitch_kalman.append(t.get("pitch_kalman", 0.0))
+                to_add_to.roll_kalman.append(t.get("roll_kalman", 0.0))
+
+                # Time
                 to_add_to.time_data.append(time.time() - start_time)
 
+                # Motors
                 to_add_to.motors.append(t.get("motors", [0, 0, 0, 0]))
 
+                # Accellerometer Raw
                 to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0))
                 to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0))
                 to_add_to.accel_raw["z"].append(t.get("accel_z", 0.0))
 
+                # Gyro Raw
                 to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
                 to_add_to.gyro_raw["y"].append(t.get("gyro_y", 0.0))
                 to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
 
-                to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
-                to_add_to.gyro_raw["y"].append(t.get("gyro_y", 0.0))
-                to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
-
+                # Pressure Raw
                 to_add_to.pres_data.append(t.get("pres", 0.0))
+
+                # Battery Raw
                 to_add_to.battery_level.append(t.get("bat", 0))
             if "ManualInput" in t:
                 t = t["ManualInput"]

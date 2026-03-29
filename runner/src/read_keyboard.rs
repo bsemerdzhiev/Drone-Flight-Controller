@@ -25,41 +25,43 @@ pub fn send_transition(
 
     let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
 
-    println!("Started\r");
     {
         let mut rcv = rcv_mut.lock().unwrap();
         let mut serial = serial_mut.lock().unwrap();
         // loop {
         let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
-        println!("Send a message\r");
 
         serial.write(&send_buffer.0[0..send_buffer.1]);
 
-        // let mut to_break = false;
-        //
-        // let mut cur_time: Instant = Instant::now();
-        //
-        // // the number of loop iterations below is chosen at random
-        // cur_time = Instant::now();
-        //
-        // loop {
-        //     if cur_time.elapsed() >= WAIT_TIME {
-        //         break;
-        //     }
-        //     if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
-        //         rcv.add_bytes(&buf[0..num]);
-        //     }
-        //
-        //     if let Some(x) = rcv.read_structure::<DeviceCommand>() {
-        //         match x {
-        //             DeviceCommand::Ack => {
-        //                 println!("Received ACK for mode transition to {:?}", state);
-        //                 return;
-        //             }
-        //             _ => {}
-        //         }
-        //     }
-        // }
+        //NOTE: The section below makes sure that the drone transitions states
+        //comment it out if there are issues with the transitions
+        // -------------------------------------------------------------------------------------------------
+        let mut to_break = false;
+
+        let mut cur_time: Instant = Instant::now();
+
+        // the number of loop iterations below is chosen at random
+        cur_time = Instant::now();
+
+        loop {
+            if cur_time.elapsed() >= WAIT_TIME {
+                break;
+            }
+            if let Ok(num) = serial.read(&mut buf[0..rcv.remaining_bytes]) {
+                rcv.add_bytes(&buf[0..num]);
+            }
+
+            if let Some(x) = rcv.read_structure::<DeviceCommand>() {
+                match x {
+                    DeviceCommand::Ack => {
+                        println!("Received ACK for mode transition to {:?}", state);
+                        return;
+                    }
+                    _ => {}
+                }
+            }
+        }
+        // -------------------------------------------------------------------------------------------------
     }
     // }
 }
