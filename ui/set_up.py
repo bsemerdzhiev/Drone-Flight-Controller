@@ -22,7 +22,6 @@ def set_up_sensors(label_suffix: str):
         callback=lambda: toggle_pause(label_suffix),
     )
     dpg.add_text("Sensor Feed", color=[255, 255, 100])
-
     for sensor_label, axes in [
         (
             "Accelerometer",
@@ -59,14 +58,6 @@ def set_up_sensors(label_suffix: str):
             ],
         ),
         (
-            "Rates",
-            [
-                ("Yaw", "x_axis_yaw", "y_axis_yaw", "yaw_series", "deg"),
-                ("Pitch", "x_axis_pitch", "y_axis_pitch", "pitch_series", "degs"),
-                ("Roll", "x_axis_roll", "y_axis_roll", "roll_series", "deg"),
-            ],
-        ),
-        (
             "Barometer",
             [
                 ("Pressure", "x_axis_baro", "y_axis_baro", "baro_series", "hPa"),
@@ -81,7 +72,7 @@ def set_up_sensors(label_suffix: str):
                     "y_axis_battery",
                     "battery_series",
                     "Voltage * 10^-2",
-                )
+                ),
             ],
         ),
     ]:
@@ -103,12 +94,52 @@ def set_up_sensors(label_suffix: str):
                     )
         dpg.add_separator()
 
+    # Rates — two series per plot
+    dpg.add_text("Rates", color=[180, 180, 180])
+    with dpg.group(horizontal=True):
+        for label, tag_x, tag_y, dmp_tag, kalman_tag in [
+            ("Yaw", "x_axis_yaw", "y_axis_yaw", "yaw_series_dmp", "yaw_series_kalman"),
+            (
+                "Pitch",
+                "x_axis_pitch",
+                "y_axis_pitch",
+                "pitch_series_dmp",
+                "pitch_series_kalman",
+            ),
+            (
+                "Roll",
+                "x_axis_roll",
+                "y_axis_roll",
+                "roll_series_dmp",
+                "roll_series_kalman",
+            ),
+        ]:
+            with dpg.plot(label=label, height=180, width=380):
+                dpg.add_plot_axis(dpg.mvXAxis, label="time", tag=tag_x + label_suffix)
+                dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag=tag_y + label_suffix)
+                dpg.add_line_series(
+                    [],
+                    [],
+                    label="DMP",
+                    parent=tag_y + label_suffix,
+                    tag=dmp_tag + label_suffix,
+                )
+                dpg.add_line_series(
+                    [],
+                    [],
+                    label="Kalman",
+                    parent=tag_y + label_suffix,
+                    tag=kalman_tag + label_suffix,
+                )
+    # dpg.add_plot_legend(
+    #     parent="y_axis_yaw" + label_suffix
+    # )  # optional, adds legend to yaw
+    dpg.add_separator()
+
     dpg.set_axis_limits("y_axis_yaw" + label_suffix, -150, 150)
     dpg.configure_item("y_axis_yaw" + label_suffix, no_initial_fit=True)
-
     dpg.set_axis_limits("y_axis_pitch" + label_suffix, -150, 150)
     dpg.configure_item("y_axis_pitch" + label_suffix, no_initial_fit=True)
-
     dpg.set_axis_limits("y_axis_roll" + label_suffix, -150, 150)
     dpg.configure_item("y_axis_roll" + label_suffix, no_initial_fit=True)
 

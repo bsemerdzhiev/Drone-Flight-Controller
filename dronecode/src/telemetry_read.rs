@@ -47,6 +47,10 @@ impl TelemetryRead for TelemetryData {
             gyro_y: gyro_raw.y,
             gyro_z: gyro_raw.z,
 
+            yaw_kalman: 0f32,
+            pitch_kalman: 0f32,
+            roll_kalman: 0f32,
+
             bat,
             pres,
             cur_state,

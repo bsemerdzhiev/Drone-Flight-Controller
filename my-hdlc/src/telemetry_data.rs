@@ -15,6 +15,10 @@ pub struct TelemetryData {
     pub pitch: f32,
     pub roll: f32,
 
+    pub yaw_kalman: f32,
+    pub pitch_kalman: f32,
+    pub roll_kalman: f32,
+
     pub accel_x: i16,
     pub accel_y: i16,
     pub accel_z: i16,

@@ -1,3 +1,4 @@
+use core::ops::Sub;
 use core::time::Duration;
 
 use crate::filters::sensors_handler::ImuHandler;
@@ -7,7 +8,7 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
-const C1: f32 = 50f32;
+const C1: f32 = 1f32;
 const C2: f32 = 100_000f32;
 
 pub struct KalmanFilter {
@@ -19,11 +20,11 @@ pub struct KalmanFilter {
     pitch: f32,
     yaw: f32,
 
-    calibration_offset: YawPitchRoll,
+    pub calibration_offset: (Accel, Gyro),
 }
 
 impl KalmanFilter {
-    pub fn new(offset: YawPitchRoll) -> Self {
+    pub fn new(offset: (Accel, Gyro)) -> Self {
         KalmanFilter {
             bias_p: 0.0,
             bias_q: 0.0,
@@ -36,35 +37,37 @@ impl KalmanFilter {
             calibration_offset: offset,
         }
     }
-    fn update_roll(&mut self) {
-        let p_clean = self.reading.1.x as f32 - self.bias_p;
+    fn update_roll(&mut self, dt: f32) {
+        let DEG_TO_RAD: f32 = micromath::F32Ext::acos(-1.0) / 180.0;
+
+        let p_clean = (self.reading.1.x as f32 * DEG_TO_RAD) - self.bias_p;
         let raw_roll = atan2f(self.reading.0.y as f32, self.reading.0.z as f32);
-        let cur_time = Instant::now();
-        let dt = (cur_time.duration_since(self.last_read_time).as_millis() as f32) / 1000.0;
 
         let estimated_roll = self.roll + p_clean * dt;
         let e = estimated_roll - raw_roll;
         self.roll = estimated_roll - e / C1;
         self.bias_p = self.bias_p + (e / dt) / C2;
     }
-    fn update_pitch(&mut self) {
-        let q_clean = self.reading.1.y as f32 - self.bias_q;
-        let raw_pitch = atan2f(
-            -self.reading.0.x as f32,
-            sqrtf(
-                (self.reading.0.y * self.reading.0.y + self.reading.0.z * self.reading.0.z) as f32,
-            ),
-        );
+    fn update_pitch(&mut self, dt: f32) {
+        let DEG_TO_RAD: f32 = micromath::F32Ext::acos(-1.0) / 180.0;
+
+        let ay = self.reading.0.y as f32;
+        let az = self.reading.0.z as f32;
+
+        let q_clean = (self.reading.1.y as f32 * DEG_TO_RAD) - self.bias_q;
+        let raw_pitch = atan2f(-self.reading.0.x as f32, sqrtf((ay * ay + az * az) as f32));
+
         let cur_time = Instant::now();
-        let dt = (cur_time.duration_since(self.last_read_time).as_millis() as f32) / 1000.0;
+        let dt = cur_time.duration_since(self.last_read_time).as_secs_f32();
 
         let estimated_pitch = self.pitch + q_clean * dt;
         let e = estimated_pitch - raw_pitch;
         self.pitch = estimated_pitch - e / C1;
+
         self.bias_q = self.bias_q + (e / dt) / C2;
     }
 
-    fn update_yaw(&mut self) {
+    fn update_yaw(&mut self, dt: f32) {
         //NOTE: only if we want to get absolute yaw
         // let dt = Instant::now()
         //     .duration_since(self.last_read_time)
@@ -73,7 +76,7 @@ impl KalmanFilter {
         // self.yaw += self.reading.1.z * dt;
 
         // get the rate instead
-        self.yaw = self.reading.1.z as f32;
+        self.yaw = self.reading.1.z as f32 * dt;
     }
 }
 
@@ -81,18 +84,35 @@ impl ImuHandler for KalmanFilter {
     fn append_new_reading(&mut self, input: (Accel, Gyro)) {
         self.reading = input;
 
-        self.update_pitch();
-        self.update_roll();
-        self.update_yaw();
+        //NOTE: Uncommenting this leads to problems
+        //since we should not be subtracting the resting
+        //readings from .0.z, as that leads to issues with the tan(division with 0)
+        // self.reading.0.x -= self.calibration_offset.0.x;
+        // self.reading.0.y -= self.calibration_offset.0.y;
+        // self.reading.0.z -= self.calibration_offset.0.z;
 
-        self.last_read_time = Instant::now();
+        self.reading.1.x -= self.calibration_offset.1.x;
+        self.reading.1.y -= self.calibration_offset.1.y;
+        self.reading.1.z -= self.calibration_offset.1.z;
+
+        let cur_time = Instant::now();
+        let dt = cur_time.duration_since(self.last_read_time).as_secs_f32();
+
+        self.update_pitch(dt);
+        self.update_roll(dt);
+        self.update_yaw(dt);
+
+        self.last_read_time = cur_time;
     }
     fn get_reading(&mut self) -> Option<YawPitchRoll> {
+        let PI: f32 = micromath::F32Ext::acos(-1.0);
+        let TO_DEGREES: f32 = 180.0 / PI;
+
         Some(YawPitchRoll {
             lift: 0f32,
             yaw: self.yaw,
-            pitch: self.pitch,
-            roll: self.roll,
+            pitch: -self.pitch * TO_DEGREES,
+            roll: self.roll * TO_DEGREES,
             pressure: read_pressure() as f32,
         })
     }

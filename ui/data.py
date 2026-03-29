@@ -14,6 +14,10 @@ class ReadData:
         self.pitch_data = deque(maxlen=MAX_SIZE)
         self.roll_data = deque(maxlen=MAX_SIZE)
 
+        self.yaw_kalman = deque(maxlen=MAX_SIZE)
+        self.pitch_kalman = deque(maxlen=MAX_SIZE)
+        self.roll_kalman = deque(maxlen=MAX_SIZE)
+
         self.time_data = deque(maxlen=MAX_SIZE)
 
         # motor_values = [0, 0, 0, 0]

@@ -69,9 +69,18 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
         return
 
     # Position
-    dpg.set_value("yaw_series" + label_suffix, [t, list(read_data.yaw_data)])
-    dpg.set_value("pitch_series" + label_suffix, [t, list(read_data.pitch_data)])
-    dpg.set_value("roll_series" + label_suffix, [t, list(read_data.roll_data)])
+    # DMP
+    dpg.set_value("yaw_series_dmp" + label_suffix, [t, list(read_data.yaw_data)])
+    dpg.set_value("pitch_series_dmp" + label_suffix, [t, list(read_data.pitch_data)])
+    dpg.set_value("roll_series_dmp" + label_suffix, [t, list(read_data.roll_data)])
+
+    # Kalman
+    dpg.set_value("yaw_series_kalman" + label_suffix, [t, list(read_data.yaw_kalman)])
+    dpg.set_value(
+        "pitch_series_kalman" + label_suffix, [t, list(read_data.pitch_kalman)]
+    )
+    dpg.set_value("roll_series_kalman" + label_suffix, [t, list(read_data.roll_kalman)])
+
     dpg.fit_axis_data("x_axis_yaw" + label_suffix)
     dpg.fit_axis_data("x_axis_pitch" + label_suffix)
     dpg.fit_axis_data("x_axis_roll" + label_suffix)
