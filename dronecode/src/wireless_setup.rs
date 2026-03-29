@@ -1,4 +1,4 @@
-use nrf51_pac::{Peripherals, RADIO};
+use nrf51_pac::{NVIC, Peripherals, RADIO};
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
@@ -8,18 +8,38 @@ static mut TX_BUF: [u8; 130] = [0; 130];
 
 pub fn radio_init() -> RADIO {
     let p = Peripherals::take().unwrap();
+    let clock = p.CLOCK;
     let radio = p.RADIO;
 
-    // set to 1Mbps mode
-    radio.mode.write(|w| w.mode().nrf_1mbit());
+    // enable high freqency clock
+    clock.events_hfclkstarted.write(|w| unsafe {
+        w.bits(0)
+    });
+    clock.tasks_hfclkstart.write(|w| unsafe {
+        w.bits(1)
+    });
+    while clock.events_hfclkstarted.read().bits() == 0 {}
+
+    // transmit power 
+    radio.txpower.write(|w| w.txpower().pos4d_bm());
 
     // set the frequency to 2407MHz
     radio.frequency.write(|w| unsafe {
         w.frequency().bits(7)
     });
 
-    // 0 output power (no attenuation)
-    radio.txpower.write(|w| w.txpower()._0d_bm());
+    // set to 1Mbps mode
+    radio.mode.write(|w| w.mode().nrf_1mbit());
+
+    // base address
+    radio.base0.write(|w| unsafe {
+        w.bits(0x75626974)
+    });
+
+    // prefix bytes
+    radio.prefix0.write(|w| unsafe {
+        w.ap0().bits(0xC3)
+    });
 
     // logical address set to 0
     radio.txaddress.write(|w| unsafe {
@@ -27,16 +47,7 @@ pub fn radio_init() -> RADIO {
     });
     radio.rxaddresses.write(|w| w.addr0().enabled());
 
-    // prefix bytes
-    radio.prefix0.write(|w| unsafe {
-        w.ap0().bits(0xC3)
-    });
-    
-    // base address
-    radio.base0.write(|w| unsafe {
-        w.bits(0xE7E7E7E7)
-    });
-
+  
     radio.pcnf0.write(|w| unsafe {
         w.lflen().bits(8).s0len().bit(false).s1len().bits(0)
     });
@@ -49,15 +60,24 @@ pub fn radio_init() -> RADIO {
          .whiteen().enabled()
     });
 
-    // radio.crccnf.write(|w| w.len().two()); // 2 byte crc
-    // radio.crcpoly.write(|w| unsafe {
-    //     w.crcpoly().bits(0x11021)
-    // });
-    // radio.crcinit.write(|w| unsafe {
-    //     w.crcinit().bits(0xFFFF)
-    // });
+    radio.datawhiteiv.write(|w| unsafe {
+        w.bits(0x18)
+    });
 
-    radio.shorts.write(|w| w.ready_start().enabled());
+    radio.crccnf.write(|w| w.len().two()); // 2 byte crc
+    radio.crcpoly.write(|w| unsafe {
+        w.crcpoly().bits(0x11021)
+    });
+    radio.crcinit.write(|w| unsafe {
+        w.crcinit().bits(0xFFFF)
+    });
+
+    radio.shorts.write(|w| w.ready_start().enabled().end_disable().enabled());
+
+    // unmask interrupts (possible use later)
+    unsafe {
+        NVIC::unmask(nrf51_pac::Interrupt::RADIO);
+    }
 
     radio
 }
@@ -72,10 +92,14 @@ pub fn radio_start_rx(radio: &RADIO) {
 
     radio.events_ready.reset();
     radio.events_end.reset();
+    radio.events_address.reset();
 
     radio.tasks_rxen.write(|w| unsafe {
         w.bits(1)
     });
+
+    // wait for ready
+    while radio.events_ready.read().bits() == 0 {}
 }
 
 // poll the receiving end
@@ -119,6 +143,7 @@ pub fn radio_send(radio: &RADIO, payload: &[u8]) {
 
     radio.events_ready.reset();
     radio.events_end.reset();
+    radio.events_address.reset();
 
     radio.tasks_txen.write(|w| unsafe { w.bits(1) });
 
