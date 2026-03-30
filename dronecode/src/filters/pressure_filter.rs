@@ -5,12 +5,16 @@ use nalgebra::{Matrix1x2, Matrix2, Matrix2x1, Vector2};
 use tudelft_quadrupel::{barometer::read_pressure, mpu::read_raw, time::Instant};
 
 use crate::{
-    filters::{kalman_filter::KalmanFilter, sensors_handler::ImuHandler},
+    filters::{
+        kalman_filter::{self, KalmanFilter},
+        sensors_handler::ImuHandler,
+    },
     states::state_structures::calibration_state::LSB_FOR_ACCEL,
 };
 type Scalar = f32;
 
 const EPS: f32 = 1e-6;
+const THRESHOLD_BARO: f32 = 1.5f32;
 
 // https://www.alldatasheet.com/datasheet-pdf/download/1132807/TDK/MPU-6050.html
 // Page 12
@@ -37,7 +41,7 @@ pub struct PressureSensor {
     last_reading_accel: Instant,
     last_reading_baro: Instant,
 
-    baseline_pressure: i32,
+    pub baseline_pressure: i32,
 }
 
 impl PressureSensor {
@@ -47,11 +51,12 @@ impl PressureSensor {
             observation_matrix: Matrix1x2::new(1.0, 0.0),
             uncertainty_matrix: Matrix2::identity(),
 
-            accelerometer_variance: 0.1,
-            barometer_variance: 5.0,
+            accelerometer_variance: 0.6f32,
+            barometer_variance: 5e-2,
 
-            last_barometer: 1000.0,
+            last_barometer: 0.0,
             last_accelerometer: 1.0,
+
             last_reading_accel: Instant::now(),
             last_reading_baro: Instant::now(),
 
@@ -59,8 +64,20 @@ impl PressureSensor {
         }
     }
 
+    pub fn reset(&mut self) {
+        self.baseline_pressure = read_pressure() as i32;
+        self.current_state = Vector2::zeros();
+        self.uncertainty_matrix = Matrix2::identity();
+    }
+
     pub fn pressure_to_meters(&mut self, pressure_reading: i32) -> f32 {
-        return (self.baseline_pressure - pressure_reading) as f32 / 12.0;
+        // return 44330.0
+        //     * (1.0
+        //         - (micromath::F32Ext::powf(
+        //             pressure_reading as f32 / self.baseline_pressure as f32,
+        //             (1.0 / 5.255),
+        //         )));
+        return (-pressure_reading + self.baseline_pressure) as f32 / 12f32;
     }
 
     pub fn prediction(&mut self, filtered_position: &mut KalmanFilter) {
@@ -68,15 +85,27 @@ impl PressureSensor {
         if (cur_time.duration_since(self.last_reading_accel) < ACCEL_SAMPLE_RATE) {
             return;
         }
-        // accelerometer value should be transformed to world view
-        // let raw_accel_read = ;
 
-        let pos = filtered_position.get_reading().unwrap();
+        let mut raw_accel = read_raw().unwrap().0;
 
-        let accel_input = ((read_raw().unwrap().0.z - filtered_position.calibration_offset.0.z)
-            as f32
-            / LSB_FOR_ACCEL as f32)
-            - 1.0;
+        let mut raw_accel_x =
+            (raw_accel.x - filtered_position.calibration_offset.0.x) as f32 / LSB_FOR_ACCEL as f32;
+        let mut raw_accel_y =
+            (raw_accel.y - filtered_position.calibration_offset.0.y) as f32 / LSB_FOR_ACCEL as f32;
+        let mut raw_accel_z =
+            (raw_accel.z - filtered_position.calibration_offset.0.z) as f32 / LSB_FOR_ACCEL as f32;
+
+        let mut accel_input = (-raw_accel_x * micromath::F32Ext::sin(filtered_position.pitch))
+            + (raw_accel_y
+                * micromath::F32Ext::sin(filtered_position.roll)
+                * micromath::F32Ext::cos(filtered_position.pitch))
+            + (raw_accel_z
+                * micromath::F32Ext::cos(filtered_position.roll)
+                * micromath::F32Ext::cos(filtered_position.pitch));
+
+        accel_input -= 1.0;
+
+        accel_input *= 9.81;
         // ----------------------------------------------------------------------
         /*
          *  Math is:
@@ -85,7 +114,8 @@ impl PressureSensor {
          */
         let dt: f32 = cur_time
             .duration_since(self.last_reading_accel)
-            .as_secs_f32();
+            .as_secs_f32()
+            .clamp(0.001, 0.02);
 
         let control_input_matrix: Matrix2x1<f32> = Matrix2x1::new(dt * dt * 0.5, dt);
 
@@ -117,19 +147,35 @@ impl PressureSensor {
 
         let baro_reading = self.pressure_to_meters(read_pressure() as i32);
 
+        // if (baro_reading - self.last_barometer).abs() > THRESHOLD_BARO {
+        //     return;
+        // }
+
         let mut kalman_gain: Matrix2x1<f32> =
             self.uncertainty_matrix * self.observation_matrix.transpose();
 
-        kalman_gain = kalman_gain
-            / (((self.observation_matrix * self.uncertainty_matrix)
-                * self.observation_matrix.transpose())
-            .x + self.barometer_variance);
+        let inovation_variance = (((self.observation_matrix * self.uncertainty_matrix)
+            * self.observation_matrix.transpose())
+        .x + self.barometer_variance);
 
-        self.current_state = self.current_state
-            + (kalman_gain * (baro_reading - (self.observation_matrix * self.current_state).x));
+        kalman_gain = kalman_gain / inovation_variance;
 
-        self.uncertainty_matrix = (Matrix2::identity() - (kalman_gain * self.observation_matrix))
-            * self.uncertainty_matrix;
+        let inovation = (baro_reading - (self.observation_matrix * self.current_state).x);
+
+        if inovation.abs() > 3.0 * inovation_variance.sqrt() {
+            return;
+        }
+
+        self.current_state = self.current_state + (kalman_gain * inovation);
+
+        // self.uncertainty_matrix = (Matrix2::identity() - (kalman_gain * self.observation_matrix))
+        //     * self.uncertainty_matrix;
+
+        let i = Matrix2::identity();
+        self.uncertainty_matrix = (i - kalman_gain * self.observation_matrix)
+            * self.uncertainty_matrix
+            * (i - kalman_gain * self.observation_matrix).transpose()
+            + kalman_gain * self.barometer_variance * kalman_gain.transpose();
 
         self.last_barometer = baro_reading;
         self.last_reading_baro = cur_time;

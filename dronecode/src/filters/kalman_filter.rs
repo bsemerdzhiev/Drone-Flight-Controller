@@ -17,8 +17,8 @@ pub struct KalmanFilter {
     bias_q: f32,
     reading: (Accel, Gyro),
     last_read_time: Instant,
-    roll: f32,
-    pitch: f32,
+    pub roll: f32,
+    pub pitch: f32,
     yaw: f32,
 
     pub calibration_offset: (Accel, Gyro),

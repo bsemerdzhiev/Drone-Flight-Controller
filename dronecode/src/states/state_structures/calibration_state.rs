@@ -1,6 +1,7 @@
 use core::{ops::Add, time::Duration};
 
 use tudelft_quadrupel::{
+    barometer::read_pressure,
     mpu::structs::{Accel, Gyro},
     time::Instant,
 };
@@ -50,9 +51,12 @@ const CALIBRATION_TIME: Duration = Duration::from_secs(5);
 pub struct CalibrationState {
     accelerometer_sum: Axis<i32>,
     gyro_sum: Axis<i32>,
+
     ypr_sum: YawPitchRoll,
     sample_cnt: i32,
+
     pub start_time: Instant,
+
     pub accelerometer_offset: Accel,
     pub gyro_offset: Gyro,
     pub ypr_offset: YawPitchRoll,
@@ -66,6 +70,7 @@ impl CalibrationState {
             ypr_sum: YawPitchRoll::new(),
             sample_cnt: 0,
             start_time: Instant::now(),
+
             accelerometer_offset: Accel { x: 0, y: 0, z: 0 },
             gyro_offset: Gyro { x: 0, y: 0, z: 0 },
             ypr_offset: YawPitchRoll {

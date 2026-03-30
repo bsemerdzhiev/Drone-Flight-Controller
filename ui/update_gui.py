@@ -116,7 +116,32 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
     )
     dpg.fit_axis_data("x_axis_baro" + label_suffix)
 
-    fit_with_margin("y_axis_baro" + label_suffix, list(read_data.pres_data))
+    fit_with_margin(
+        "y_axis_baro" + label_suffix,
+        list(read_data.pres_data) + list(read_data.pres_data_filtered),
+    )
+    # -------------------------------------------------
+
+    dpg.set_value("baro_series_solo_raw" + label_suffix, [t, list(read_data.pres_data)])
+    dpg.fit_axis_data("x_axis_baro_raw" + label_suffix)
+
+    fit_with_margin(
+        "y_axis_baro_raw" + label_suffix,
+        list(read_data.pres_data),
+    )
+
+    # -------------------------------------------------
+
+    dpg.set_value(
+        "baro_series_solo_kalman" + label_suffix,
+        [t, list(read_data.pres_data_filtered)],
+    )
+    dpg.fit_axis_data("x_axis_baro_kalman" + label_suffix)
+
+    fit_with_margin(
+        "y_axis_baro_kalman" + label_suffix,
+        list(read_data.pres_data_filtered),
+    )
 
     # Battery
     dpg.set_value("battery_series" + label_suffix, [t, list(read_data.battery_level)])

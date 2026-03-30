@@ -29,15 +29,29 @@ def qt_update(
     with stored_data.message_log_lock:
         if len(stored_data.live_data.time_data) == 0:
             return
+
+        provide_data = [
+            stored_data.live_data.yaw_data[-1],
+            stored_data.live_data.pitch_data[-1],
+            stored_data.live_data.roll_data[-1],
+        ]
+
+        if stored_data.chosen_sensors:
+            provide_data = [
+                0,
+                stored_data.live_data.pitch_kalman[-1],
+                stored_data.live_data.roll_kalman[-1],
+            ]
+
         update_drone_view(
             arms,
             arms2,
             prop_dots,
             arm_verts,
             motor_labels,
-            stored_data.live_data.yaw_data[-1],
-            stored_data.live_data.pitch_data[-1],
-            stored_data.live_data.roll_data[-1],
+            provide_data[0],
+            provide_data[1],
+            provide_data[2],
             stored_data.live_data.motors[-1],
         )
 

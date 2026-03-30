@@ -1,6 +1,7 @@
 import dearpygui.dearpygui as dpg
+import numpy
 
-from states import FSM_COLORS
+from states import FSM_COLORS, SENSOR_NAMES
 import data as stored_data
 
 
@@ -33,30 +34,30 @@ def set_up_sensors(label_suffix: str):
                     "x_axis_accel_x",
                     "y_axis_accel_x",
                     "accel_x_series",
-                    "i16",
+                    "G(m/s^2)",
                 ),
                 (
                     "Accel Y",
                     "x_axis_accel_y",
                     "y_axis_accel_y",
                     "accel_y_series",
-                    "i16",
+                    "G(m/s^2)",
                 ),
                 (
                     "Accel Z",
                     "x_axis_accel_z",
                     "y_axis_accel_z",
                     "accel_z_series",
-                    "i16",
+                    "G(m/s^2)",
                 ),
             ],
         ),
         (
             "Gyroscope",
             [
-                ("Gyro X", "x_axis_gyro_x", "y_axis_gyro_x", "gyro_x_series", "i16"),
-                ("Gyro Y", "x_axis_gyro_y", "y_axis_gyro_y", "gyro_y_series", "i16"),
-                ("Gyro Z", "x_axis_gyro_z", "y_axis_gyro_z", "gyro_z_series", "i16"),
+                ("Gyro X", "x_axis_gyro_x", "y_axis_gyro_x", "gyro_x_series", "deg/s"),
+                ("Gyro Y", "x_axis_gyro_y", "y_axis_gyro_y", "gyro_y_series", "deg/s"),
+                ("Gyro Z", "x_axis_gyro_z", "y_axis_gyro_z", "gyro_z_series", "deg/s"),
             ],
         ),
         (
@@ -93,13 +94,11 @@ def set_up_sensors(label_suffix: str):
     # --- Barometer (two series: raw + Kalman) ---
     dpg.add_text("Barometer", color=[180, 180, 180])
     with dpg.group(horizontal=True):
-        with dpg.plot(label="Pressure", height=180, width=380):
+        with dpg.plot(label="Pressure Together", height=180, width=380):
             dpg.add_plot_axis(
                 dpg.mvXAxis, label="time", tag="x_axis_baro" + label_suffix
             )
-            dpg.add_plot_axis(
-                dpg.mvYAxis, label="hPa", tag="y_axis_baro" + label_suffix
-            )
+            dpg.add_plot_axis(dpg.mvYAxis, label="m", tag="y_axis_baro" + label_suffix)
             dpg.add_line_series(
                 [],
                 [],
@@ -114,6 +113,35 @@ def set_up_sensors(label_suffix: str):
                 parent="y_axis_baro" + label_suffix,
                 tag="baro_series_kalman" + label_suffix,
             )
+        with dpg.plot(label="Pressure Raw", height=180, width=380):
+            dpg.add_plot_axis(
+                dpg.mvXAxis, label="time", tag="x_axis_baro_raw" + label_suffix
+            )
+            dpg.add_plot_axis(
+                dpg.mvYAxis, label="m", tag="y_axis_baro_raw" + label_suffix
+            )
+            dpg.add_line_series(
+                [],
+                [],
+                label="Raw",
+                parent="y_axis_baro_raw" + label_suffix,
+                tag="baro_series_solo_raw" + label_suffix,
+            )
+        with dpg.plot(label="Pressure Filtered", height=180, width=380):
+            dpg.add_plot_axis(
+                dpg.mvXAxis, label="time", tag="x_axis_baro_kalman" + label_suffix
+            )
+            dpg.add_plot_axis(
+                dpg.mvYAxis, label="m", tag="y_axis_baro_kalman" + label_suffix
+            )
+            dpg.add_line_series(
+                [],
+                [],
+                label="Kalman",
+                parent="y_axis_baro_kalman" + label_suffix,
+                tag="baro_series_solo_kalman" + label_suffix,
+            )
+
     dpg.add_separator()
 
     # --- Rates (two series per plot: DMP + Kalman) ---
@@ -163,10 +191,41 @@ def set_up_sensors(label_suffix: str):
     dpg.configure_item("y_axis_roll" + label_suffix, no_initial_fit=True)
 
 
+def toggle_chosen_sensors():
+    stored_data.chosen_sensors ^= True
+
+    stored_data.baro_var_calc = numpy.array([0.0])
+    stored_data.accel_var_calc = numpy.array([0.0])
+
+    dpg.set_value(
+        "chosen_sensors_text", stored_data.sensor_names[stored_data.chosen_sensors]
+    )
+
+    dpg.configure_item(
+        "chosen_sensors_text",
+        color=SENSOR_NAMES.get(
+            stored_data.sensor_names[stored_data.chosen_sensors], [255, 255, 255]
+        ),
+    )
+
+
 def set_up_gui():
     dpg.create_context()
 
     with dpg.window(label="Drone Live Feed", tag="main_window", width=900, height=800):
+        dpg.add_text("Visualization Sensors", color=[255, 255, 100])
+        with dpg.group(horizontal=True):
+            dpg.add_button(
+                label="Swap sensors",
+                tag="chosen_sensors",
+                callback=lambda: toggle_chosen_sensors(),
+            )
+
+            dpg.add_text("Current sensors", color=[180, 180, 180])
+            dpg.add_text("DMP", tag="chosen_sensors_text", color=SENSOR_NAMES["DMP"])
+
+        dpg.add_separator()
+
         # --- FSM State ---
         dpg.add_text("FSM State", color=[255, 255, 100])
         with dpg.group(horizontal=True):
@@ -174,6 +233,7 @@ def set_up_gui():
             dpg.add_text("SafeMode", tag="fsm_display", color=FSM_COLORS["SafeMode"])
         dpg.add_separator()
 
+        dpg.add_text("Communication Packet Size", color=[255, 255, 100])
         with dpg.group(horizontal=True):
             dpg.add_text("Packet size:", color=[180, 180, 180])
             dpg.add_text("0", tag="packet_size_display", color=[180, 180, 180])

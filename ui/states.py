@@ -17,3 +17,5 @@ FSM_COLORS = {
     "FullControlMode": [180, 100, 255],
     "RawMode": [200, 200, 200],
 }
+
+SENSOR_NAMES = {"DMP": [220, 180, 50], "Kalman(Simplified)": [100, 100, 255]}

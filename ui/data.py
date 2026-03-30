@@ -3,6 +3,7 @@
 
 from collections import deque
 import threading
+import numpy as np
 
 MAX_SIZE = 200
 MAX_LOG_QUEUE_SIZE = 500
@@ -48,8 +49,14 @@ joystick = {
     "roll_pitch_d_trim": _init_deque(),
 }
 
+baro_var_calc = np.array([0.0])
+accel_var_calc = np.array([0.0])
+
 live_data = ReadData()
 logged_data = ReadData()
+
+chosen_sensors = False
+sensor_names = ["DMP", "Kalman(Simplified)"]
 
 fsm_state = "SafeMode"
 telemetry_data_size = 0
