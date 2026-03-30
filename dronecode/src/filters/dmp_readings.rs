@@ -1,4 +1,6 @@
-use crate::{filters::sensors_handler::ImuHandler, util::yaw_pitch_roll::YawPitchRoll};
+use crate::filters::sensors_handler::ImuHandler;
+use crate::states::state_structures::calibration_state::CalibrationState;
+use crate::util::yaw_pitch_roll::YawPitchRoll;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;
 
@@ -72,5 +74,5 @@ impl ImuHandler for DmpReadings {
 
         return Some(calculated_rate);
     }
-    fn append_new_reading(&mut self, input: (Accel, Gyro)) {}
+    fn append_new_reading(&mut self) {}
 }

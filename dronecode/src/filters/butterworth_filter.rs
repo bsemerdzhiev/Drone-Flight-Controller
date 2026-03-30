@@ -3,7 +3,10 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 use libm::{atan2f, sqrtf};
 use tudelft_quadrupel::{
     barometer::read_pressure,
-    mpu::structs::{Accel, Gyro, Quaternion},
+    mpu::{
+        read_raw,
+        structs::{Accel, Gyro, Quaternion},
+    },
     nrf51_pac::gpio::out,
 };
 const LOOK_BACK_ELEMENTS: i32 = 100;
@@ -41,7 +44,8 @@ impl ImuHandler for ButterWorth {
         })
     }
 
-    fn append_new_reading(&mut self, input: (Accel, Gyro)) {
+    fn append_new_reading(&mut self) {
+        let input = read_raw().unwrap();
         let cur_input_arr: [i16; 6] = [
             input.0.x, input.0.y, input.0.z, input.1.x, input.1.y, input.1.z,
         ];

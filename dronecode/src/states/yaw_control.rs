@@ -14,14 +14,14 @@ use tudelft_quadrupel::mpu::is_dmp_enabled;
 use tudelft_quadrupel::uart::send_bytes;
 
 pub struct FSMYaw {
-    pub imu_sampler: Box<dyn ImuHandler>,
     pub pid_controller: Box<PIDController>,
 }
 
 impl FSMControl for FSMYaw {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // read sensor data
-        let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
+
+        let input_opt: Option<YawPitchRoll> = ctx.dmp_filter.get_reading();
 
         if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;

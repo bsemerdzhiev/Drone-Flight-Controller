@@ -1,5 +1,4 @@
 use crate::filters::dmp_readings::DmpReadings;
-use crate::filters::kalman_filter::KalmanFilter;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::full_control::FSMFullControl;
@@ -53,22 +52,16 @@ impl FSMControl for FSMSafe {
             FSMState::ManualMode => return Box::new(FSMManual {}),
             FSMState::YawControl => {
                 return Box::new(FSMYaw {
-                    imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
                     pid_controller: Box::new(PIDController::new()),
                 })
             }
             FSMState::FullControlMode => {
                 return Box::new(FSMFullControl {
-                    imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
                     pid_controller: Box::new(PIDController::new()),
                 })
             }
             FSMState::RawSensorsFullControlMode => {
                 return Box::new(FSMRawFullControl {
-                    imu_sampler: Box::new(KalmanFilter::new((
-                        ctx.calibration_state.accelerometer_offset,
-                        ctx.calibration_state.gyro_offset,
-                    ))),
                     pid_controller: Box::new(PIDController::new()),
                 })
             }

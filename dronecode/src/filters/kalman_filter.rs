@@ -2,6 +2,7 @@ use core::ops::Sub;
 use core::time::Duration;
 
 use crate::filters::sensors_handler::ImuHandler;
+use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::util::yaw_pitch_roll::*;
 use libm::{atan2f, sqrtf};
 use tudelft_quadrupel::barometer::read_pressure;
@@ -81,15 +82,15 @@ impl KalmanFilter {
 }
 
 impl ImuHandler for KalmanFilter {
-    fn append_new_reading(&mut self, input: (Accel, Gyro)) {
-        self.reading = input;
+    fn append_new_reading(&mut self) {
+        self.reading = read_raw().unwrap();
 
         //NOTE: Uncommenting this leads to problems
         //since we should not be subtracting the resting
         //readings from .0.z, as that leads to issues with the tan(division with 0)
-        // self.reading.0.x -= self.calibration_offset.0.x;
-        // self.reading.0.y -= self.calibration_offset.0.y;
-        // self.reading.0.z -= self.calibration_offset.0.z;
+        self.reading.0.x -= self.calibration_offset.0.x;
+        self.reading.0.y -= self.calibration_offset.0.y;
+        self.reading.0.z -= self.calibration_offset.0.z;
 
         self.reading.1.x -= self.calibration_offset.1.x;
         self.reading.1.y -= self.calibration_offset.1.y;
