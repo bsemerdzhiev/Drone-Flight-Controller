@@ -32,7 +32,7 @@ impl FSMControl for FSMRawFullControl {
         if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;
         }
-        let target: YawPitchRoll =
+        let mut target: YawPitchRoll =
             YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
 
         let input = input_opt.unwrap();
@@ -74,22 +74,15 @@ impl FSMControl for FSMRawFullControl {
             ControllerFlags::AddP as u8,
         );
 
-        // add to current input
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_yaw(correction.yaw as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_pitch(correction.pitch as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_roll(-correction.roll as i32);
+        target.yaw += correction.yaw;
+        target.roll += correction.yaw;
+        target.pitch -= correction.yaw;
 
         // output to motors
-        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
+        actuate_motors_with_rates(
+            &target,
+            ctx.input_from_controller.as_ref().unwrap().get_lift(),
+        );
 
         return self;
     }

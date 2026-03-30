@@ -95,25 +95,17 @@ impl FSMControl for FSMHeightControl {
         // send_bytes(&to_write.0[0..to_write.1]);
         //
         // add to current input
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_lift(correction.lift as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_yaw(correction.yaw as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_pitch(correction.pitch as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_roll(correction.roll as i32);
+
+        target.lift += correction.lift;
+        target.yaw += correction.yaw;
+        target.roll += correction.yaw;
+        target.pitch -= correction.yaw;
 
         // output to motors
-        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
+        actuate_motors_with_rates(
+            &target,
+            ctx.input_from_controller.as_ref().unwrap().get_lift(),
+        );
 
         //*ctx.input_from_controller = None;
 

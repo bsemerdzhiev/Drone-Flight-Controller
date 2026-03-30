@@ -11,8 +11,7 @@ import data as stored_data
 def log_message(direction: str, msg: str):
     """direction: 'PC>Drone' or 'Drone>PC'"""
     ts = time.strftime("%H:%M:%S")
-    with stored_data.message_log_lock:
-        stored_data.message_log.append((ts, direction, msg))
+    stored_data.message_log.append((ts, direction, msg))
 
 
 def serial_reader():
@@ -37,81 +36,145 @@ def serial_reader():
             # print(t)
             # print("\n\r")
 
-            if "Telemetry" in t:
-                t = t["Telemetry"]
+            with stored_data.message_log_lock:
+                if "Telemetry" in t:
+                    t = t["Telemetry"]
 
-                log_message(
-                    "Drone>PC",
-                    f"Telemetry dt={t['dt']} state={t['cur_state']} bat={t['bat']} "
-                    f"motors=[{t['motors'][0]},{t['motors'][1]},{t['motors'][2]},{t['motors'][3]}] "
-                    f"yaw={t['yaw']:.3f} pitch={t['pitch']:.3f} roll={t['roll']:.3f} "
-                    f"yaw_kalman={t['yaw_kalman']:.3f} pitch_kalman={t['pitch_kalman']:.3f} roll_kalman={t['roll_kalman']:.3f} "
-                    f"accel=({t['accel_x']},{t['accel_y']},{t['accel_z']}) "
-                    f"gyro=({t['gyro_x']},{t['gyro_y']},{t['gyro_z']}) "
-                    f"battery=({t['bat']}) "
-                    f"pres={t['pres']} flash={t['logged_in_flash']}",
-                )
+                    # log_message(
+                    #     "Drone>PC",
+                    #     f"Telemetry dt={t['dt']} state={t['cur_state']} bat={t['bat']} "
+                    #     f"motors=[{t['motors'][0]},{t['motors'][1]},{t['motors'][2]},{t['motors'][3]}] "
+                    #     f"yaw={t['yaw']:.3f} pitch={t['pitch']:.3f} roll={t['roll']:.3f} "
+                    #     f"yaw_kalman={t['yaw_kalman']:.3f} pitch_kalman={t['pitch_kalman']:.3f} roll_kalman={t['roll_kalman']:.3f} "
+                    #     f"accel=({t['accel_x']},{t['accel_y']},{t['accel_z']}) "
+                    #     f"gyro=({t['gyro_x']},{t['gyro_y']},{t['gyro_z']}) "
+                    #     f"battery=({t['bat']}) "
+                    #     f"pres={t['pres']} flash={t['logged_in_flash']}",
+                    # )
+                    # print(t, "\r")
 
-                to_add_to = stored_data.logged_data
+                    if "GeneralData" in t:
+                        t = t["GeneralData"]
 
-                if not t["logged_in_flash"]:
-                    to_add_to = stored_data.live_data
+                        to_add_to = stored_data.logged_data
 
-                    fsm_state = t.get("cur_state", "Unknown")
+                        if not t["logged_in_flash"]:
+                            to_add_to = stored_data.live_data
 
-                    stored_data.fsm_state = fsm_state
+                            fsm_state = t.get("cur_state", "Unknown")
 
-                # DMP Data
-                to_add_to.yaw_data.append(math.degrees(t.get("yaw", 0.0)))
-                to_add_to.pitch_data.append(math.degrees(t.get("pitch", 0.0)))
-                to_add_to.roll_data.append(math.degrees(t.get("roll", 0.0)))
+                            stored_data.fsm_state = fsm_state
 
-                # Kalman data
-                to_add_to.yaw_kalman.append(t.get("yaw_kalman", 0.0))
-                to_add_to.pitch_kalman.append(t.get("pitch_kalman", 0.0))
-                to_add_to.roll_kalman.append(t.get("roll_kalman", 0.0))
+                        # Time
+                        to_add_to.time_data.append(time.time() - start_time)
 
-                # Time
-                to_add_to.time_data.append(time.time() - start_time)
+                        # Battery Raw
+                        to_add_to.battery_level.append(t.get("bat", 0))
+                        log_message(
+                            "Drone>PC",
+                            f"[General] state={t.get('cur_state')} bat={t.get('bat')} dt={t.get('dt')}ms flash={t.get('logged_in_flash')}",
+                        )
 
-                # Motors
-                to_add_to.motors.append(t.get("motors", [0, 0, 0, 0]))
+                    if "MotorData" in t:
+                        t = t["MotorData"]
 
-                # Accellerometer Raw
-                to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0))
-                to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0))
-                to_add_to.accel_raw["z"].append(t.get("accel_z", 0.0))
+                        to_add_to = stored_data.logged_data
 
-                # Gyro Raw
-                to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
-                to_add_to.gyro_raw["y"].append(t.get("gyro_y", 0.0))
-                to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
+                        if not t["logged_in_flash"]:
+                            to_add_to = stored_data.live_data
 
-                # Pressure Raw
-                to_add_to.pres_data.append(t.get("pres", 0.0))
-                to_add_to.pres_data_filtered.append(t.get("pressure_filtered", 0.0))
+                        # Motors
+                        to_add_to.motors.append(t.get("motors", [0, 0, 0, 0]))
+                        log_message(
+                            "Drone>PC",
+                            f"[Motors] M0={t['motors'][0]} M1={t['motors'][1]} M2={t['motors'][2]} M3={t['motors'][3]} flash={t.get('logged_in_flash')}",
+                        )
 
-                # Battery Raw
-                to_add_to.battery_level.append(t.get("bat", 0))
-            if "ManualInput" in t:
-                t = t["ManualInput"]
+                    if "PositionData" in t:
+                        t = t["PositionData"]
 
-                log_message(
-                    "PC>Drone",
-                    f"ManualInput lift={t['lift']:.3f} roll={t['roll']:.3f} "
-                    f"pitch={t['pitch']:.3f} yaw={t['yaw']:.3f}",
-                )
+                        to_add_to = stored_data.logged_data
 
-                for space_pos in [
-                    "pitch",
-                    "yaw",
-                    "roll",
-                    "lift",
-                    "yaw_p_trim",
-                    "roll_pitch_p_trim",
-                    "roll_pitch_d_trim",
-                ]:
-                    stored_data.joystick[space_pos].append(t[space_pos])
+                        if not t["logged_in_flash"]:
+                            to_add_to = stored_data.live_data
+
+                        log_message(
+                            "Drone>PC",
+                            f"[Position] yaw={math.degrees(t.get('yaw', 0.0)):.1f}° pitch={math.degrees(t.get('pitch', 0.0)):.1f}° roll={math.degrees(t.get('roll', 0.0)):.1f}° | kalman yaw={t.get('yaw_kalman', 0):.1f} pitch={t.get('pitch_kalman', 0):.1f} roll={t.get('roll_kalman', 0):.1f} flash={t.get('logged_in_flash')}",
+                        )
+
+                        # DMP Data
+                        to_add_to.yaw_data.append(math.degrees(t.get("yaw", 0.0)))
+                        to_add_to.pitch_data.append(math.degrees(t.get("pitch", 0.0)))
+                        to_add_to.roll_data.append(math.degrees(t.get("roll", 0.0)))
+
+                        # Kalman data
+                        to_add_to.yaw_kalman.append(t.get("yaw_kalman", 0.0))
+                        to_add_to.pitch_kalman.append(t.get("pitch_kalman", 0.0))
+                        to_add_to.roll_kalman.append(t.get("roll_kalman", 0.0))
+
+                    if "RawData" in t:
+                        t = t["RawData"]
+
+                        to_add_to = stored_data.logged_data
+
+                        if not t["logged_in_flash"]:
+                            to_add_to = stored_data.live_data
+
+                        log_message(
+                            "Drone>PC",
+                            f"[Raw] accel=({t.get('accel_x')},{t.get('accel_y')},{t.get('accel_z')}) gyro=({t.get('gyro_x')},{t.get('gyro_y')},{t.get('gyro_z')}) flash={t.get('logged_in_flash')}",
+                        )
+
+                        # Accellerometer Raw
+                        to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0))
+                        to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0))
+                        to_add_to.accel_raw["z"].append(t.get("accel_z", 0.0))
+
+                        # Gyro Raw
+                        to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
+                        to_add_to.gyro_raw["y"].append(t.get("gyro_y", 0.0))
+                        to_add_to.gyro_raw["z"].append(t.get("gyro_z", 0.0))
+
+                    if "PressureData" in t:
+                        t = t["PressureData"]
+
+                        to_add_to = stored_data.logged_data
+
+                        if not t["logged_in_flash"]:
+                            to_add_to = stored_data.live_data
+
+                        # Pressure Raw
+                        to_add_to.pres_data.append(t.get("pres", 0.0))
+                        to_add_to.pres_data_filtered.append(
+                            t.get("pressure_filtered", 0.0)
+                        )
+
+                        log_message(
+                            "Drone>PC",
+                            f"[Pressure] raw={t.get('pres', 0.0):.2f} filtered={t.get('pressure_filtered', 0.0):.2f} flash={t.get('logged_in_flash')}",
+                        )
+
+                if "ManualInput" in t:
+                    t = t["ManualInput"]
+
+                    log_message(
+                        "PC>Drone",
+                        f"ManualInput lift={t['lift']:.3f} roll={t['roll']:.3f} "
+                        f"pitch={t['pitch']:.3f} yaw={t['yaw']:.3f}",
+                    )
+
+                    for space_pos in [
+                        "pitch",
+                        "yaw",
+                        "roll",
+                        "lift",
+                        "yaw_p_trim",
+                        "roll_pitch_p_trim",
+                        "roll_pitch_d_trim",
+                    ]:
+                        stored_data.joystick[space_pos].append(t[space_pos])
+                    stored_data.telemetry_data_size = t["telemetry_data_size"]
 
         except Exception as e:
             print(f"Serial error: {e}")

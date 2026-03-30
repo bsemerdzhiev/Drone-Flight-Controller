@@ -68,8 +68,8 @@ pub fn main_loop() -> ! {
 
     let mut received_manual_input: Option<ManualInput> = None;
     let mut calibration_state: CalibrationState = CalibrationState::new();
-    let mut flash_head = 0u32;
-    let mut flash_tail = 0u32;
+    let mut flash_head = 0usize;
+    let mut flash_tail = 0usize;
 
     let mut pressure_sensor_filter = PressureSensor::new();
     let mut position_kalman = KalmanFilter::new((
@@ -178,13 +178,22 @@ pub fn main_loop() -> ! {
 fn send_drone_data(curent_state: FSMState, dt: Duration, ctx: &mut StateContext) {
     Green.on();
 
-    let mut data: TelemetryData = TelemetryRead::read_telemetry(ctx, dt, curent_state, false);
-
-    let kalman_read = ctx.kalman_position.get_reading().unwrap();
-
-    let msg = ctx.trv.write_structure(&DeviceCommand::Telemetry(data));
-
+    let mut msg =
+        <TelemetryData as TelemetryRead>::read_general_data(ctx, dt, curent_state, false, true);
     send_bytes(&msg.0[0..msg.1]);
+
+    msg = <TelemetryData as TelemetryRead>::read_motor_data(ctx, false, true);
+    send_bytes(&msg.0[0..msg.1]);
+
+    msg = <TelemetryData as TelemetryRead>::read_position_data(ctx, false, true);
+    send_bytes(&msg.0[0..msg.1]);
+
+    msg = <TelemetryData as TelemetryRead>::read_pressure_data(ctx, false, true);
+    send_bytes(&msg.0[0..msg.1]);
+
+    msg = <TelemetryData as TelemetryRead>::read_raw_data(ctx, false, true);
+    send_bytes(&msg.0[0..msg.1]);
+
     Green.off();
 }
 
@@ -198,17 +207,32 @@ fn send_ack(transceiver: &mut HdlcTransceiver) {
 }
 
 fn put_telemetry_data_on_flash(ctx: &mut StateContext, dt: Duration, curent_state: FSMState) {
-    if (*ctx.flash_head + TELEMETERY_DATA_SIZE) > 0x01FFFF {
+    if *ctx.flash_tail + (STUFFED_MESSAGE_SIZE * 5) > 0x01FFFF {
         return;
     }
 
-    let data: TelemetryData = TelemetryRead::read_telemetry(ctx, dt, curent_state, true);
-
-    let mut buf = [0u8; (TELEMETERY_DATA_SIZE + 20) as usize];
-    let ser: &mut [u8] = postcard::to_slice(&data, &mut buf).unwrap();
-
     Yellow.on();
-    _ = flash_write_bytes(*ctx.flash_head, ser);
+
+    let mut msg =
+        <TelemetryData as TelemetryRead>::read_general_data(ctx, dt, curent_state, true, false);
+    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
+    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+
+    msg = <TelemetryData as TelemetryRead>::read_motor_data(ctx, true, false);
+    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
+    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+
+    msg = <TelemetryData as TelemetryRead>::read_position_data(ctx, true, false);
+    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
+    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+
+    msg = <TelemetryData as TelemetryRead>::read_pressure_data(ctx, true, false);
+    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
+    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+
+    msg = <TelemetryData as TelemetryRead>::read_raw_data(ctx, true, false);
+    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
+    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+
     Yellow.off();
-    *ctx.flash_head += TELEMETERY_DATA_SIZE;
 }

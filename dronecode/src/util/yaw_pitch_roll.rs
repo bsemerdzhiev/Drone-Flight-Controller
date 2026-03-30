@@ -3,6 +3,8 @@ use core::ops::{Add, Div, Mul, Sub};
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
+use crate::util::{yaw_pitch_roll, MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE};
+
 /// This struct holds the yaw, pitch, and roll that the drone things it is in.
 /// The struct is currently implemented using `f32`, you may want to change this to use fixed point arithmetic.
 #[derive(Debug, Copy, Clone)]
@@ -132,10 +134,10 @@ impl YawPitchRoll {
     }
     pub fn from_manual_input(input: &ManualInput) -> Self {
         Self {
-            lift: input.get_lift() as f32,
-            yaw: input.get_yaw() as f32,
-            pitch: input.get_pitch() as f32,
-            roll: input.get_roll() as f32,
+            lift: MAX_LIFT * input.get_lift() as f32,
+            yaw: YAW_RATE * input.get_yaw() as f32,
+            pitch: PITCH_DEGREE * input.get_pitch() as f32,
+            roll: ROLL_DEGREE * input.get_roll() as f32,
             pressure: 0f32,
         }
     }

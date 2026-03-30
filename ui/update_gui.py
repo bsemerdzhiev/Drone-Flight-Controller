@@ -5,9 +5,7 @@ import dearpygui.dearpygui as dpg
 import data as stored_data
 from states import FSM_COLORS
 
-ROLL_NORMALIZE = 20
-PITCH_NORMALIZE = 20
-LIFT_NORMALIZE = 15
+YAW_RATE = 80
 
 # Update loop
 # ---------------------------------------
@@ -27,6 +25,8 @@ def update_battery_and_fsm():
     dpg.configure_item(
         "fsm_display", color=FSM_COLORS.get(stored_data.fsm_state, [255, 255, 255])
     )
+
+    dpg.set_value("packet_size_display", stored_data.telemetry_data_size)
 
 
 def update_message_log():
@@ -129,17 +129,17 @@ def update_joystick():
     if len(stored_data.joystick["roll"]) == 0:
         return
 
-    cx = 100 + (stored_data.joystick["roll"][-1] / ROLL_NORMALIZE) * 90
-    cy = 100 - (stored_data.joystick["pitch"][-1] / PITCH_NORMALIZE) * 90
+    cx = 100 + (stored_data.joystick["roll"][-1]) * 90
+    cy = 100 - (stored_data.joystick["pitch"][-1]) * 90
     dpg.configure_item("joystick_dot", center=[cx, cy])
 
     # lift bar — lift normalized 0-1
-    lift_normalized = stored_data.joystick["lift"][-1] / LIFT_NORMALIZE  # 0.0 to 1.0
+    lift_normalized = stored_data.joystick["lift"][-1]  # 0.0 to 1.0
     top = 190 - lift_normalized * 180  # pixels from top
     dpg.configure_item("lift_bar", pmin=[10, top], pmax=[30, 190])
 
     # yaw needle
-    rad = math.radians(stored_data.joystick["yaw"][-1])
+    rad = math.radians(stored_data.joystick["yaw"][-1] * YAW_RATE)
     tip_x = 100 + 70 * math.sin(rad)
     tip_y = 100 - 70 * math.cos(rad)
     dpg.configure_item("yaw_needle", p1=[tip_x, tip_y], p2=[100, 100])

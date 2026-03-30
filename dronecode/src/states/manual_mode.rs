@@ -1,6 +1,6 @@
 use crate::{
     states::state_structures::state_context::StateContext,
-    util::rpm_calculator::actuate_motors_with_rates,
+    util::{rpm_calculator::actuate_motors_with_rates, yaw_pitch_roll::YawPitchRoll},
 };
 use alloc::boxed::Box;
 use my_hdlc::{
@@ -20,11 +20,14 @@ impl FSMControl for FSMManual {
         if ctx.input_from_controller.is_none() {
             return self;
         }
+        let mut target: YawPitchRoll =
+            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
 
-        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
+        actuate_motors_with_rates(
+            &target,
+            ctx.input_from_controller.as_ref().unwrap().get_lift(),
+        );
 
-        // consume the command and set it to None
-        // *ctx.input_from_controller = None;
         self
     }
 

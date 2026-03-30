@@ -20,20 +20,20 @@ def make_drone_view():
     arm_length = 0.5
     arm_verts = np.array(
         [
-            [-arm_length, -arm_length, 0],
-            [arm_length, arm_length, 0],
-            [-arm_length, arm_length, 0],
-            [arm_length, -arm_length, 0],
+            [-arm_length, 0, 0],
+            [0, arm_length, 0],
+            [arm_length, 0, 0],
+            [0, -arm_length, 0],
         ]
     )
     arms = gl.GLLinePlotItem(
-        pos=np.array([arm_verts[0], arm_verts[1]]),
+        pos=np.array([arm_verts[0], arm_verts[2]]),
         color=(1, 1, 1, 1),
         width=2,
         antialias=True,
     )
     arms2 = gl.GLLinePlotItem(
-        pos=np.array([arm_verts[2], arm_verts[3]]),
+        pos=np.array([arm_verts[1], arm_verts[3]]),
         color=(1, 1, 1, 1),
         width=2,
         antialias=True,
@@ -44,10 +44,10 @@ def make_drone_view():
     # propeller positions (match arm tips)
     prop_positions = np.array(
         [
-            [-arm_length, -arm_length, 0],  # M0
-            [-arm_length, arm_length, 0],  # M2
-            [arm_length, arm_length, 0],  # M1
-            [arm_length, -arm_length, 0],  # M3
+            [-arm_length, 0, 0],  # M0
+            [0, arm_length, 0],  # M1
+            [arm_length, 0, 0],  # M2
+            [0, -arm_length, 0],  # M3
         ]
     )
 
@@ -71,10 +71,10 @@ def make_drone_view():
 
     motor_labels = []
     label_offsets = [
-        [-arm_length - 0.1, -arm_length - 0.1, 0.05],  # M0
-        [-arm_length - 0.1, arm_length + 0.1, 0.05],  # M2
-        [arm_length + 0.1, arm_length + 0.1, 0.05],  # M1
-        [arm_length + 0.1, -arm_length - 0.1, 0.05],  # M3
+        [-arm_length, 0, 0.5],  # M0
+        [0, arm_length, 0.5],  # M1
+        [arm_length, 0, 0.5],  # M2
+        [0, -arm_length, 0.5],  # M3
     ]
     for i, offset in enumerate(label_offsets):
         label = gl.GLTextItem(
@@ -106,15 +106,16 @@ def update_drone_view(
     roll,
     motor_values,
 ):
-    r = Rotation.from_euler("ZYX", [yaw, pitch, roll], degrees=True)
+    r = Rotation.from_euler("ZYX", [yaw, pitch, -roll], degrees=True)
+    # print([yaw, pitch, roll], "\n\r")
     rotated = r.apply(arm_verts)
 
-    arms.setData(pos=np.array([rotated[0], rotated[1]]))
-    arms2.setData(pos=np.array([rotated[2], rotated[3]]))
+    arms.setData(pos=np.array([rotated[0], rotated[2]]))
+    arms2.setData(pos=np.array([rotated[1], rotated[3]]))
 
-    tmp_val = motor_values[1]
-    motor_values[1] = motor_values[2]
-    motor_values[2] = tmp_val
+    # tmp_val = motor_values[1]
+    # motor_values[1] = motor_values[2]
+    # motor_values[2] = tmp_val
 
     for i, dot in enumerate(prop_dots):
         dot.setData(pos=rotated[i].reshape(1, 3), color=rpm_to_color(motor_values[i]))
