@@ -1,5 +1,7 @@
 use core::time::Duration;
 
+use crate::filters::sensors_handler::ImuHandler;
+use crate::states::state_structures::state_context::StateContext;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use my_hdlc::command::FSMState;
 use my_hdlc::telemetry_data::TelemetryData;
@@ -11,11 +13,21 @@ use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw, structs::*};
 
 pub trait TelemetryRead {
-    fn read_telemetry(dt: Duration, cur_state: FSMState, logged_in_flash: bool) -> Self;
+    fn read_telemetry(
+        ctx: &mut StateContext,
+        dt: Duration,
+        cur_state: FSMState,
+        logged_in_flash: bool,
+    ) -> Self;
 }
 
 impl TelemetryRead for TelemetryData {
-    fn read_telemetry(dt: Duration, cur_state: FSMState, logged_in_flash: bool) -> Self {
+    fn read_telemetry(
+        ctx: &mut StateContext,
+        dt: Duration,
+        cur_state: FSMState,
+        logged_in_flash: bool,
+    ) -> Self {
         let motors = get_motors();
         let quaternion = block!(read_dmp_bytes()); //
                                                    //
@@ -26,9 +38,12 @@ impl TelemetryRead for TelemetryData {
         };
 
         let (accel_raw, gyro_raw) = read_raw().unwrap();
+        let kalman_pos = ctx.kalman_position.get_reading().unwrap();
 
         let bat = read_battery();
-        let pres = read_pressure();
+        let pres = ctx
+            .pressure_sensor_filter
+            .pressure_to_meters(read_pressure() as i32);
 
         return TelemetryData {
             logged_in_flash: logged_in_flash,
@@ -47,12 +62,13 @@ impl TelemetryRead for TelemetryData {
             gyro_y: gyro_raw.y,
             gyro_z: gyro_raw.z,
 
-            yaw_kalman: 0f32,
-            pitch_kalman: 0f32,
-            roll_kalman: 0f32,
+            yaw_kalman: kalman_pos.yaw,
+            pitch_kalman: kalman_pos.pitch,
+            roll_kalman: kalman_pos.roll,
 
             bat,
-            pres,
+            pres: pres,
+            pressure_filtered: ctx.pressure_sensor_filter.get_reading(),
             cur_state,
         };
     }

@@ -34,6 +34,7 @@ class ReadData:
             "z": deque(maxlen=MAX_SIZE),
         }
         self.pres_data = deque(maxlen=MAX_SIZE)
+        self.pres_data_filtered = deque(maxlen=MAX_SIZE)
 
         self.is_paused = False
 

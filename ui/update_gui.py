@@ -110,7 +110,10 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
     fit_with_margin("y_axis_gyro_z" + label_suffix, list(read_data.gyro_raw["z"]))
 
     # Barometer
-    dpg.set_value("baro_series" + label_suffix, [t, list(read_data.pres_data)])
+    dpg.set_value("baro_series_raw" + label_suffix, [t, list(read_data.pres_data)])
+    dpg.set_value(
+        "baro_series_kalman" + label_suffix, [t, list(read_data.pres_data_filtered)]
+    )
     dpg.fit_axis_data("x_axis_baro" + label_suffix)
 
     fit_with_margin("y_axis_baro" + label_suffix, list(read_data.pres_data))

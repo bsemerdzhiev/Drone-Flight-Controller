@@ -18,7 +18,6 @@ use crate::{
 };
 
 pub struct FSMHeightControl {
-    pub imu_sampler: Box<dyn ImuHandler>,
     pub pid_controller: Box<PIDController>,
     pub prev_state: Box<dyn FSMControl>,
 
@@ -29,10 +28,8 @@ impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         //TODO: Implement going back to the state from which we came
 
-        self.imu_sampler.append_new_reading(read_raw().unwrap());
-
         // read sensor data
-        let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
+        let input_opt: Option<YawPitchRoll> = ctx.kalman_position.get_reading();
 
         if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;

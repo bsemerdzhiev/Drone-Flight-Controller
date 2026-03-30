@@ -1,13 +1,16 @@
 use core::time::Duration;
 
+use crate::filters::dmp_readings::DmpReadings;
+use crate::filters::kalman_filter::KalmanFilter;
+use crate::filters::pressure_filter::PressureSensor;
+use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::telemetry_read::TelemetryRead;
+
 use alloc::boxed::Box;
 use alloc::format;
 use my_hdlc::telemetry_data::*;
-use template_project::filters::kalman_filter::{self, KalmanFilter};
-use template_project::filters::sensors_handler::ImuHandler;
-use template_project::util::yaw_pitch_roll::YawPitchRoll;
+
 use tudelft_quadrupel::flash::flash_write_bytes;
 
 use crate::states::fsm_base_class::FSMControl;
@@ -68,8 +71,19 @@ pub fn main_loop() -> ! {
     let mut flash_head = 0u32;
     let mut flash_tail = 0u32;
 
+    let mut pressure_sensor_filter = PressureSensor::new();
+    let mut position_kalman = KalmanFilter::new((
+        calibration_state.accelerometer_offset,
+        calibration_state.gyro_offset,
+    ));
+    let mut dmp_sampler = DmpReadings::new(calibration_state.ypr_offset);
+
     let mut ctx = StateContext {
+        kalman_position: position_kalman,
         calibration_state: &mut calibration_state,
+        pressure_sensor_filter: &mut pressure_sensor_filter,
+        dmp_filter: dmp_sampler,
+
         trv: &mut transceiver,
         input_from_controller: &mut received_manual_input,
         flash_head: &mut flash_head,
@@ -83,7 +97,6 @@ pub fn main_loop() -> ! {
     let mut last_send_message: Instant = Instant::now();
 
     let cal = CalibrationState::new();
-    let mut kalman_readings = KalmanFilter::new((cal.accelerometer_offset, cal.gyro_offset));
 
     // used to determine whether battery voltage is too low
     let mut battery_panic = false;
@@ -104,11 +117,6 @@ pub fn main_loop() -> ! {
 
         // Read Uart Buff
         let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.bytes_to_read()]);
-
-        kalman_readings.calibration_offset = (
-            ctx.calibration_state.accelerometer_offset,
-            ctx.calibration_state.gyro_offset,
-        );
 
         if num_received != 0usize {
             //read the sent bytes
@@ -139,24 +147,23 @@ pub fn main_loop() -> ! {
             current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
         }
 
+        let dt = now.duration_since(current_time);
+
+        // update filter readings
+        ctx.kalman_position.append_new_reading();
+        ctx.pressure_sensor_filter
+            .update_readings(&mut ctx.kalman_position);
+
         // run the loop of the state
         current_state = current_state.run_state_loop(&mut ctx);
-        let dt = now.duration_since(current_time);
 
         if now.duration_since(last_send_message) >= DRONE_STATE_TIMER {
             last_send_message = now;
 
-            kalman_readings.append_new_reading(read_raw().unwrap());
-
-            send_drone_data(
-                &mut ctx.trv,
-                current_state.get_state(),
-                dt,
-                &mut kalman_readings,
-            );
+            send_drone_data(current_state.get_state(), dt, &mut ctx);
         }
 
-        put_telemetry_data_on_flash(&mut ctx.flash_head, dt, current_state.get_state());
+        put_telemetry_data_on_flash(&mut ctx, dt, current_state.get_state());
 
         // -------------------------------------------------------------------------
 
@@ -168,23 +175,14 @@ pub fn main_loop() -> ! {
 /*
 * Sends data to the drone
 */
-fn send_drone_data(
-    transceiver: &mut HdlcTransceiver,
-    curent_state: FSMState,
-    dt: Duration,
-    kalman_filter: &mut KalmanFilter,
-) {
+fn send_drone_data(curent_state: FSMState, dt: Duration, ctx: &mut StateContext) {
     Green.on();
 
-    let mut data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state, false);
+    let mut data: TelemetryData = TelemetryRead::read_telemetry(ctx, dt, curent_state, false);
 
-    let kalman_read = kalman_filter.get_reading().unwrap();
+    let kalman_read = ctx.kalman_position.get_reading().unwrap();
 
-    data.yaw_kalman = kalman_read.yaw;
-    data.pitch_kalman = kalman_read.pitch;
-    data.roll_kalman = kalman_read.roll;
-
-    let msg = transceiver.write_structure(&DeviceCommand::Telemetry(data));
+    let msg = ctx.trv.write_structure(&DeviceCommand::Telemetry(data));
 
     send_bytes(&msg.0[0..msg.1]);
     Green.off();
@@ -199,18 +197,18 @@ fn send_ack(transceiver: &mut HdlcTransceiver) {
     send_bytes(&msg.0[0..msg.1]);
 }
 
-fn put_telemetry_data_on_flash(flash_head: &mut u32, dt: Duration, curent_state: FSMState) {
-    if (*flash_head + TELEMETERY_DATA_SIZE) > 0x01FFFF {
+fn put_telemetry_data_on_flash(ctx: &mut StateContext, dt: Duration, curent_state: FSMState) {
+    if (*ctx.flash_head + TELEMETERY_DATA_SIZE) > 0x01FFFF {
         return;
     }
 
-    let data: TelemetryData = TelemetryRead::read_telemetry(dt, curent_state, true);
+    let data: TelemetryData = TelemetryRead::read_telemetry(ctx, dt, curent_state, true);
 
     let mut buf = [0u8; (TELEMETERY_DATA_SIZE + 20) as usize];
     let ser: &mut [u8] = postcard::to_slice(&data, &mut buf).unwrap();
 
     Yellow.on();
-    _ = flash_write_bytes(*flash_head, ser);
+    _ = flash_write_bytes(*ctx.flash_head, ser);
     Yellow.off();
-    *flash_head += TELEMETERY_DATA_SIZE;
+    *ctx.flash_head += TELEMETERY_DATA_SIZE;
 }

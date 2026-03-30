@@ -89,6 +89,7 @@ def serial_reader():
 
                 # Pressure Raw
                 to_add_to.pres_data.append(t.get("pres", 0.0))
+                to_add_to.pres_data_filtered.append(t.get("pressure_filtered", 0.0))
 
                 # Battery Raw
                 to_add_to.battery_level.append(t.get("bat", 0))

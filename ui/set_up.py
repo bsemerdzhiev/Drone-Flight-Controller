@@ -22,6 +22,8 @@ def set_up_sensors(label_suffix: str):
         callback=lambda: toggle_pause(label_suffix),
     )
     dpg.add_text("Sensor Feed", color=[255, 255, 100])
+
+    # --- Single-series sensor plots ---
     for sensor_label, axes in [
         (
             "Accelerometer",
@@ -58,12 +60,6 @@ def set_up_sensors(label_suffix: str):
             ],
         ),
         (
-            "Barometer",
-            [
-                ("Pressure", "x_axis_baro", "y_axis_baro", "baro_series", "hPa"),
-            ],
-        ),
-        (
             "Battery readings",
             [
                 (
@@ -94,7 +90,33 @@ def set_up_sensors(label_suffix: str):
                     )
         dpg.add_separator()
 
-    # Rates — two series per plot
+    # --- Barometer (two series: raw + Kalman) ---
+    dpg.add_text("Barometer", color=[180, 180, 180])
+    with dpg.group(horizontal=True):
+        with dpg.plot(label="Pressure", height=180, width=380):
+            dpg.add_plot_axis(
+                dpg.mvXAxis, label="time", tag="x_axis_baro" + label_suffix
+            )
+            dpg.add_plot_axis(
+                dpg.mvYAxis, label="hPa", tag="y_axis_baro" + label_suffix
+            )
+            dpg.add_line_series(
+                [],
+                [],
+                label="Raw",
+                parent="y_axis_baro" + label_suffix,
+                tag="baro_series_raw" + label_suffix,
+            )
+            dpg.add_line_series(
+                [],
+                [],
+                label="Kalman",
+                parent="y_axis_baro" + label_suffix,
+                tag="baro_series_kalman" + label_suffix,
+            )
+    dpg.add_separator()
+
+    # --- Rates (two series per plot: DMP + Kalman) ---
     dpg.add_text("Rates", color=[180, 180, 180])
     with dpg.group(horizontal=True):
         for label, tag_x, tag_y, dmp_tag, kalman_tag in [
@@ -131,9 +153,6 @@ def set_up_sensors(label_suffix: str):
                     parent=tag_y + label_suffix,
                     tag=kalman_tag + label_suffix,
                 )
-    # dpg.add_plot_legend(
-    #     parent="y_axis_yaw" + label_suffix
-    # )  # optional, adds legend to yaw
     dpg.add_separator()
 
     dpg.set_axis_limits("y_axis_yaw" + label_suffix, -150, 150)
@@ -154,6 +173,7 @@ def set_up_gui():
             dpg.add_text("Current State:", color=[180, 180, 180])
             dpg.add_text("SafeMode", tag="fsm_display", color=FSM_COLORS["SafeMode"])
         dpg.add_separator()
+
         # --- Battery ---
         dpg.add_text("Battery Level", color=[255, 255, 100])
         dpg.add_progress_bar(
@@ -205,7 +225,6 @@ def set_up_gui():
                     dpg.draw_circle(
                         [100, 100], 90, color=[80, 80, 80], fill=[30, 30, 30]
                     )
-                    # cardinal marks
                     for angle, label, pos in [
                         (0, "N", [97, 8]),
                         (90, "E", [183, 97]),
@@ -213,7 +232,6 @@ def set_up_gui():
                         (270, "W", [5, 97]),
                     ]:
                         dpg.draw_text(pos, label, color=[150, 150, 150], size=13)
-                    # tick marks
                     import math
 
                     for deg in range(0, 360, 30):
@@ -223,7 +241,6 @@ def set_up_gui():
                         x2 = 100 + 90 * math.sin(rad)
                         y2 = 100 - 90 * math.cos(rad)
                         dpg.draw_line([x1, y1], [x2, y2], color=[80, 80, 80])
-                    # needle
                     dpg.draw_arrow(
                         [100, 100 - 70],
                         [100, 100],
@@ -252,6 +269,7 @@ def set_up_gui():
 
         dpg.add_separator()
         set_up_sensors("_live")
+
     with dpg.window(
         label="Drone Logged Feed", tag="logged_feed", width=900, height=800
     ):
@@ -263,7 +281,6 @@ def set_up_gui():
             tag="pause_btn_logs",
             callback=lambda: toggle_pause_logs(),
         )
-
         dpg.add_text("Message Log", color=[255, 255, 100])
         with dpg.table(
             tag="msg_table",

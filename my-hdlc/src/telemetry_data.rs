@@ -28,6 +28,7 @@ pub struct TelemetryData {
     pub gyro_z: i16,
 
     pub bat: u16,
-    pub pres: u32,
+    pub pres: f32,
+    pub pressure_filtered: f32,
     pub cur_state: FSMState,
 }

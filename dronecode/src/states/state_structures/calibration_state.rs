@@ -7,6 +7,12 @@ use tudelft_quadrupel::{
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
+// since the accelerometer uses +-2G(16'384 LSB/g),
+// this number needs to be subtracted from the calibrated
+// Z axis
+// https://www.alldatasheet.com/datasheet-pdf/download/1132807/TDK/MPU-6050.html
+pub const LSB_FOR_ACCEL: i16 = 16384;
+
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Axis<T> {
     pub x: T,
@@ -94,6 +100,8 @@ impl CalibrationState {
             y: (self.accelerometer_sum.y / self.sample_cnt) as i16,
             z: (self.accelerometer_sum.z / self.sample_cnt) as i16,
         };
+        self.accelerometer_offset.z -= LSB_FOR_ACCEL;
+
         self.gyro_offset = Gyro {
             x: (self.gyro_sum.x / self.sample_cnt) as i16,
             y: (self.gyro_sum.y / self.sample_cnt) as i16,

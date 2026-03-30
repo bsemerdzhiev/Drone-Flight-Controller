@@ -21,15 +21,13 @@ use tudelft_quadrupel::mpu::{self, read_raw};
 // Order of parameters: Yaw - Pitch - Roll
 
 pub struct FSMRawFullControl {
-    pub imu_sampler: Box<dyn ImuHandler>,
     pub pid_controller: Box<PIDController>,
 }
 
 impl FSMControl for FSMRawFullControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        self.imu_sampler.append_new_reading(read_raw().unwrap());
         // read sensor data
-        let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
+        let input_opt: Option<YawPitchRoll> = ctx.kalman_position.get_reading();
 
         if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
             return self;
@@ -100,7 +98,6 @@ impl FSMControl for FSMRawFullControl {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
             FSMState::HeightControlMode => Box::new(FSMHeightControl {
-                imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
                 pid_controller: Box::new(PIDController::new()),
 
                 prev_state: self,
