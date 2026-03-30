@@ -27,7 +27,7 @@ impl FSMControl for FSMYaw {
             return self;
         }
 
-        let target: YawPitchRoll =
+        let mut target: YawPitchRoll =
             YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
 
         let input = input_opt.unwrap();
@@ -48,15 +48,11 @@ impl FSMControl for FSMYaw {
             ControllerFlags::AddP as u8,
         );
 
-        // add to current input
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_yaw(correction.yaw as i32);
-        // output to motors
-        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
-
-        // *ctx.input_from_controller = None;
+        target.yaw += correction.yaw;
+        actuate_motors_with_rates(
+            &target,
+            ctx.input_from_controller.as_ref().unwrap().get_lift(),
+        );
 
         return self;
     }

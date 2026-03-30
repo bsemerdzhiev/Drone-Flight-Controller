@@ -3,8 +3,13 @@ use core::time::Duration;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::state_context::StateContext;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
+use my_hdlc::command::DeviceCommand;
 use my_hdlc::command::FSMState;
-use my_hdlc::telemetry_data::TelemetryData;
+use my_hdlc::telemetry_data::{
+    GeneralData, MotorData, PositionData, PressureData, RawData, TelemetryData,
+    TELEMETERY_DATA_SIZE,
+};
+use my_hdlc::STUFFED_MESSAGE_SIZE;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
 use tudelft_quadrupel::block;
@@ -12,47 +17,143 @@ use tudelft_quadrupel::led::Led::Yellow;
 use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw, structs::*};
 
+type ReturnType = (([u8; STUFFED_MESSAGE_SIZE], usize));
+
 pub trait TelemetryRead {
-    fn read_telemetry(
+    fn read_general_data(
         ctx: &mut StateContext,
         dt: Duration,
         cur_state: FSMState,
         logged_in_flash: bool,
-    ) -> Self;
+        encoded: bool,
+    ) -> ReturnType;
+
+    fn read_motor_data(ctx: &mut StateContext, logged_in_flash: bool, encoded: bool) -> ReturnType;
+
+    fn read_position_data(
+        ctx: &mut StateContext,
+        logged_in_flash: bool,
+        encoded: bool,
+    ) -> ReturnType;
+
+    fn read_raw_data(ctx: &mut StateContext, logged_in_flash: bool, encoded: bool) -> ReturnType;
+
+    fn read_pressure_data(
+        ctx: &mut StateContext,
+        logged_in_flash: bool,
+        encoded: bool,
+    ) -> ReturnType;
 }
 
 impl TelemetryRead for TelemetryData {
-    fn read_telemetry(
+    fn read_general_data(
         ctx: &mut StateContext,
         dt: Duration,
         cur_state: FSMState,
         logged_in_flash: bool,
-    ) -> Self {
-        let motors = get_motors();
-        let quaternion = block!(read_dmp_bytes()); //
-                                                   //
-        let ypr = if quaternion.is_ok() {
+        encoded: bool,
+    ) -> ReturnType {
+        let bat = read_battery();
+
+        let data_to_send = DeviceCommand::Telemetry(TelemetryData::GeneralData(GeneralData {
+            logged_in_flash: logged_in_flash,
+            dt: dt.as_millis() as u32,
+
+            bat: bat,
+            cur_state: cur_state,
+        }));
+
+        if encoded {
+            return ctx.trv.write_structure(&data_to_send);
+        } else {
+            let mut buf = [0u8; STUFFED_MESSAGE_SIZE];
+            let len = postcard::to_slice(&data_to_send, &mut buf).unwrap().len();
+            return (buf, len);
+        }
+    }
+
+    fn read_motor_data(ctx: &mut StateContext, logged_in_flash: bool, encoded: bool) -> ReturnType {
+        let data_to_send = DeviceCommand::Telemetry(TelemetryData::MotorData(MotorData {
+            logged_in_flash: logged_in_flash,
+            motors: get_motors(),
+        }));
+
+        if encoded {
+            return ctx.trv.write_structure(&data_to_send);
+        } else {
+            let mut buf = [0u8; STUFFED_MESSAGE_SIZE];
+            let len = postcard::to_slice(&data_to_send, &mut buf).unwrap().len();
+            return (buf, len);
+        }
+    }
+
+    fn read_position_data(
+        ctx: &mut StateContext,
+        logged_in_flash: bool,
+        encoded: bool,
+    ) -> ReturnType {
+        let quaternion = block!(read_dmp_bytes());
+
+        let kalman_pos = ctx.kalman_position.get_reading().unwrap();
+
+        let mut ypr = if quaternion.is_ok() {
             YawPitchRoll::from(quaternion.unwrap())
         } else {
             YawPitchRoll::new()
         };
+        ypr.yaw -=
+            (ctx.calibration_state.gyro_offset.z as f32) * micromath::F32Ext::acos(-1.0) / 180.0;
 
-        let (accel_raw, gyro_raw) = read_raw().unwrap();
-        let kalman_pos = ctx.kalman_position.get_reading().unwrap();
-
-        let bat = read_battery();
-        let pres = ctx
-            .pressure_sensor_filter
-            .pressure_to_meters(read_pressure() as i32);
-
-        return TelemetryData {
+        let data_to_send = DeviceCommand::Telemetry(TelemetryData::PositionData(PositionData {
             logged_in_flash: logged_in_flash,
-            dt: dt.as_millis() as u32,
-            motors,
 
             yaw: ypr.yaw,
             pitch: ypr.pitch,
             roll: ypr.roll,
+
+            yaw_kalman: kalman_pos.yaw,
+            pitch_kalman: kalman_pos.pitch,
+            roll_kalman: kalman_pos.roll,
+        }));
+
+        if encoded {
+            return ctx.trv.write_structure(&data_to_send);
+        } else {
+            let mut buf = [0u8; STUFFED_MESSAGE_SIZE];
+            let len = postcard::to_slice(&data_to_send, &mut buf).unwrap().len();
+            return (buf, len);
+        }
+    }
+
+    fn read_pressure_data(
+        ctx: &mut StateContext,
+        logged_in_flash: bool,
+        encoded: bool,
+    ) -> ReturnType {
+        let pres = ctx
+            .pressure_sensor_filter
+            .pressure_to_meters(read_pressure() as i32);
+        let data_to_send = DeviceCommand::Telemetry(TelemetryData::PressureData(PressureData {
+            logged_in_flash: logged_in_flash,
+
+            pres: pres,
+            pressure_filtered: ctx.pressure_sensor_filter.get_reading(),
+        }));
+
+        if encoded {
+            return ctx.trv.write_structure(&data_to_send);
+        } else {
+            let mut buf = [0u8; STUFFED_MESSAGE_SIZE];
+            let len = postcard::to_slice(&data_to_send, &mut buf).unwrap().len();
+            return (buf, len);
+        }
+    }
+
+    fn read_raw_data(ctx: &mut StateContext, logged_in_flash: bool, encoded: bool) -> ReturnType {
+        let (accel_raw, gyro_raw) = read_raw().unwrap();
+
+        let data_to_send = DeviceCommand::Telemetry(TelemetryData::RawData(RawData {
+            logged_in_flash: logged_in_flash,
 
             accel_x: accel_raw.x,
             accel_y: accel_raw.y,
@@ -61,15 +162,14 @@ impl TelemetryRead for TelemetryData {
             gyro_x: gyro_raw.x,
             gyro_y: gyro_raw.y,
             gyro_z: gyro_raw.z,
+        }));
 
-            yaw_kalman: kalman_pos.yaw,
-            pitch_kalman: kalman_pos.pitch,
-            roll_kalman: kalman_pos.roll,
-
-            bat,
-            pres: pres,
-            pressure_filtered: ctx.pressure_sensor_filter.get_reading(),
-            cur_state,
-        };
+        if encoded {
+            return ctx.trv.write_structure(&data_to_send);
+        } else {
+            let mut buf = [0u8; STUFFED_MESSAGE_SIZE];
+            let len = postcard::to_slice(&data_to_send, &mut buf).unwrap().len();
+            return (buf, len);
+        }
     }
 }

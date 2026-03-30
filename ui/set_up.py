@@ -174,12 +174,10 @@ def set_up_gui():
             dpg.add_text("SafeMode", tag="fsm_display", color=FSM_COLORS["SafeMode"])
         dpg.add_separator()
 
-        # --- Battery ---
-        dpg.add_text("Battery Level", color=[255, 255, 100])
-        dpg.add_progress_bar(
-            tag="battery_bar", default_value=1.0, width=400, overlay="100%"
-        )
-        dpg.add_text("100%", tag="battery_text")
+        with dpg.group(horizontal=True):
+            dpg.add_text("Packet size:", color=[180, 180, 180])
+            dpg.add_text("0", tag="packet_size_display", color=[180, 180, 180])
+
         dpg.add_separator()
 
         # --- Joystick ---

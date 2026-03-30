@@ -26,19 +26,20 @@ def qt_update(
     arm_verts,
     motor_labels,
 ):
-    if len(stored_data.live_data.time_data) == 0:
-        return
-    update_drone_view(
-        arms,
-        arms2,
-        prop_dots,
-        arm_verts,
-        motor_labels,
-        stored_data.live_data.yaw_kalman[-1],
-        stored_data.live_data.pitch_kalman[-1],
-        stored_data.live_data.roll_kalman[-1],
-        stored_data.live_data.motors[-1],
-    )
+    with stored_data.message_log_lock:
+        if len(stored_data.live_data.time_data) == 0:
+            return
+        update_drone_view(
+            arms,
+            arms2,
+            prop_dots,
+            arm_verts,
+            motor_labels,
+            stored_data.live_data.yaw_data[-1],
+            stored_data.live_data.pitch_data[-1],
+            stored_data.live_data.roll_data[-1],
+            stored_data.live_data.motors[-1],
+        )
 
 
 if __name__ == "__main__":
@@ -52,6 +53,6 @@ if __name__ == "__main__":
     timer.timeout.connect(
         lambda: qt_update(arms, arms2, prop_dots, arm_verts, motor_labels)
     )
-    timer.start(50)
+    timer.start(100)
 
     qt_app.exec()

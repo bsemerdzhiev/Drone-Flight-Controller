@@ -10,6 +10,8 @@ use alloc::boxed::Box;
 use crc::{CRC_32_ISCSI, Crc};
 use serde::{Deserialize, Serialize};
 
+use crate::{command::DeviceCommand, telemetry_data::TELEMETERY_DATA_SIZE};
+
 /*
 * A serialized Command struct consists of 2 bytes + 1 byte for the CRC. Therefore, the MESSAGE_SIZE used for
 * serializing the Command struct is set to be 8 bytes. After escaping the control bytes inside the
@@ -29,7 +31,7 @@ pub static BUFFER_SIZE: usize = 1 << 15;
 #[cfg(not(feature = "pc"))]
 pub static BUFFER_SIZE: usize = 1 << 8;
 
-pub static MESSAGE_SIZE: usize = 1 << 6;
+pub static MESSAGE_SIZE: usize = core::mem::size_of::<DeviceCommand>();
 // used as return size when serializing a structure
 pub static STUFFED_MESSAGE_SIZE: usize = MESSAGE_SIZE * 2 + 2;
 

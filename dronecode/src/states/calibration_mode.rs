@@ -25,6 +25,7 @@ impl FSMControl for FSMCalibration {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         let (accel, gyro) = read_raw().unwrap();
         let dmp_data = block!(read_dmp_bytes()); //
+
         let ypr = if (dmp_data.is_ok()) {
             YawPitchRoll::from(dmp_data.unwrap())
         } else {

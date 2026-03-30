@@ -6,6 +6,7 @@ use std::os::unix::net::UnixStream;
 
 use crossterm::terminal::enable_raw_mode;
 use evdev::{enumerate, AbsoluteAxisCode, Device};
+use my_hdlc::STUFFED_MESSAGE_SIZE;
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 use tudelft_serial_upload::serial2::SerialPort;
 
@@ -17,6 +18,7 @@ use crate::{
     read_joystick::{combine_inputs, read_joystick},
     read_keyboard::read_keyboard,
 };
+use my_hdlc::telemetry_data::TELEMETERY_DATA_SIZE;
 
 const DEBUG_BOARD_MODE: bool = true;
 
@@ -79,6 +81,7 @@ pub fn downlink_main_loop(
                 "roll": cmd_for_ui.get_roll(),
                 "pitch": cmd_for_ui.get_pitch(),
                 "yaw": cmd_for_ui.get_yaw(),
+                "telemetry_data_size" : STUFFED_MESSAGE_SIZE,
 
                 "yaw_p_trim": cmd_for_ui.yaw_p_trim,
                 "roll_pitch_p_trim": cmd_for_ui.roll_pitch_p_trim,
