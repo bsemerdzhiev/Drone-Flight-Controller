@@ -65,6 +65,7 @@ pub fn main_loop() -> ! {
     let mut flash_head = 0u32;
     let mut flash_tail = 0u32;
     let mut wireless_toggle = false;
+    let mut wireless_toggle = false;
     let mut wireless_option = WirelessOptions::PCSide;
 
     let mut ctx = StateContext {
