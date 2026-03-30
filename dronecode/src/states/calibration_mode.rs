@@ -1,4 +1,5 @@
 use crate::filters::dmp_readings::DmpReadings;
+use crate::filters::pressure_filter::PressureSensor;
 use crate::states::full_control::FSMFullControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
@@ -12,6 +13,7 @@ use my_hdlc::command::FSMState;
 use my_hdlc::command::{DebugCalibration, DeviceCommand};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
+use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;
 use tudelft_quadrupel::mpu::{
     read_dmp_bytes, read_raw,
@@ -41,16 +43,8 @@ impl FSMControl for FSMCalibration {
 
         if ctx.calibration_state.should_finish() {
             ctx.calibration_state.finalize_calibration();
-            let msg = ctx
-                .trv
-                .write_structure(&DeviceCommand::DebugCalibration(DebugCalibration {
-                    ypr_offset: [
-                        ctx.calibration_state.ypr_offset.yaw,
-                        ctx.calibration_state.ypr_offset.pitch,
-                        ctx.calibration_state.ypr_offset.roll,
-                    ],
-                }));
-            send_bytes(&msg.0[0..msg.1]);
+
+            ctx.pressure_sensor_filter.reset();
 
             return Box::new(FSMSafe {});
         }

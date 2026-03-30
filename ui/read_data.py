@@ -4,6 +4,7 @@ import json
 import socket
 import time
 import math
+import numpy as np
 
 import data as stored_data
 
@@ -127,9 +128,22 @@ def serial_reader():
                         )
 
                         # Accellerometer Raw
-                        to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0))
-                        to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0))
-                        to_add_to.accel_raw["z"].append(t.get("accel_z", 0.0))
+                        to_add_to.accel_raw["x"].append(t.get("accel_x", 0.0) / 16384)
+                        to_add_to.accel_raw["y"].append(t.get("accel_y", 0.0) / 16384)
+                        to_add_to.accel_raw["z"].append(t.get("accel_z", 0.0) / 16384)
+
+                        if (
+                            abs(stored_data.accel_var_calc[-1] - t.get("accel_z"))
+                            > 1e-6
+                        ):
+                            stored_data.accel_var_calc = np.append(
+                                stored_data.accel_var_calc,
+                                t.get("accel_z", 0.0) / 16384 - 1.0,
+                            )
+
+                        print(
+                            "Accel variance", stored_data.accel_var_calc.var(), "\n\r"
+                        )
 
                         # Gyro Raw
                         to_add_to.gyro_raw["x"].append(t.get("gyro_x", 0.0))
@@ -143,6 +157,18 @@ def serial_reader():
 
                         if not t["logged_in_flash"]:
                             to_add_to = stored_data.live_data
+
+                            if (
+                                abs(stored_data.baro_var_calc[-1] - t.get("pres"))
+                                > 1e-6
+                            ):
+                                stored_data.baro_var_calc = np.append(
+                                    stored_data.baro_var_calc, t.get("pres")
+                                )
+
+                            print(
+                                "Baro variance", stored_data.baro_var_calc.var(), "\n\r"
+                            )
 
                         # Pressure Raw
                         to_add_to.pres_data.append(t.get("pres", 0.0))
