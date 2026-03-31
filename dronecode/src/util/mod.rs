@@ -5,6 +5,8 @@ pub mod rpm_calculator;
 pub mod yaw_pitch_roll;
 
 #[cfg(target_arch = "arm")]
+pub mod approx_funcs;
+#[cfg(target_arch = "arm")]
 pub mod pid_controller;
 
 #[cfg(target_arch = "arm")]
