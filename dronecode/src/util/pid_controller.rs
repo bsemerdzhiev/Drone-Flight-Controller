@@ -1,10 +1,27 @@
+use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::time::Instant;
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
-pub const K_P: [f32; 4] = [4f32, 0.005f32, 0.005f32, 1f32];
+pub const K_P: [f32; 4] = [4f32, 0.005f32, 0.005f32, 8f32];
 pub const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 pub const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
+
+pub fn add_trims(manual_input: &ManualInput) -> ([f32; 4], [f32; 4], [f32; 4]) {
+    let mut k_p: [f32; 4] = K_P;
+    let mut k_i: [f32; 4] = K_I;
+    let mut k_d: [f32; 4] = K_D;
+
+    k_p[0] += manual_input.yaw_p_trim;
+
+    k_p[1] += manual_input.roll_pitch_p_trim;
+    k_p[2] += manual_input.roll_pitch_p_trim;
+
+    k_d[1] += manual_input.roll_pitch_d_trim;
+    k_d[2] += manual_input.roll_pitch_d_trim;
+
+    return (k_p, k_i, k_d);
+}
 
 /*
 * Selects the type of error correction
@@ -59,7 +76,8 @@ impl PIDController {
         let current_time = Instant::now();
         let delta_t = current_time
             .duration_since(self.last_timestamp)
-            .as_secs_f32();
+            .as_secs_f32()
+            .clamp(0.001, 0.02);
 
         // compute P part
         if ((controller_flags & (ControllerFlags::AddP as u8)) != 0) {

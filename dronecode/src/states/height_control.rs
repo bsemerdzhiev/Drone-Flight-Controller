@@ -11,7 +11,7 @@ use crate::{
         state_structures::state_context::StateContext,
     },
     util::{
-        pid_controller::{ControllerFlags, PIDController, K_D, K_I, K_P},
+        pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P},
         rpm_calculator::actuate_motors_with_rates,
         yaw_pitch_roll::YawPitchRoll,
     },
@@ -39,33 +39,7 @@ impl FSMControl for FSMHeightControl {
 
         input.pressure = ctx.pressure_sensor_filter.get_reading();
 
-        let mut k_p: [f32; 4] = K_P;
-        let mut k_i: [f32; 4] = K_I;
-        let mut k_d: [f32; 4] = K_D;
-
-        k_p[0] += ctx.input_from_controller.as_ref().unwrap().yaw_p_trim;
-
-        k_p[1] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_p_trim;
-        k_p[2] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_p_trim;
-
-        k_d[1] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_d_trim;
-        k_d[2] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_d_trim;
+        let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller.as_ref().unwrap());
 
         // the target
         let mut target: YawPitchRoll =
@@ -85,7 +59,7 @@ impl FSMControl for FSMHeightControl {
         target.lift += correction.lift;
         target.yaw += correction.yaw;
         target.roll += correction.roll;
-        target.pitch -= correction.pitch;
+        target.pitch += correction.pitch;
 
         // output to motors
         actuate_motors_with_rates(

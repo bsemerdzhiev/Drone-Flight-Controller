@@ -52,7 +52,12 @@ def qt_update(
             provide_data[0],
             provide_data[1],
             provide_data[2],
-            stored_data.live_data.motors[-1],
+            [
+                stored_data.live_data.motors[0][-1],
+                stored_data.live_data.motors[1][-1],
+                stored_data.live_data.motors[2][-1],
+                stored_data.live_data.motors[3][-1],
+            ],
         )
 
 

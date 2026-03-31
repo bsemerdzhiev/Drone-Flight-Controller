@@ -22,7 +22,7 @@ class ReadData:
         self.pitch_kalman = _init_deque()
         self.roll_kalman = _init_deque()
         self.time_data = _init_deque()
-        self.motors = deque([[0, 0, 0, 0]] * MAX_SIZE, maxlen=MAX_SIZE)
+        self.motors = [_init_deque(), _init_deque(), _init_deque(), _init_deque()]
         self.accel_raw = {
             "x": _init_deque(),
             "y": _init_deque(),
