@@ -35,7 +35,9 @@ impl FSMControl for FSMHeightControl {
             return self;
         }
 
-        let input = input_opt.unwrap();
+        let mut input = input_opt.unwrap();
+
+        input.pressure = ctx.pressure_sensor_filter.get_reading();
 
         let mut k_p: [f32; 4] = K_P;
         let mut k_i: [f32; 4] = K_I;
@@ -80,34 +82,16 @@ impl FSMControl for FSMHeightControl {
             ControllerFlags::AddP as u8,
         );
 
-        // let to_write =
-        //     ctx.trv
-        //         .write_structure(&DeviceCommand::DebugYawPitchRoll(DebugYawPitchRoll {
-        //             info: [
-        //                 correction.lift,
-        //                 correction.yaw,
-        //                 correction.pitch,
-        //                 correction.roll,
-        //                 correction.pressure,
-        //             ],
-        //         }));
-        //
-        // send_bytes(&to_write.0[0..to_write.1]);
-        //
-        // add to current input
-
         target.lift += correction.lift;
         target.yaw += correction.yaw;
-        target.roll += correction.yaw;
-        target.pitch -= correction.yaw;
+        target.roll += correction.roll;
+        target.pitch -= correction.pitch;
 
         // output to motors
         actuate_motors_with_rates(
             &target,
             ctx.input_from_controller.as_ref().unwrap().get_lift(),
         );
-
-        //*ctx.input_from_controller = None;
 
         return self;
     }

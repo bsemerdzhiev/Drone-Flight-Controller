@@ -144,27 +144,66 @@ def set_up_sensors(label_suffix: str):
 
     dpg.add_separator()
 
-    # --- Rates (two series per plot: DMP + Kalman) ---
+    # --- Rates (three plots each: combined, DMP-only, Kalman-only) ---
     dpg.add_text("Rates", color=[180, 180, 180])
-    with dpg.group(horizontal=True):
-        for label, tag_x, tag_y, dmp_tag, kalman_tag in [
-            ("Yaw", "x_axis_yaw", "y_axis_yaw", "yaw_series_dmp", "yaw_series_kalman"),
-            (
-                "Pitch",
-                "x_axis_pitch",
-                "y_axis_pitch",
-                "pitch_series_dmp",
-                "pitch_series_kalman",
-            ),
-            (
-                "Roll",
-                "x_axis_roll",
-                "y_axis_roll",
-                "roll_series_dmp",
-                "roll_series_kalman",
-            ),
-        ]:
-            with dpg.plot(label=label, height=180, width=380):
+    for (
+        rate_label,
+        tag_x,
+        tag_y,
+        dmp_tag,
+        kalman_tag,
+        tag_x_dmp,
+        tag_y_dmp,
+        tag_x_kal,
+        tag_y_kal,
+        solo_dmp_tag,
+        solo_kal_tag,
+    ) in [
+        (
+            "Yaw",
+            "x_axis_yaw",
+            "y_axis_yaw",
+            "yaw_series_dmp",
+            "yaw_series_kalman",
+            "x_axis_yaw_dmp",
+            "y_axis_yaw_dmp",
+            "x_axis_yaw_kal",
+            "y_axis_yaw_kal",
+            "yaw_series_solo_dmp",
+            "yaw_series_solo_kal",
+        ),
+        (
+            "Pitch",
+            "x_axis_pitch",
+            "y_axis_pitch",
+            "pitch_series_dmp",
+            "pitch_series_kalman",
+            "x_axis_pitch_dmp",
+            "y_axis_pitch_dmp",
+            "x_axis_pitch_kal",
+            "y_axis_pitch_kal",
+            "pitch_series_solo_dmp",
+            "pitch_series_solo_kal",
+        ),
+        (
+            "Roll",
+            "x_axis_roll",
+            "y_axis_roll",
+            "roll_series_dmp",
+            "roll_series_kalman",
+            "x_axis_roll_dmp",
+            "y_axis_roll_dmp",
+            "x_axis_roll_kal",
+            "y_axis_roll_kal",
+            "roll_series_solo_dmp",
+            "roll_series_solo_kal",
+        ),
+    ]:
+        dpg.add_text(rate_label, color=[150, 150, 150])
+        # Row 1: combined plot + DMP-only + Kalman-only
+        with dpg.group(horizontal=True):
+            # Combined (DMP + Kalman overlaid)
+            with dpg.plot(label=rate_label + " Together", height=180, width=380):
                 dpg.add_plot_axis(dpg.mvXAxis, label="time", tag=tag_x + label_suffix)
                 dpg.add_plot_axis(dpg.mvYAxis, label="deg", tag=tag_y + label_suffix)
                 dpg.add_line_series(
@@ -181,14 +220,47 @@ def set_up_sensors(label_suffix: str):
                     parent=tag_y + label_suffix,
                     tag=kalman_tag + label_suffix,
                 )
+            # DMP only
+            with dpg.plot(label=rate_label + " DMP", height=180, width=380):
+                dpg.add_plot_axis(
+                    dpg.mvXAxis, label="time", tag=tag_x_dmp + label_suffix
+                )
+                dpg.add_plot_axis(
+                    dpg.mvYAxis, label="deg", tag=tag_y_dmp + label_suffix
+                )
+                dpg.add_line_series(
+                    [],
+                    [],
+                    label="DMP",
+                    parent=tag_y_dmp + label_suffix,
+                    tag=solo_dmp_tag + label_suffix,
+                )
+            # Kalman only
+            with dpg.plot(label=rate_label + " Filtered", height=180, width=380):
+                dpg.add_plot_axis(
+                    dpg.mvXAxis, label="time", tag=tag_x_kal + label_suffix
+                )
+                dpg.add_plot_axis(
+                    dpg.mvYAxis, label="deg", tag=tag_y_kal + label_suffix
+                )
+                dpg.add_line_series(
+                    [],
+                    [],
+                    label="Kalman",
+                    parent=tag_y_kal + label_suffix,
+                    tag=solo_kal_tag + label_suffix,
+                )
+
     dpg.add_separator()
 
-    dpg.set_axis_limits("y_axis_yaw" + label_suffix, -150, 150)
-    dpg.configure_item("y_axis_yaw" + label_suffix, no_initial_fit=True)
-    dpg.set_axis_limits("y_axis_pitch" + label_suffix, -150, 150)
-    dpg.configure_item("y_axis_pitch" + label_suffix, no_initial_fit=True)
-    dpg.set_axis_limits("y_axis_roll" + label_suffix, -150, 150)
-    dpg.configure_item("y_axis_roll" + label_suffix, no_initial_fit=True)
+    # Lock Y axis limits for all rate plots
+    for axis in ["yaw", "pitch", "roll"]:
+        for suffix in [
+            "",
+        ]:
+            tag = f"y_axis_{axis}{suffix}" + label_suffix
+            dpg.set_axis_limits(tag, -150, 150)
+            dpg.configure_item(tag, no_initial_fit=True)
 
 
 def toggle_chosen_sensors():

@@ -94,7 +94,7 @@ impl FSMControl for FSMFullControl {
                 pid_controller: Box::new(PIDController::new()),
 
                 prev_state: self,
-                initial_pressure: read_pressure() as f32,
+                initial_pressure: ctx.pressure_sensor_filter.get_reading(),
             }),
 
             _ => self,

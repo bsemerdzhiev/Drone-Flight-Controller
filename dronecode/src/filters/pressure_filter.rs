@@ -71,6 +71,7 @@ impl PressureSensor {
     }
 
     pub fn pressure_to_meters(&mut self, pressure_reading: i32) -> f32 {
+        // NOTE: more physics accurate formula
         // return 44330.0
         //     * (1.0
         //         - (micromath::F32Ext::powf(
@@ -147,10 +148,6 @@ impl PressureSensor {
 
         let baro_reading = self.pressure_to_meters(read_pressure() as i32);
 
-        // if (baro_reading - self.last_barometer).abs() > THRESHOLD_BARO {
-        //     return;
-        // }
-
         let mut kalman_gain: Matrix2x1<f32> =
             self.uncertainty_matrix * self.observation_matrix.transpose();
 
@@ -162,14 +159,11 @@ impl PressureSensor {
 
         let inovation = (baro_reading - (self.observation_matrix * self.current_state).x);
 
-        if inovation.abs() > 3.0 * inovation_variance.sqrt() {
-            return;
-        }
+        // if inovation.abs() > 10.0 * inovation_variance.sqrt() {
+        //     return;
+        // }
 
         self.current_state = self.current_state + (kalman_gain * inovation);
-
-        // self.uncertainty_matrix = (Matrix2::identity() - (kalman_gain * self.observation_matrix))
-        //     * self.uncertainty_matrix;
 
         let i = Matrix2::identity();
         self.uncertainty_matrix = (i - kalman_gain * self.observation_matrix)
