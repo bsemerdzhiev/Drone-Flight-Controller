@@ -25,24 +25,21 @@ pub struct FSMCalibration {}
 
 impl FSMControl for FSMCalibration {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        let (accel, gyro) = read_raw().unwrap();
-        let dmp_data = block!(read_dmp_bytes()); //
-
-        let ypr = if (dmp_data.is_ok()) {
-            YawPitchRoll::from(dmp_data.unwrap())
-        } else {
-            YawPitchRoll::new()
-        }; //
-           // let ypr = match read_dmp_bytes() {
-           //     Ok(quaternion) => YawPitchRoll::from(quaternion),
-           //     Err(_) => YawPitchRoll::new(),
-           // };
+        //
+        // let ypr = match read_dmp_bytes() {
+        //     Ok(quaternion) => YawPitchRoll::from(quaternion),
+        //     Err(_) => YawPitchRoll::new(),
+        // };
 
         // read new sample
-        ctx.calibration_state.read_new_sample(accel, gyro, ypr);
+        ctx.calibration_state.read_new_sample();
 
         if ctx.calibration_state.should_finish() {
             ctx.calibration_state.finalize_calibration();
+            ctx.kalman_position.calibration_offset = (
+                ctx.calibration_state.accelerometer_offset,
+                ctx.calibration_state.gyro_offset,
+            );
 
             ctx.pressure_sensor_filter.reset();
 

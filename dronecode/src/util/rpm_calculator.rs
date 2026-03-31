@@ -9,21 +9,19 @@ use crate::util::{yaw_pitch_roll::YawPitchRoll, MAX_LIFT, PITCH_DEGREE, ROLL_DEG
 
 //------------------------------------------------------
 
+// chosen by trial and error in Desmos
 const THRUST_COEFFICIENT: f32 = 14e-8;
 const DRAG_COEFFICIENT: f32 = 2e-6;
 
 const MIN_PWM: u16 = 50;
-
 const MAX_RPMS: f32 = (980 * 10) as f32;
 
-const THRESHOLD_LIFT: f32 = 0.2;
+pub const THRESHOLD_LIFT: f32 = 0.1;
 
 fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [f32]) {
     let cur_maxes = motor::get_motor_max();
 
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
-
-    let mut all_zero: bool = true;
 
     let mut k: usize = 0;
     for x in rpms_square {
@@ -33,17 +31,15 @@ fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [f32]) {
 
         pwm_to_set[k] = (cur_maxes as f32 * rpm_ratio) as u16;
 
-        if pwm_to_set[k] != 0 {
-            all_zero = false;
-        }
         k += 1;
     }
 
+    //if lift is below threshold, then all motors are off
     if lift_raw_value < THRESHOLD_LIFT {
         for cur_motor_rpm in &mut pwm_to_set {
             *cur_motor_rpm = 0;
         }
-    } else if !all_zero {
+    } else {
         for cur_motor_rpm in &mut pwm_to_set {
             *cur_motor_rpm = MIN_PWM.max(*cur_motor_rpm);
         }

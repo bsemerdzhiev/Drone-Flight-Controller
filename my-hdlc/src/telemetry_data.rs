@@ -10,6 +10,7 @@ pub const TELEMETERY_DATA_SIZE: usize = core::mem::size_of::<TelemetryData>();
 pub struct GeneralData {
     pub logged_in_flash: bool,
     pub dt: u32,
+    pub time_for_main_loop: f32,
 
     pub bat: u16,
     pub cur_state: FSMState,
@@ -61,10 +62,31 @@ pub struct PressureData {
 
 #[repr(C)]
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct PIDInfo {
+    pub logged_in_flash: bool,
+
+    pub selected_height: f32,
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct CalibrationInfo {
+    pub logged_in_flash: bool,
+
+    pub averaged_accel: [i32; 3],
+    pub averaged_gyro: [i32; 3],
+
+    pub averaged_ypr: [f32; 3],
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
 pub enum TelemetryData {
     GeneralData(GeneralData),
     MotorData(MotorData),
     PositionData(PositionData),
     RawData(RawData),
     PressureData(PressureData),
+    CalibrationInfo(CalibrationInfo),
+    PIDInfo(PIDInfo),
 }

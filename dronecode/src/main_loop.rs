@@ -16,7 +16,7 @@ use tudelft_quadrupel::flash::flash_write_bytes;
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
-use crate::states::state_structures::state_context::StateContext;
+use crate::states::state_structures::state_context::{PIDInfo, StateContext};
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
@@ -78,6 +78,10 @@ pub fn main_loop() -> ! {
     ));
     let mut dmp_sampler = DmpReadings::new(calibration_state.ypr_offset);
 
+    let mut pid_info: Box<PIDInfo> = Box::new(PIDInfo {
+        selected_height: 0f32,
+    });
+
     let mut ctx = StateContext {
         kalman_position: position_kalman,
         calibration_state: &mut calibration_state,
@@ -86,8 +90,13 @@ pub fn main_loop() -> ! {
 
         trv: &mut transceiver,
         input_from_controller: &mut received_manual_input,
+
         flash_head: &mut flash_head,
         flash_tail: &mut flash_tail,
+
+        time_for_main_loop: 0f32,
+
+        pid_info: &mut pid_info,
     };
 
     // -------------------------------------------------------------------------
@@ -102,6 +111,8 @@ pub fn main_loop() -> ! {
     let mut battery_panic = false;
     // -------------------------------------------------------------------------
     for i in 0.. {
+        let time_start = Instant::now();
+
         let _ = Blue.toggle();
         // -------------------------------------------------------------------------
         // Check battery level and switch to panic
@@ -142,13 +153,6 @@ pub fn main_loop() -> ! {
             }
         }
 
-        let now = Instant::now();
-        if now.duration_since(time_for_last_received_message) >= WATCHDOG_TIMER_FOR_PANICKING {
-            current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
-        }
-
-        let dt = now.duration_since(current_time);
-
         // update filter readings
         ctx.kalman_position.append_new_reading();
         ctx.pressure_sensor_filter
@@ -157,13 +161,27 @@ pub fn main_loop() -> ! {
         // run the loop of the state
         current_state = current_state.run_state_loop(&mut ctx);
 
-        if now.duration_since(last_send_message) >= DRONE_STATE_TIMER {
-            last_send_message = now;
+        let time_end = Instant::now();
+
+        if time_end.duration_since(time_for_last_received_message) >= WATCHDOG_TIMER_FOR_PANICKING {
+            current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
+        }
+
+        let dt = time_end.duration_since(current_time);
+
+        ctx.time_for_main_loop = time_end.duration_since(time_start).as_secs_f32();
+
+        if matches!(current_state.as_ref().get_state(), FSMState::SafeMode)
+            || time_end.duration_since(last_send_message) >= DRONE_STATE_TIMER
+        {
+            last_send_message = time_end;
 
             send_drone_data(current_state.get_state(), dt, &mut ctx);
         }
 
-        put_telemetry_data_on_flash(&mut ctx, dt, current_state.get_state());
+        if !matches!(current_state.as_ref().get_state(), FSMState::SafeMode) {
+            put_telemetry_data_on_flash(&mut ctx, dt, current_state.get_state());
+        }
 
         // -------------------------------------------------------------------------
 
@@ -194,6 +212,12 @@ fn send_drone_data(curent_state: FSMState, dt: Duration, ctx: &mut StateContext)
     msg = <TelemetryData as TelemetryRead>::read_raw_data(ctx, false, true);
     send_bytes(&msg.0[0..msg.1]);
 
+    msg = <TelemetryData as TelemetryRead>::read_pid_info(ctx, false, true);
+    send_bytes(&msg.0[0..msg.1]);
+
+    msg = <TelemetryData as TelemetryRead>::read_calibration_info(ctx, false, true);
+    send_bytes(&msg.0[0..msg.1]);
+
     Green.off();
 }
 
@@ -207,7 +231,7 @@ fn send_ack(transceiver: &mut HdlcTransceiver) {
 }
 
 fn put_telemetry_data_on_flash(ctx: &mut StateContext, dt: Duration, curent_state: FSMState) {
-    if *ctx.flash_tail + (STUFFED_MESSAGE_SIZE * 5) > 0x01FFFF {
+    if *ctx.flash_tail + (STUFFED_MESSAGE_SIZE * 7) > 0x01FFFF {
         return;
     }
 
@@ -231,6 +255,14 @@ fn put_telemetry_data_on_flash(ctx: &mut StateContext, dt: Duration, curent_stat
     *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
 
     msg = <TelemetryData as TelemetryRead>::read_raw_data(ctx, true, false);
+    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
+    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+
+    msg = <TelemetryData as TelemetryRead>::read_pid_info(ctx, true, false);
+    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
+    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+
+    msg = <TelemetryData as TelemetryRead>::read_calibration_info(ctx, true, false);
     _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
     *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
 

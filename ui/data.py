@@ -13,6 +13,10 @@ def _init_deque(value=0) -> deque:
     return deque([value] * MAX_SIZE, maxlen=MAX_SIZE)
 
 
+def _init_deque_array(value=[0, 0, 0]) -> deque:
+    return deque([value] * MAX_SIZE, maxlen=MAX_SIZE)
+
+
 class ReadData:
     def __init__(self) -> None:
         self.yaw_data = _init_deque()
@@ -37,6 +41,19 @@ class ReadData:
         self.pres_data_filtered = _init_deque()
         self.is_paused = False
         self.battery_level = _init_deque()
+
+        self.general_data = {
+            "time_for_main_loop": _init_deque(),
+        }
+
+        self.pid_info = {
+            "selected_height": _init_deque(),
+        }
+        self.calibration_data = {
+            "averaged_accel": _init_deque_array(),
+            "averaged_gyro": _init_deque_array(),
+            "averaged_ypr": _init_deque_array(),
+        }
 
 
 joystick = {

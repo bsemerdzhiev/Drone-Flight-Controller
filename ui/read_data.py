@@ -69,11 +69,15 @@ def serial_reader():
                         # Time
                         to_add_to.time_data.append(time.time() - start_time)
 
+                        to_add_to.general_data["time_for_main_loop"].append(
+                            t["time_for_main_loop"]
+                        )
+
                         # Battery Raw
                         to_add_to.battery_level.append(t.get("bat", 0))
                         log_message(
                             "Drone>PC",
-                            f"[General] state={t.get('cur_state')} bat={t.get('bat')} dt={t.get('dt')}ms flash={t.get('logged_in_flash')}",
+                            f"[General] state={t.get('cur_state')} bat={t.get('bat')} time_for_main_loop={t.get('time_for_main_loop')}s, dt={t.get('dt')}s flash={t.get('logged_in_flash')}",
                         )
 
                     if "MotorData" in t:
@@ -182,6 +186,44 @@ def serial_reader():
                         log_message(
                             "Drone>PC",
                             f"[Pressure] raw={t.get('pres', 0.0):.2f} filtered={t.get('pressure_filtered', 0.0):.2f} flash={t.get('logged_in_flash')}",
+                        )
+                    if "PIDInfo" in t:
+                        t = t["PIDInfo"]
+
+                        to_add_to = stored_data.logged_data
+
+                        if not t["logged_in_flash"]:
+                            to_add_to = stored_data.live_data
+
+                        # Pressure Raw
+                        to_add_to.pid_info["selected_height"].append(
+                            t.get("selected_height")
+                        )
+
+                        log_message(
+                            "Drone>PC",
+                            f"[PIDInfo] selected_height={t.get('selected_height', 0.0):.2f} flash={t.get('logged_in_flash')}",
+                        )
+                    if "CalibrationInfo" in t:
+                        t = t["CalibrationInfo"]
+
+                        # print(t, "\n\r")
+                        to_add_to = stored_data.logged_data
+
+                        if not t["logged_in_flash"]:
+                            to_add_to = stored_data.live_data
+
+                        # Pressure Raw
+                        for chosen in [
+                            "averaged_accel",
+                            "averaged_gyro",
+                            "averaged_ypr",
+                        ]:
+                            to_add_to.calibration_data[chosen].append(t.get(chosen))
+
+                        log_message(
+                            "Drone>PC",
+                            f"[CalibrationInfo] accel={t.get('averaged_accel')}, gyro={t.get('averaged_gyro')}, ypr={t.get('averaged_ypr')} flash={t.get('logged_in_flash')}",
                         )
 
                 if "ManualInput" in t:

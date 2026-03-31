@@ -85,7 +85,7 @@ fn send_flash_data(flash_head: &mut usize, my_hdlc: &mut HdlcTransceiver) {
     let mut buffer = [0u8; (STUFFED_MESSAGE_SIZE) as usize];
     let mut msg = ([0u8; STUFFED_MESSAGE_SIZE], 0usize);
 
-    for _i in 0..5 {
+    for _i in 0..7 {
         _ = flash_read_bytes(*flash_head as u32, &mut buffer).unwrap();
         *flash_head += STUFFED_MESSAGE_SIZE;
 

@@ -27,15 +27,13 @@ pub struct FSMRawFullControl {
 impl FSMControl for FSMRawFullControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // read sensor data
-        let input_opt: Option<YawPitchRoll> = ctx.kalman_position.get_reading();
+        let input: YawPitchRoll = ctx.kalman_position.get_reading();
 
-        if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
+        if ctx.input_from_controller.is_none() {
             return self;
         }
         let mut target: YawPitchRoll =
             YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
-
-        let input = input_opt.unwrap();
 
         let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller.as_ref().unwrap());
         // calculate the error correction
@@ -69,6 +67,7 @@ impl FSMControl for FSMRawFullControl {
 
                 prev_state: self,
                 initial_pressure: ctx.pressure_sensor_filter.get_reading(),
+                initial_lift: ctx.input_from_controller.as_ref().unwrap().get_lift(),
             }),
 
             _ => self,

@@ -152,4 +152,8 @@ impl YawPitchRoll {
             pressure: self.pressure,
         }
     }
+
+    pub fn to_array(&mut self) -> [f32; 3] {
+        return [self.yaw, self.pitch, self.roll];
+    }
 }
