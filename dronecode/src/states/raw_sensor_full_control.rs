@@ -75,8 +75,8 @@ impl FSMControl for FSMRawFullControl {
         );
 
         target.yaw += correction.yaw;
-        target.roll += correction.yaw;
-        target.pitch -= correction.yaw;
+        target.roll += correction.roll;
+        target.pitch += correction.pitch;
 
         // output to motors
         actuate_motors_with_rates(
@@ -94,7 +94,7 @@ impl FSMControl for FSMRawFullControl {
                 pid_controller: Box::new(PIDController::new()),
 
                 prev_state: self,
-                initial_pressure: read_pressure() as f32,
+                initial_pressure: ctx.pressure_sensor_filter.get_reading(),
             }),
 
             _ => self,

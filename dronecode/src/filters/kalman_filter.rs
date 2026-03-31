@@ -9,8 +9,8 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
-const C1: f32 = 1f32;
-const C2: f32 = 100_000f32;
+const C1: f32 = 2.5f32;
+const C2: f32 = 1_000f32;
 
 pub struct KalmanFilter {
     bias_p: f32,
@@ -57,9 +57,6 @@ impl KalmanFilter {
 
         let q_clean = (self.reading.1.y as f32 * DEG_TO_RAD) - self.bias_q;
         let raw_pitch = atan2f(-self.reading.0.x as f32, sqrtf((ay * ay + az * az) as f32));
-
-        let cur_time = Instant::now();
-        let dt = cur_time.duration_since(self.last_read_time).as_secs_f32();
 
         let estimated_pitch = self.pitch + q_clean * dt;
         let e = estimated_pitch - raw_pitch;
@@ -114,7 +111,7 @@ impl ImuHandler for KalmanFilter {
             yaw: self.yaw,
             pitch: -self.pitch * TO_DEGREES,
             roll: self.roll * TO_DEGREES,
-            pressure: read_pressure() as f32,
+            pressure: 0f32,
         })
     }
 }

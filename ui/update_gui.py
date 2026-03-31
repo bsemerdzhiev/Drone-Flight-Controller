@@ -71,19 +71,55 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
     # Position
     # DMP
     dpg.set_value("yaw_series_dmp" + label_suffix, [t, list(read_data.yaw_data)])
+    dpg.set_value("yaw_series_solo_dmp" + label_suffix, [t, list(read_data.yaw_data)])
+
     dpg.set_value("pitch_series_dmp" + label_suffix, [t, list(read_data.pitch_data)])
+    dpg.set_value(
+        "pitch_series_solo_dmp" + label_suffix, [t, list(read_data.pitch_data)]
+    )
+
     dpg.set_value("roll_series_dmp" + label_suffix, [t, list(read_data.roll_data)])
+    dpg.set_value("roll_series_solo_dmp" + label_suffix, [t, list(read_data.roll_data)])
 
     # Kalman
     dpg.set_value("yaw_series_kalman" + label_suffix, [t, list(read_data.yaw_kalman)])
+    dpg.set_value("yaw_series_solo_kal" + label_suffix, [t, list(read_data.yaw_kalman)])
+
     dpg.set_value(
         "pitch_series_kalman" + label_suffix, [t, list(read_data.pitch_kalman)]
     )
+    dpg.set_value(
+        "pitch_series_solo_kal" + label_suffix, [t, list(read_data.pitch_kalman)]
+    )
+
     dpg.set_value("roll_series_kalman" + label_suffix, [t, list(read_data.roll_kalman)])
+    dpg.set_value(
+        "roll_series_solo_kal" + label_suffix, [t, list(read_data.roll_kalman)]
+    )
 
     dpg.fit_axis_data("x_axis_yaw" + label_suffix)
     dpg.fit_axis_data("x_axis_pitch" + label_suffix)
     dpg.fit_axis_data("x_axis_roll" + label_suffix)
+
+    dpg.fit_axis_data("x_axis_yaw_dmp" + label_suffix)
+    dpg.fit_axis_data("x_axis_pitch_dmp" + label_suffix)
+    dpg.fit_axis_data("x_axis_roll_dmp" + label_suffix)
+
+    dpg.fit_axis_data("x_axis_yaw_kal" + label_suffix)
+    dpg.fit_axis_data("x_axis_pitch_kal" + label_suffix)
+    dpg.fit_axis_data("x_axis_roll_kal" + label_suffix)
+
+    fit_with_margin("y_axis_yaw_kal" + label_suffix, list(read_data.yaw_kalman))
+    fit_with_margin("y_axis_pitch_kal" + label_suffix, list(read_data.pitch_kalman))
+    fit_with_margin("y_axis_roll_kal" + label_suffix, list(read_data.roll_kalman))
+
+    fit_with_margin("y_axis_yaw_dmp" + label_suffix, list(read_data.yaw_data))
+    fit_with_margin("y_axis_pitch_dmp" + label_suffix, list(read_data.pitch_data))
+    fit_with_margin("y_axis_roll_dmp" + label_suffix, list(read_data.roll_data))
+
+    # fit_with_margin("y_axis_yaw_kal" + label_suffix, list(read_data.yaw_kalman[-1]))
+    # fit_with_margin("y_axis_pitch_kal" + label_suffix, list(read_data.pitch_kalman[-1]))
+    # fit_with_margin("y_axis_roll_kal" + label_suffix, list(read_data.roll_kalman[-1]))
 
     # Accel
     dpg.set_value("accel_x_series" + label_suffix, [t, list(read_data.accel_raw["x"])])

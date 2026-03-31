@@ -2,7 +2,7 @@ use tudelft_quadrupel::time::Instant;
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
-pub const K_P: [f32; 4] = [4f32, 0.005f32, 0.005f32, 0f32];
+pub const K_P: [f32; 4] = [4f32, 0.005f32, 0.005f32, 1f32];
 pub const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 pub const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
 
@@ -18,7 +18,7 @@ pub enum ControllerFlags {
 }
 
 // in kg
-const DRONE_WEIGHT: f32 = 5f32;
+const DRONE_WEIGHT: f32 = 0.5f32;
 
 const GRAVITY_CONSTANT: f32 = 9.8f32;
 
@@ -91,7 +91,7 @@ impl PIDController {
          *            measured drone         |             calculated
          *               weight              v               correction
          */
-        result.lift = DRONE_WEIGHT * GRAVITY_CONSTANT - (result.pressure);
+        result.lift = DRONE_WEIGHT * GRAVITY_CONSTANT + (result.pressure);
 
         return result;
     }
