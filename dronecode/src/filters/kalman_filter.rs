@@ -3,6 +3,7 @@ use core::time::Duration;
 
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
+use crate::util::axis::Axis;
 use crate::util::yaw_pitch_roll::*;
 use libm::{atan2f, sqrtf};
 use tudelft_quadrupel::barometer::read_pressure;
@@ -15,21 +16,24 @@ const C2: f32 = 10_000_000f32;
 pub struct KalmanFilter {
     bias_p: f32,
     bias_q: f32,
-    reading: (Accel, Gyro),
+    reading: (Axis<i32>, Axis<i32>),
     last_read_time: Instant,
     pub roll: f32,
     pub pitch: f32,
     yaw: f32,
 
-    pub calibration_offset: (Accel, Gyro),
+    pub calibration_offset: (Axis<i32>, Axis<i32>),
 }
 
 impl KalmanFilter {
-    pub fn new(offset: (Accel, Gyro)) -> Self {
+    pub fn new(offset: (Axis<i32>, Axis<i32>)) -> Self {
         KalmanFilter {
             bias_p: 0.0,
             bias_q: 0.0,
-            reading: (Accel { x: 0, y: 0, z: 0 }, Gyro { x: 0, y: 0, z: 0 }),
+            reading: (
+                Axis::<i32> { x: 0, y: 0, z: 0 },
+                Axis::<i32> { x: 0, y: 0, z: 0 },
+            ),
             last_read_time: Instant::now(),
             roll: 0f32,
             pitch: 0f32,
@@ -80,11 +84,10 @@ impl KalmanFilter {
 
 impl ImuHandler for KalmanFilter {
     fn append_new_reading(&mut self) {
-        self.reading = read_raw().unwrap();
+        let raw_read = read_raw().unwrap();
 
-        //NOTE: Uncommenting this leads to problems
-        //since we should not be subtracting the resting
-        //readings from .0.z, as that leads to issues with the tan(division with 0)
+        self.reading = (Axis::from(raw_read.0), Axis::from(raw_read.1));
+
         self.reading.0.x = self.reading.0.x.saturating_sub(self.calibration_offset.0.x);
         self.reading.0.y = self.reading.0.y.saturating_sub(self.calibration_offset.0.y);
         self.reading.0.z = self.reading.0.z.saturating_sub(self.calibration_offset.0.z);
@@ -97,7 +100,7 @@ impl ImuHandler for KalmanFilter {
         let dt = cur_time
             .duration_since(self.last_read_time)
             .as_secs_f32()
-            .clamp(0.001, 0.02);
+            .clamp(0.001, 0.03);
 
         self.update_pitch(dt);
         self.update_roll(dt);
@@ -105,16 +108,16 @@ impl ImuHandler for KalmanFilter {
 
         self.last_read_time = cur_time;
     }
-    fn get_reading(&mut self) -> Option<YawPitchRoll> {
+    fn get_reading(&mut self) -> YawPitchRoll {
         let PI: f32 = micromath::F32Ext::acos(-1.0);
         let TO_DEGREES: f32 = 180.0 / PI;
 
-        Some(YawPitchRoll {
+        YawPitchRoll {
             lift: 0f32,
             yaw: self.yaw,
             pitch: -self.pitch * TO_DEGREES,
             roll: self.roll * TO_DEGREES,
             pressure: 0f32,
-        })
+        }
     }
 }

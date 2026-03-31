@@ -28,20 +28,20 @@ impl ButterWorth {
 // theta      — your current pitch estimate (rad)
 // psi        — your current yaw estimate (rad)
 impl ImuHandler for ButterWorth {
-    fn get_reading(&mut self) -> Option<YawPitchRoll> {
+    fn get_reading(&mut self) -> YawPitchRoll {
         let roll = atan2f(self.output.0.y as f32, self.output.0.z as f32);
         let pitch = atan2f(
             -self.output.0.x as f32,
             sqrtf((self.output.0.y * self.output.0.y + self.output.0.z * self.output.0.z) as f32),
         );
         let yaw = self.output.1.z as f32;
-        Some(YawPitchRoll {
+        YawPitchRoll {
             lift: 0f32,
             yaw,
             pitch,
             roll,
             pressure: read_pressure() as f32,
-        })
+        }
     }
 
     fn append_new_reading(&mut self) {

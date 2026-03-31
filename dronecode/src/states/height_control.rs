@@ -12,7 +12,7 @@ use crate::{
     },
     util::{
         pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P},
-        rpm_calculator::actuate_motors_with_rates,
+        rpm_calculator::{actuate_motors_with_rates, THRESHOLD_LIFT},
         yaw_pitch_roll::YawPitchRoll,
     },
 };
@@ -21,21 +21,28 @@ pub struct FSMHeightControl {
     pub pid_controller: Box<PIDController>,
     pub prev_state: Box<dyn FSMControl>,
 
+    pub initial_lift: f32,
     pub initial_pressure: f32,
 }
 
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        //TODO: Implement going back to the state from which we came
+        // send chosen height
+        ctx.pid_info.selected_height = self.initial_pressure;
 
         // read sensor data
-        let input_opt: Option<YawPitchRoll> = ctx.kalman_position.get_reading();
+        let mut input: YawPitchRoll = ctx.kalman_position.get_reading();
 
-        if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
+        if ctx.input_from_controller.is_none() {
             return self;
         }
 
-        let mut input = input_opt.unwrap();
+        // if lift is changed, return to previous state
+        if (ctx.input_from_controller.as_ref().unwrap().get_lift() - self.initial_lift).abs()
+            > f32::EPSILON
+        {
+            return self.prev_state;
+        }
 
         input.pressure = ctx.pressure_sensor_filter.get_reading();
 
@@ -53,7 +60,7 @@ impl FSMControl for FSMHeightControl {
             k_p,
             k_i,
             k_d,
-            ControllerFlags::AddP as u8,
+            ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8,
         );
 
         target.lift += correction.lift;
@@ -62,10 +69,8 @@ impl FSMControl for FSMHeightControl {
         target.pitch += correction.pitch;
 
         // output to motors
-        actuate_motors_with_rates(
-            &target,
-            ctx.input_from_controller.as_ref().unwrap().get_lift(),
-        );
+        // raw_lift is set to threshold lift, as we want to hover at the same position
+        actuate_motors_with_rates(&target, THRESHOLD_LIFT);
 
         return self;
     }

@@ -39,12 +39,9 @@ impl DmpReadings {
 }
 
 impl ImuHandler for DmpReadings {
-    fn get_reading(&mut self) -> Option<YawPitchRoll> {
+    fn get_reading(&mut self) -> YawPitchRoll {
         let sampled_dmp_res = block!(read_dmp_bytes());
 
-        if sampled_dmp_res.is_err() {
-            return None;
-        }
         let sampled_quaternion = sampled_dmp_res.unwrap();
 
         let mut sampled_yaw_pitch_roll = YawPitchRoll::from(sampled_quaternion);
@@ -57,7 +54,7 @@ impl ImuHandler for DmpReadings {
             self.last_sampled_time = Some(Instant::now());
             self.last_sample = Some(sampled_yaw_pitch_roll);
 
-            return self.last_sample;
+            return sampled_yaw_pitch_roll;
         }
         let current_time: Instant = Instant::now();
 
@@ -72,7 +69,7 @@ impl ImuHandler for DmpReadings {
         self.last_sampled_time = Some(current_time);
         self.last_sample = Some(sampled_yaw_pitch_roll);
 
-        return Some(calculated_rate);
+        return calculated_rate;
     }
     fn append_new_reading(&mut self) {}
 }

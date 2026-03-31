@@ -4,6 +4,7 @@ import dearpygui.dearpygui as dpg
 
 import data as stored_data
 from states import FSM_COLORS
+from update_time_diagrams import update_loop_timing
 
 YAW_RATE = 80
 
@@ -184,6 +185,11 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
     )
     dpg.fit_axis_data("x_axis_baro_kalman" + label_suffix)
 
+    dpg.set_value(
+        "baro_target_line" + label_suffix,
+        [t, list(read_data.pid_info["selected_height"])],
+    )
+
     fit_with_margin(
         "y_axis_baro_kalman" + label_suffix,
         list(read_data.pres_data_filtered),
@@ -235,6 +241,9 @@ def update_step():
 
     update_sensor_plots(stored_data.live_data, "_live")
     update_sensor_plots(stored_data.logged_data, "_logged")
+
+    update_loop_timing(stored_data.live_data, "_live")
+    update_loop_timing(stored_data.logged_data, "_logged")
 
     # if len(stored_data.time_data) > 0:
     #     t_list = list(stored_data.time_data)

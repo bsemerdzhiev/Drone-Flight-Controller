@@ -119,7 +119,7 @@ impl PressureSensor {
         let dt: f32 = cur_time
             .duration_since(self.last_reading_accel)
             .as_secs_f32()
-            .clamp(0.001, 0.02);
+            .clamp(0.001, 0.03);
 
         let control_input_matrix: Matrix2x1<f32> = Matrix2x1::new(dt * dt * 0.5, dt);
 
