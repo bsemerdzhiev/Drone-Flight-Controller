@@ -9,8 +9,8 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
-const C1: f32 = 2.5f32;
-const C2: f32 = 1_000f32;
+const C1: f32 = 1.4f32;
+const C2: f32 = 10_000_000f32;
 
 pub struct KalmanFilter {
     bias_p: f32,
@@ -85,16 +85,19 @@ impl ImuHandler for KalmanFilter {
         //NOTE: Uncommenting this leads to problems
         //since we should not be subtracting the resting
         //readings from .0.z, as that leads to issues with the tan(division with 0)
-        self.reading.0.x -= self.calibration_offset.0.x;
-        self.reading.0.y -= self.calibration_offset.0.y;
-        self.reading.0.z -= self.calibration_offset.0.z;
+        self.reading.0.x = self.reading.0.x.saturating_sub(self.calibration_offset.0.x);
+        self.reading.0.y = self.reading.0.y.saturating_sub(self.calibration_offset.0.y);
+        self.reading.0.z = self.reading.0.z.saturating_sub(self.calibration_offset.0.z);
 
-        self.reading.1.x -= self.calibration_offset.1.x;
-        self.reading.1.y -= self.calibration_offset.1.y;
-        self.reading.1.z -= self.calibration_offset.1.z;
+        self.reading.1.x = self.reading.1.x.saturating_sub(self.calibration_offset.1.x);
+        self.reading.1.y = self.reading.1.y.saturating_sub(self.calibration_offset.1.y);
+        self.reading.1.z = self.reading.1.z.saturating_sub(self.calibration_offset.1.z);
 
         let cur_time = Instant::now();
-        let dt = cur_time.duration_since(self.last_read_time).as_secs_f32();
+        let dt = cur_time
+            .duration_since(self.last_read_time)
+            .as_secs_f32()
+            .clamp(0.001, 0.02);
 
         self.update_pitch(dt);
         self.update_roll(dt);

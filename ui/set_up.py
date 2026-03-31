@@ -91,6 +91,26 @@ def set_up_sensors(label_suffix: str):
                     )
         dpg.add_separator()
 
+    # --- Motors ---
+    dpg.add_text("Motors", color=[180, 180, 180])
+    with dpg.group(horizontal=True):
+        for i in range(4):
+            with dpg.plot(label=f"Motor {i}", height=180, width=380):
+                dpg.add_plot_axis(
+                    dpg.mvXAxis, label="time", tag=f"x_axis_motor_{i}" + label_suffix
+                )
+                dpg.add_plot_axis(
+                    dpg.mvYAxis, label="pwm", tag=f"y_axis_motor_{i}" + label_suffix
+                )
+                dpg.add_line_series(
+                    [],
+                    [],
+                    label=f"Motor {i}",
+                    parent=f"y_axis_motor_{i}" + label_suffix,
+                    tag=f"motor_{i}_series" + label_suffix,
+                )
+    dpg.add_separator()
+
     # --- Barometer (two series: raw + Kalman) ---
     dpg.add_text("Barometer", color=[180, 180, 180])
     with dpg.group(horizontal=True):

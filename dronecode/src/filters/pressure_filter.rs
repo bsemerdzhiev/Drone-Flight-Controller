@@ -90,11 +90,14 @@ impl PressureSensor {
         let mut raw_accel = read_raw().unwrap().0;
 
         let mut raw_accel_x =
-            (raw_accel.x - filtered_position.calibration_offset.0.x) as f32 / LSB_FOR_ACCEL as f32;
+            ((raw_accel.x as i32 - filtered_position.calibration_offset.0.x as i32) as f32
+                / LSB_FOR_ACCEL as f32);
         let mut raw_accel_y =
-            (raw_accel.y - filtered_position.calibration_offset.0.y) as f32 / LSB_FOR_ACCEL as f32;
+            ((raw_accel.y as i32 - filtered_position.calibration_offset.0.y as i32) as f32
+                / LSB_FOR_ACCEL as f32);
         let mut raw_accel_z =
-            (raw_accel.z - filtered_position.calibration_offset.0.z) as f32 / LSB_FOR_ACCEL as f32;
+            ((raw_accel.z as i32 - filtered_position.calibration_offset.0.z as i32) as f32
+                / LSB_FOR_ACCEL as f32);
 
         let mut accel_input = (-raw_accel_x * micromath::F32Ext::sin(filtered_position.pitch))
             + (raw_accel_y
@@ -159,7 +162,7 @@ impl PressureSensor {
 
         let inovation = (baro_reading - (self.observation_matrix * self.current_state).x);
 
-        // if inovation.abs() > 10.0 * inovation_variance.sqrt() {
+        // if inovation.abs() > 15.0 * inovation_variance.sqrt() {
         //     return;
         // }
 

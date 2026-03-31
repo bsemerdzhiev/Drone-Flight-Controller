@@ -85,7 +85,10 @@ def serial_reader():
                             to_add_to = stored_data.live_data
 
                         # Motors
-                        to_add_to.motors.append(t.get("motors", [0, 0, 0, 0]))
+                        motor_read = t.get("motors")
+
+                        for i in range(4):
+                            to_add_to.motors[i].append(motor_read[i])
                         log_message(
                             "Drone>PC",
                             f"[Motors] M0={t['motors'][0]} M1={t['motors'][1]} M2={t['motors'][2]} M3={t['motors'][3]} flash={t.get('logged_in_flash')}",

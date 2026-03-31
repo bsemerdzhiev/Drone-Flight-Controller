@@ -168,6 +168,16 @@ def update_sensor_plots(read_data: stored_data.ReadData, label_suffix: str):
 
     # -------------------------------------------------
 
+    for i in range(4):
+        dpg.set_value(
+            f"motor_{i}_series" + label_suffix, [t, list(read_data.motors[i])]
+        )
+        dpg.fit_axis_data(f"x_axis_motor_{i}" + label_suffix)
+
+        fit_with_margin(f"y_axis_motor_{i}" + label_suffix, list(read_data.motors[i]))
+
+    # -------------------------------------------------
+
     dpg.set_value(
         "baro_series_solo_kalman" + label_suffix,
         [t, list(read_data.pres_data_filtered)],
