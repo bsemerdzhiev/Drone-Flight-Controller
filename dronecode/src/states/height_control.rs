@@ -31,7 +31,8 @@ impl FSMControl for FSMHeightControl {
         ctx.pid_info.selected_height = self.initial_pressure;
 
         // read sensor data
-        let mut input: YawPitchRoll = ctx.kalman_position.get_reading();
+        // let mut input: YawPitchRoll = ctx.kalman_position.get_reading();
+        let mut input: YawPitchRoll = ctx.dmp_filter.get_reading();
 
         if ctx.input_from_controller.is_none() {
             return self;
@@ -51,7 +52,9 @@ impl FSMControl for FSMHeightControl {
         // the target
         let mut target: YawPitchRoll =
             YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+
         target.pressure = self.initial_pressure;
+        target.lift = 0f32;
 
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
@@ -60,11 +63,11 @@ impl FSMControl for FSMHeightControl {
             k_p,
             k_i,
             k_d,
-            ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8,
+            ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8 | ControllerFlags::AddI as u8,
         );
 
         target.lift += correction.lift;
-        target.yaw += correction.yaw;
+        target.yaw -= correction.yaw;
         target.roll += correction.roll;
         target.pitch += correction.pitch;
 

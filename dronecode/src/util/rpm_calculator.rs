@@ -13,10 +13,10 @@ use crate::util::{yaw_pitch_roll::YawPitchRoll, MAX_LIFT, PITCH_DEGREE, ROLL_DEG
 const THRUST_COEFFICIENT: f32 = 14e-8;
 const DRAG_COEFFICIENT: f32 = 2e-6;
 
-const MIN_PWM: u16 = 50;
+const MIN_PWM: u16 = 200;
 const MAX_RPMS: f32 = (980 * 10) as f32;
 
-pub const THRESHOLD_LIFT: f32 = 0.1;
+pub const THRESHOLD_LIFT: f32 = 0.05;
 
 fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [f32]) {
     let cur_maxes = motor::get_motor_max();

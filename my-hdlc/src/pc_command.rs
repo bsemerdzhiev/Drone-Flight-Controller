@@ -1,7 +1,10 @@
+use core::f32;
 use core::fmt;
 use core::i32;
 
 use serde::{Deserialize, Serialize};
+
+const THRESHOLD: f32 = 0.03;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
 pub struct ManualInput {
@@ -119,10 +122,10 @@ impl ManualInput {
     }
 
     pub fn is_zeroed(&self) -> bool {
-        self.lift == 0.0
-            && self.pitch == 0.0
-            && self.roll == 0.0
-            && self.yaw == 0.0
+        self.lift.abs() < THRESHOLD
+            && self.pitch.abs() < THRESHOLD
+            && self.roll.abs() < THRESHOLD
+            && self.yaw.abs() < THRESHOLD
             && !self.enter_panic
     }
 }
