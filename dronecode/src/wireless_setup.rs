@@ -3,8 +3,9 @@ use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 
-static mut RX_BUF: [u8; 130] = [0; 130];
-static mut TX_BUF: [u8; 130] = [0; 130];
+static mut RX_BUF: [u8; 8] = [0; 8];
+static mut TX_BUF: [u8; 8] = [0; 8];
+const PACKET_SIZE: u8 = 16;
 
 pub fn radio_init() -> RADIO {
     // have to steal because peripherals is already taken in the init
@@ -56,7 +57,7 @@ pub fn radio_init() -> RADIO {
     });
 
     radio.pcnf1.write(|w| unsafe {
-        w.maxlen().bits(130)
+        w.maxlen().bits(PACKET_SIZE)
          .statlen().bits(0)
          .balen().bits(3)
          .endian().little()
@@ -68,11 +69,11 @@ pub fn radio_init() -> RADIO {
     });
 
     radio.crccnf.write(|w| w.len().two()); // 2 byte crc
-    radio.crcpoly.write(|w| unsafe {
-        w.crcpoly().bits(0x11021)
-    });
     radio.crcinit.write(|w| unsafe {
         w.crcinit().bits(0xFFFF)
+    });
+    radio.crcpoly.write(|w| unsafe {
+        w.crcpoly().bits(0x11021)
     });
 
     radio.shorts.write(|w| w.ready_start().enabled().end_disable().enabled());
@@ -85,70 +86,75 @@ pub fn radio_init() -> RADIO {
     radio
 }
 
-pub fn radio_start_rx(radio: &RADIO) {
+pub fn radio_start_rx(radio_option: Option<&RADIO>) {
     // let p = unsafe { Peripherals::steal() };
     // let radio = &p.RADIO;
+    if let Some(radio) = radio_option {
+        unsafe {
+            radio.packetptr.write(|w| w.bits(RX_BUF.as_ptr() as u32));
+        }
 
-    unsafe {
-        radio.packetptr.write(|w| w.bits(RX_BUF.as_ptr() as u32));
+        radio.events_ready.reset();
+        radio.events_end.reset();
+        radio.events_address.reset();
+
+        radio.tasks_rxen.write(|w| unsafe {
+            w.bits(1)
+        });
+
+        // wait for ready
+        while radio.events_ready.read().bits() == 0 {}
     }
-
-    radio.events_ready.reset();
-    radio.events_end.reset();
-    radio.events_address.reset();
-
-    radio.tasks_rxen.write(|w| unsafe {
-        w.bits(1)
-    });
-
-    // wait for ready
-    while radio.events_ready.read().bits() == 0 {}
 }
 
 // poll the receiving end
-pub fn radio_poll_rx(radio: &RADIO, transceiver: &mut HdlcTransceiver) -> Option<DeviceCommand> {
+pub fn radio_poll_rx(radio_option: Option<&RADIO>, transceiver: &mut HdlcTransceiver) -> Option<DeviceCommand> {
     // let p = unsafe{ Peripherals::steal() };
     // let radio = &p.RADIO;
+    if let Some(radio) = radio_option {
+        if radio.events_end.read().bits() == 0 {
+            return None
+        }
 
-    if radio.events_end.read().bits() == 0 {
-        return None
+        radio.events_end.reset();
+
+        let len = unsafe { RX_BUF[0] as usize };
+        let payload = unsafe { &RX_BUF[1..1 + len] };
+
+        transceiver.add_bytes(payload);
+        transceiver.read_structure::<DeviceCommand>()
+    } else {
+        None
     }
-
-    radio.events_end.reset();
-
-    let len = unsafe { RX_BUF[0] as usize };
-    let payload = unsafe { &RX_BUF[1..1 + len] };
-
-    transceiver.add_bytes(payload);
-    transceiver.read_structure::<DeviceCommand>()
 }
 
-pub fn radio_send_command(radio: &RADIO, transceiver: &mut HdlcTransceiver, cmd: &DeviceCommand) {
-    let (frame, len) = transceiver.write_structure(cmd);
+// pub fn radio_send_command(radio: &RADIO, transceiver: &mut HdlcTransceiver, cmd: &DeviceCommand) {
+//     let (frame, len) = transceiver.write_structure(cmd);
 
-    if len == 0 {
-        //frame too large
-        return;
-    }
+//     if len == 0 {
+//         //frame too large
+//         return;
+//     }
 
-    radio_send(radio, &frame[..len]);
-}
+//     radio_send(radio, &frame[..len]);
+// }
 
 // Function is blocking (no interrupts implemented currently)
-pub fn radio_send(radio: &RADIO, payload: &[u8]) {
+pub fn radio_send(radio_option: Option<&RADIO>, payload: &[u8]) {
     // let p = unsafe { Peripherals::steal() };
     // let radio = &p.RADIO;
+    if let Some(radio) = radio_option {
+        unsafe {
+            TX_BUF[..payload.len()].copy_from_slice(payload);
+            radio.packetptr.write(|w| w.bits(TX_BUF.as_ptr() as u32));
+        }
 
-    unsafe {
-        TX_BUF[..payload.len()].copy_from_slice(payload);
-        radio.packetptr.write(|w| w.bits(TX_BUF.as_ptr() as u32));
+        radio.events_ready.reset();
+        radio.events_end.reset();
+        radio.events_address.reset();
+
+        radio.tasks_txen.write(|w| unsafe { w.bits(1) });
+
+        while radio.events_end.read().bits() == 0 {}
     }
-
-    radio.events_ready.reset();
-    radio.events_end.reset();
-    radio.events_address.reset();
-
-    radio.tasks_txen.write(|w| unsafe { w.bits(1) });
-
-    while radio.events_end.read().bits() == 0 {}
 }

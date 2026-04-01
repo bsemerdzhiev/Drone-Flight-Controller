@@ -86,9 +86,8 @@ pub fn main_loop() -> ! {
     let mut battery_panic = false;
 
     // radio object
-    let radio = wireless_setup::radio_init();
+    let mut radio: Option<RADIO> = None;
 
-    radio_start_rx(&radio);
     // -------------------------------------------------------------------------
     for i in 0.. {
         let _ = Blue.toggle();
@@ -106,30 +105,34 @@ pub fn main_loop() -> ! {
         // -------------------------------------------------------------------------
 
         if *ctx.wireless_toggle {
+            if radio.is_none() {
+                radio = Some(wireless_setup::radio_init());
+                radio_start_rx(radio.as_ref());
+            }
             match *ctx.wireless_option {
                 WirelessOptions::PCSide => {
                     // Read Uart Buff
                     let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
 
                     if num_received != 0usize {
-                        wireless_setup::radio_send(&radio, &uart_buf[..num_received]);
+                        wireless_setup::radio_send(radio.as_ref(), &uart_buf[..num_received]);
                         time_for_last_received_message = Instant::now();
                     }
 
-                    if let Some(telemetry) = radio_poll_rx(&radio, &mut ctx.trv) {
+                    if let Some(telemetry) = radio_poll_rx(radio.as_ref(), &mut ctx.trv) {
                         let (buf, len) = ctx.trv.write_structure(&telemetry);
                         send_bytes(&buf[..len]);
                     }
 
-                    radio_start_rx(&radio);
+                    radio_start_rx(radio.as_ref());
                 }
 
                 WirelessOptions::DroneSide => {
-                    if let Some(command) = radio_poll_rx(&radio, &mut ctx.trv) {
+                    if let Some(command) = radio_poll_rx(radio.as_ref(), &mut ctx.trv) {
                         match command {
                             DeviceCommand::ChangeMode(new_mode) => {
                                 current_state = current_state.step(new_mode, &mut ctx);
-                                send_ack(&mut ctx.trv, ctx.wireless_option, &radio);
+                                send_ack(&mut ctx.trv, ctx.wireless_option, radio.as_ref());
                             }
                             DeviceCommand::ManualInput(manual_input) => {
                                 *ctx.input_from_controller = Some(manual_input);
@@ -138,7 +141,7 @@ pub fn main_loop() -> ! {
                         }
                         time_for_last_received_message = Instant::now();
                     }
-                    radio_start_rx(&radio);
+                    radio_start_rx(radio.as_ref());
                 }
             }
         } else {
@@ -157,7 +160,7 @@ pub fn main_loop() -> ! {
                     match command {
                         DeviceCommand::ChangeMode(new_mode) => {
                             current_state = current_state.step(new_mode, &mut ctx);
-                            send_ack(&mut ctx.trv, ctx.wireless_option, &radio);
+                            send_ack(&mut ctx.trv, ctx.wireless_option, radio.as_ref());
                         }
                         DeviceCommand::ManualInput(manual_input) => {
                             *ctx.input_from_controller = Some(manual_input);
@@ -183,7 +186,7 @@ pub fn main_loop() -> ! {
                 &mut ctx.trv,
                 current_state.get_state(),
                 ctx.wireless_option,
-                &radio,
+                radio.as_ref(),
             );
             Green.off();
         }
@@ -206,7 +209,7 @@ fn send_drone_data(
     transceiver: &mut HdlcTransceiver,
     current_state: FSMState,
     wireless_mode: &WirelessOptions,
-    radio: &RADIO,
+    radio: Option<&RADIO>,
 ) {
     let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
         current_state,
@@ -225,7 +228,7 @@ fn send_drone_data(
 /*
 * Sends ACKs to the drone after a state change
 */
-fn send_ack(transceiver: &mut HdlcTransceiver, wireless_mode: &WirelessOptions, radio: &RADIO) {
+fn send_ack(transceiver: &mut HdlcTransceiver, wireless_mode: &WirelessOptions, radio: Option<&RADIO>) {
     let ack_cmd = DeviceCommand::Ack;
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
 
