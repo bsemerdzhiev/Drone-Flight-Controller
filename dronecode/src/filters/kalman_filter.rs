@@ -10,8 +10,8 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
-const C1: f32 = 1.4f32;
-const C2: f32 = 10_000_000f32;
+const C1: f32 = 2.5f32;
+const C2: f32 = 1000f32;
 
 pub struct KalmanFilter {
     bias_p: f32,

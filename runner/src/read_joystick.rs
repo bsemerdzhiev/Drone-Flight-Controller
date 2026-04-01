@@ -7,7 +7,7 @@ use evdev::*;
 
 //------------------------------------------------------
 
-const THRESHOLD: f32 = 10f32;
+const THRESHOLD: f32 = 60f32;
 //------------------------------------------------------
 
 pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInput) {
@@ -36,10 +36,10 @@ pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInp
                                 joystick_input.set_roll((v / 512.0) - 1.0);
                             }
                             AbsoluteAxisCode::ABS_Y => {
-                                joystick_input.set_pitch(1.0 - (v / 512.0));
+                                joystick_input.set_pitch((v / 512.0) - 1.0);
                             }
                             AbsoluteAxisCode::ABS_RZ => {
-                                joystick_input.set_yaw(((v / 128.0) - 1.0));
+                                joystick_input.set_yaw((1.0 - (v / 128.0)));
                             }
                             _ => {}
                         }

@@ -3,9 +3,9 @@ use tudelft_quadrupel::time::Instant;
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
-pub const K_P: [f32; 4] = [4f32, 0.005f32, 0.005f32, 8f32];
-pub const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-pub const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
+pub const K_P: [f32; 4] = [1.5f32, 0.05f32, 0.05f32, 12f32];
+pub const K_I: [f32; 4] = [0f32, 0.0002f32, 0.0002f32, 0f32];
+pub const K_D: [f32; 4] = [0f32, 0.001f32, 0.001f32, 0f32];
 
 pub fn add_trims(manual_input: &ManualInput) -> ([f32; 4], [f32; 4], [f32; 4]) {
     let mut k_p: [f32; 4] = K_P;
@@ -35,7 +35,7 @@ pub enum ControllerFlags {
 }
 
 // in kg
-const DRONE_WEIGHT: f32 = 0.5f32;
+const DRONE_WEIGHT: f32 = 2f32;
 
 const GRAVITY_CONSTANT: f32 = 9.8f32;
 

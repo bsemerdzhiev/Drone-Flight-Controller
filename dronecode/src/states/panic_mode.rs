@@ -14,7 +14,7 @@ impl FSMControl for FSMPanic {
     // loop is called every tick
     fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         let current_speed = get_motors();
-        const DESCENT_STEP: u16 = 2;
+        const DESCENT_STEP: u16 = 50;
 
         Red.on();
         // get the smallest speed
