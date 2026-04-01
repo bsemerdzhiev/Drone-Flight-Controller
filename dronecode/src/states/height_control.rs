@@ -11,6 +11,7 @@ use crate::{
         state_structures::state_context::StateContext,
     },
     util::{
+        constants_file::ChosenFixedPointType,
         pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P},
         rpm_calculator::{actuate_motors_with_rates, THRESHOLD_LIFT},
         yaw_pitch_roll::YawPitchRoll,
@@ -21,14 +22,14 @@ pub struct FSMHeightControl {
     pub pid_controller: Box<PIDController>,
     pub prev_state: Box<dyn FSMControl>,
 
-    pub initial_lift: f32,
-    pub initial_pressure: f32,
+    pub initial_lift: ChosenFixedPointType,
+    pub initial_pressure: ChosenFixedPointType,
 }
 
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // send chosen height
-        ctx.pid_info.selected_height = self.initial_pressure;
+        ctx.pid_info.selected_height = self.initial_pressure.to_num::<f32>();
 
         // read sensor data
         let mut input: YawPitchRoll = ctx.kalman_position.get_reading();
@@ -38,8 +39,9 @@ impl FSMControl for FSMHeightControl {
         }
 
         // if lift is changed, return to previous state
-        if (ctx.input_from_controller.as_ref().unwrap().get_lift() - self.initial_lift).abs()
-            > f32::EPSILON
+        if (ChosenFixedPointType::from_num(ctx.input_from_controller.as_ref().unwrap().get_lift())
+            - self.initial_lift)
+            != 0
         {
             return self.prev_state;
         }

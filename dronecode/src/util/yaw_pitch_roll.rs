@@ -3,18 +3,24 @@ use core::ops::{Add, Div, Mul, Sub};
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
-use crate::util::{yaw_pitch_roll, MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE};
+use crate::util::{
+    approx_funcs::{approx_atan2, approx_sqrt},
+    constants_file::{
+        ChosenFixedPointType, MAX_LIFT, PITCH_DEGREE, RAD_TO_DEGREE, ROLL_DEGREE, YAW_RATE,
+    },
+    yaw_pitch_roll,
+};
 
 /// This struct holds the yaw, pitch, and roll that the drone things it is in.
 /// The struct is currently implemented using `f32`, you may want to change this to use fixed point arithmetic.
 #[derive(Debug, Copy, Clone)]
 pub struct YawPitchRoll {
-    pub lift: f32,
-    pub yaw: f32,
-    pub pitch: f32,
-    pub roll: f32,
+    pub lift: ChosenFixedPointType,
+    pub yaw: ChosenFixedPointType,
+    pub pitch: ChosenFixedPointType,
+    pub roll: ChosenFixedPointType,
 
-    pub pressure: f32,
+    pub pressure: ChosenFixedPointType,
 }
 
 impl Sub for YawPitchRoll {
@@ -45,10 +51,10 @@ impl Add for YawPitchRoll {
     }
 }
 
-impl Mul<f32> for YawPitchRoll {
+impl Mul<ChosenFixedPointType> for YawPitchRoll {
     type Output = Self;
 
-    fn mul(self, scalar: f32) -> Self::Output {
+    fn mul(self, scalar: ChosenFixedPointType) -> Self::Output {
         Self {
             lift: self.lift * scalar,
             yaw: self.yaw * scalar,
@@ -59,10 +65,10 @@ impl Mul<f32> for YawPitchRoll {
     }
 }
 
-impl Div<f32> for YawPitchRoll {
+impl Div<ChosenFixedPointType> for YawPitchRoll {
     type Output = Self;
 
-    fn div(self, scalar: f32) -> Self::Output {
+    fn div(self, scalar: ChosenFixedPointType) -> Self::Output {
         Self {
             lift: self.lift / scalar,
             yaw: self.yaw / scalar,
@@ -73,10 +79,10 @@ impl Div<f32> for YawPitchRoll {
     }
 }
 
-impl Mul<[f32; 4]> for YawPitchRoll {
+impl Mul<[ChosenFixedPointType; 4]> for YawPitchRoll {
     type Output = Self;
 
-    fn mul(self, scalar: [f32; 4]) -> Self::Output {
+    fn mul(self, scalar: [ChosenFixedPointType; 4]) -> Self::Output {
         Self {
             lift: self.lift,
             yaw: self.yaw * scalar[0],
@@ -91,33 +97,36 @@ impl From<Quaternion> for YawPitchRoll {
     /// Creates a YawPitchRoll from a Quaternion
     fn from(q: Quaternion) -> Self {
         let Quaternion { w, x, y, z } = q;
-        let w: f32 = w.to_num();
-        let x: f32 = x.to_num();
-        let y: f32 = y.to_num();
-        let z: f32 = z.to_num();
+        let w = ChosenFixedPointType::from_num(w);
+        let x = ChosenFixedPointType::from_num(x);
+        let y = ChosenFixedPointType::from_num(y);
+        let z = ChosenFixedPointType::from_num(z);
 
-        let gx = 2.0 * (x * z - w * y);
-        let gy = 2.0 * (w * x + y * z);
-        let gz = w * w - x * x - y * y + z * z;
+        let gx: ChosenFixedPointType = 2 * (x * z - w * y);
+        let gy: ChosenFixedPointType = 2 * (w * x + y * z);
+        let gz: ChosenFixedPointType = w * w - x * x - y * y + z * z;
 
-        // yaw: (about Z axis)
+        let yaw = approx_atan2(
+            ChosenFixedPointType::from_num(2) * (w * z + x * y),
+            ChosenFixedPointType::from_num(1) - ChosenFixedPointType::from_num(2) * (y * y + z * z),
+        ) / 2;
         // let yaw =
-        // micromath::F32Ext::atan2(2.0 * x * y - 2.0 * w * z, 2.0 * w * w + 2.0 * x * x - 1.0);
-        let yaw =
-            micromath::F32Ext::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)) / 2.0;
+        // micromath::F32Ext::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)) / 2.0;
 
         // pitch: (nose up/down, about Y axis)
-        let pitch = micromath::F32Ext::atan2(gx, micromath::F32Ext::sqrt(gy * gy + gz * gz));
+        // let pitch = micromath::F32Ext::atan2(gx, micromath::F32Ext::sqrt(gy * gy + gz * gz));
+        let pitch = approx_atan2(gx, approx_sqrt(gy * gy + gz * gz));
 
         // roll: (tilt left/right, about X axis)
-        let roll = micromath::F32Ext::atan2(gy, gz);
+        // let roll = micromath::F32Ext::atan2(gy, gz);
+        let roll = approx_atan2(gy, gz);
 
         Self {
-            lift: 0f32,
+            lift: ChosenFixedPointType::from_num(0),
             yaw,
             pitch,
             roll,
-            pressure: 0f32,
+            pressure: ChosenFixedPointType::from_num(0),
         }
     }
 }
@@ -125,35 +134,43 @@ impl From<Quaternion> for YawPitchRoll {
 impl YawPitchRoll {
     pub fn new() -> Self {
         YawPitchRoll {
-            lift: 0f32,
-            yaw: 0f32,
-            pitch: 0f32,
-            roll: 0f32,
-            pressure: 0f32,
+            lift: ChosenFixedPointType::from_num(0),
+            yaw: ChosenFixedPointType::from_num(0),
+            pitch: ChosenFixedPointType::from_num(0),
+            roll: ChosenFixedPointType::from_num(0),
+            pressure: ChosenFixedPointType::from_num(0),
         }
     }
     pub fn from_manual_input(input: &ManualInput) -> Self {
         Self {
-            lift: MAX_LIFT * input.get_lift() as f32,
-            yaw: YAW_RATE * input.get_yaw() as f32,
-            pitch: PITCH_DEGREE * input.get_pitch() as f32,
-            roll: ROLL_DEGREE * input.get_roll() as f32,
-            pressure: 0f32,
+            lift: MAX_LIFT * ChosenFixedPointType::from_num(input.get_lift()),
+            yaw: YAW_RATE * ChosenFixedPointType::from_num(input.get_yaw()),
+            pitch: PITCH_DEGREE * ChosenFixedPointType::from_num(input.get_pitch()),
+            roll: ROLL_DEGREE * ChosenFixedPointType::from_num(input.get_roll()),
+            pressure: ChosenFixedPointType::from_num(0),
         }
     }
-    pub fn calculate_rate_per_sec(&self, prev_sample: YawPitchRoll, duration_in_sec: f32) -> Self {
-        let PI: f32 = micromath::F32Ext::acos(-1.0);
-        let TO_DEGREES: f32 = 180.0 / PI;
+    pub fn calculate_rate_per_sec(
+        &self,
+        prev_sample: YawPitchRoll,
+        duration_in_sec: ChosenFixedPointType,
+    ) -> Self {
+        // let PI: f32 = micromath::F32Ext::acos(-1.0);
+        // let TO_DEGREES: f32 = 180.0 / PI;
         YawPitchRoll {
-            lift: 0f32,
-            yaw: (TO_DEGREES * (self.yaw - prev_sample.yaw)) / duration_in_sec,
-            pitch: (TO_DEGREES * self.pitch),
-            roll: (TO_DEGREES * self.roll),
+            lift: ChosenFixedPointType::from_num(0),
+            yaw: (RAD_TO_DEGREE * (self.yaw - prev_sample.yaw)) / duration_in_sec,
+            pitch: (RAD_TO_DEGREE * self.pitch),
+            roll: (RAD_TO_DEGREE * self.roll),
             pressure: self.pressure,
         }
     }
 
     pub fn to_array(&mut self) -> [f32; 3] {
-        return [self.yaw, self.pitch, self.roll];
+        return [
+            self.yaw.to_num::<f32>(),
+            self.pitch.to_num::<f32>(),
+            self.roll.to_num::<f32>(),
+        ];
     }
 }

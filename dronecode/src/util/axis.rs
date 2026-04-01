@@ -1,6 +1,9 @@
 use core::ops::Add;
 
-use tudelft_quadrupel::mpu::structs::{Accel, Gyro};
+use tudelft_quadrupel::{
+    fixed::types::{I32F0, I64F0},
+    mpu::structs::{Accel, Gyro},
+};
 
 #[derive(Copy, Clone, Debug, PartialEq, Default)]
 pub struct Axis<T> {
@@ -9,52 +12,56 @@ pub struct Axis<T> {
     pub z: T,
 }
 
-impl Add<Accel> for Axis<i64> {
-    type Output = Axis<i64>;
+impl Add<Accel> for Axis<I64F0> {
+    type Output = Axis<I64F0>;
 
     fn add(self, input: Accel) -> Self::Output {
-        Axis::<i64> {
-            x: self.x + input.x as i64,
-            y: self.y + input.y as i64,
-            z: self.z + input.z as i64,
+        Axis::<I64F0> {
+            x: self.x + I64F0::from_num(input.x),
+            y: self.y + I64F0::from_num(input.y),
+            z: self.z + I64F0::from_num(input.z),
         }
     }
 }
 
-impl Add<Gyro> for Axis<i64> {
-    type Output = Axis<i64>;
+impl Add<Gyro> for Axis<I64F0> {
+    type Output = Axis<I64F0>;
 
     fn add(self, input: Gyro) -> Self::Output {
-        Axis::<i64> {
-            x: self.x + input.x as i64,
-            y: self.y + input.y as i64,
-            z: self.z + input.z as i64,
+        Axis::<I64F0> {
+            x: self.x + I64F0::from_num(input.x),
+            y: self.y + I64F0::from_num(input.y),
+            z: self.z + I64F0::from_num(input.z),
         }
     }
 }
 
-impl From<Accel> for Axis<i32> {
-    fn from(input: Accel) -> Axis<i32> {
+impl From<Accel> for Axis<I32F0> {
+    fn from(input: Accel) -> Axis<I32F0> {
         Axis {
-            x: input.x as i32,
-            y: input.y as i32,
-            z: input.z as i32,
+            x: I32F0::from_num(input.x),
+            y: I32F0::from_num(input.y),
+            z: I32F0::from_num(input.z),
         }
     }
 }
 
-impl From<Gyro> for Axis<i32> {
-    fn from(input: Gyro) -> Axis<i32> {
+impl From<Gyro> for Axis<I32F0> {
+    fn from(input: Gyro) -> Axis<I32F0> {
         Axis {
-            x: input.x as i32,
-            y: input.y as i32,
-            z: input.z as i32,
+            x: I32F0::from_num(input.x),
+            y: I32F0::from_num(input.y),
+            z: I32F0::from_num(input.z),
         }
     }
 }
 
-impl Axis<i32> {
+impl Axis<I32F0> {
     pub fn to_array(&mut self) -> [i32; 3] {
-        return [self.x, self.y, self.z];
+        return [
+            self.x.to_num::<i32>(),
+            self.y.to_num::<i32>(),
+            self.z.to_num::<i32>(),
+        ];
     }
 }

@@ -1,5 +1,6 @@
 use core::time::Duration;
 
+use fixed::types::I32F0;
 use micromath::F32Ext;
 use nalgebra::{Matrix1x2, Matrix2, Matrix2x1, Vector2};
 use tudelft_quadrupel::{barometer::read_pressure, mpu::read_raw, time::Instant};
@@ -10,6 +11,7 @@ use crate::{
         sensors_handler::ImuHandler,
     },
     states::state_structures::calibration_state::LSB_FOR_ACCEL,
+    util::constants_file::ChosenFixedPointType,
 };
 type Scalar = f32;
 
@@ -26,51 +28,70 @@ const BARO_SAMPLE_DURATION: Duration = Duration::from_millis(10);
 
 pub struct PressureSensor {
     // ------------------------------------
-    current_state: Matrix2x1<f32>,
-    observation_matrix: Matrix1x2<f32>,
-    uncertainty_matrix: Matrix2<f32>,
+    current_state: Matrix2x1<ChosenFixedPointType>,
+    observation_matrix: Matrix1x2<ChosenFixedPointType>,
+    uncertainty_matrix: Matrix2<ChosenFixedPointType>,
 
     // ------------------------------------
-    barometer_variance: f32,
-    accelerometer_variance: f32,
+    barometer_variance: ChosenFixedPointType,
+    accelerometer_variance: ChosenFixedPointType,
 
     // ------------------------------------
-    last_barometer: f32,
-    last_accelerometer: f32,
+    last_barometer: ChosenFixedPointType,
+    last_accelerometer: ChosenFixedPointType,
 
     last_reading_accel: Instant,
     last_reading_baro: Instant,
 
-    pub baseline_pressure: i32,
+    pub baseline_pressure: I32F0,
 }
 
 impl PressureSensor {
     pub fn new() -> Self {
         Self {
-            current_state: Vector2::zeros(),
-            observation_matrix: Matrix1x2::new(1.0, 0.0),
-            uncertainty_matrix: Matrix2::identity(),
+            current_state: Matrix2x1::new(
+                ChosenFixedPointType::from_num(0),
+                ChosenFixedPointType::from_num(0),
+            ),
+            observation_matrix: Matrix1x2::new(
+                ChosenFixedPointType::from_num(1),
+                ChosenFixedPointType::from_num(0),
+            ),
+            uncertainty_matrix: Matrix2::<ChosenFixedPointType>::new(
+                ChosenFixedPointType::from_num(1),
+                ChosenFixedPointType::from_num(0),
+                ChosenFixedPointType::from_num(0),
+                ChosenFixedPointType::from_num(1),
+            ),
 
-            accelerometer_variance: 0.6f32,
-            barometer_variance: 5e-2,
+            accelerometer_variance: ChosenFixedPointType::from_num(0.6f32),
+            barometer_variance: ChosenFixedPointType::from_num(5e-2),
 
-            last_barometer: 0.0,
-            last_accelerometer: 1.0,
+            last_barometer: ChosenFixedPointType::from_num(0.0),
+            last_accelerometer: ChosenFixedPointType::from_num(1.0),
 
             last_reading_accel: Instant::now(),
             last_reading_baro: Instant::now(),
 
-            baseline_pressure: 101325,
+            baseline_pressure: I32F0::from_num(101325),
         }
     }
 
     pub fn reset(&mut self) {
-        self.baseline_pressure = read_pressure() as i32;
-        self.current_state = Vector2::zeros();
-        self.uncertainty_matrix = Matrix2::identity();
+        self.baseline_pressure = I32F0::from_num(read_pressure());
+        self.current_state = Matrix2x1::new(
+            ChosenFixedPointType::from_num(0),
+            ChosenFixedPointType::from_num(0),
+        );
+        self.uncertainty_matrix = Matrix2::new(
+            ChosenFixedPointType::from_num(1),
+            ChosenFixedPointType::from_num(0),
+            ChosenFixedPointType::from_num(0),
+            ChosenFixedPointType::from_num(1),
+        );
     }
 
-    pub fn pressure_to_meters(&mut self, pressure_reading: i32) -> f32 {
+    pub fn pressure_to_meters(&mut self, pressure_reading: I32F0) -> I32F0 {
         // NOTE: more physics accurate formula
         // return 44330.0
         //     * (1.0
@@ -78,7 +99,7 @@ impl PressureSensor {
         //             pressure_reading as f32 / self.baseline_pressure as f32,
         //             (1.0 / 5.255),
         //         )));
-        return (-pressure_reading + self.baseline_pressure) as f32 / 12f32;
+        return (-pressure_reading + self.baseline_pressure) / I32F0::from_num(12);
     }
 
     pub fn prediction(&mut self, filtered_position: &mut KalmanFilter) {
@@ -89,55 +110,112 @@ impl PressureSensor {
 
         let mut raw_accel = read_raw().unwrap().0;
 
-        let mut raw_accel_x =
-            ((raw_accel.x as i32 - filtered_position.calibration_offset.0.x as i32) as f32
-                / LSB_FOR_ACCEL as f32);
-        let mut raw_accel_y =
-            ((raw_accel.y as i32 - filtered_position.calibration_offset.0.y as i32) as f32
-                / LSB_FOR_ACCEL as f32);
-        let mut raw_accel_z =
-            ((raw_accel.z as i32 - filtered_position.calibration_offset.0.z as i32) as f32
-                / LSB_FOR_ACCEL as f32);
+        let mut raw_accel_x = (ChosenFixedPointType::from_num(raw_accel.x)
+            - ChosenFixedPointType::from_num(filtered_position.calibration_offset.0.x))
+            / ChosenFixedPointType::from_num(LSB_FOR_ACCEL);
 
-        let mut accel_input = (-raw_accel_x * micromath::F32Ext::sin(filtered_position.pitch))
+        let mut raw_accel_y = (ChosenFixedPointType::from_num(raw_accel.y)
+            - ChosenFixedPointType::from_num(filtered_position.calibration_offset.0.y))
+            / ChosenFixedPointType::from_num(LSB_FOR_ACCEL);
+
+        let mut raw_accel_z = (ChosenFixedPointType::from_num(raw_accel.z)
+            - ChosenFixedPointType::from_num(filtered_position.calibration_offset.0.z))
+            / ChosenFixedPointType::from_num(LSB_FOR_ACCEL);
+
+        let mut accel_input: ChosenFixedPointType = (-raw_accel_x
+            * ChosenFixedPointType::from_num(micromath::F32Ext::sin(
+                filtered_position.pitch.to_num::<f32>(),
+            )))
             + (raw_accel_y
-                * micromath::F32Ext::sin(filtered_position.roll)
-                * micromath::F32Ext::cos(filtered_position.pitch))
+                * ChosenFixedPointType::from_num(micromath::F32Ext::sin(
+                    filtered_position.roll.to_num::<f32>(),
+                ))
+                * ChosenFixedPointType::from_num(micromath::F32Ext::cos(
+                    filtered_position.pitch.to_num::<f32>(),
+                )))
             + (raw_accel_z
-                * micromath::F32Ext::cos(filtered_position.roll)
-                * micromath::F32Ext::cos(filtered_position.pitch));
+                * ChosenFixedPointType::from_num(micromath::F32Ext::cos(
+                    filtered_position.roll.to_num::<f32>(),
+                ))
+                * ChosenFixedPointType::from_num(micromath::F32Ext::cos(
+                    filtered_position.pitch.to_num::<f32>(),
+                )));
 
-        accel_input -= 1.0;
+        accel_input -= ChosenFixedPointType::from_num(1);
 
-        accel_input *= 9.81;
+        accel_input *= ChosenFixedPointType::from_num(9.81);
         // ----------------------------------------------------------------------
         /*
          *  Math is:
          *   x_(k+1) = F*x_k + B*u_k
          *   P_(k+1) = F*P*F^T + Q
          */
-        let dt: f32 = cur_time
-            .duration_since(self.last_reading_accel)
-            .as_secs_f32()
-            .clamp(0.001, 0.03);
+        let dt: ChosenFixedPointType = ChosenFixedPointType::from_num(
+            cur_time
+                .duration_since(self.last_reading_accel)
+                .as_secs_f32()
+                .clamp(0.001, 0.03),
+        );
 
-        let control_input_matrix: Matrix2x1<f32> = Matrix2x1::new(dt * dt * 0.5, dt);
+        let control_input_matrix: Matrix2x1<ChosenFixedPointType> =
+            Matrix2x1::new(dt * dt * ChosenFixedPointType::from_num(0.5), dt);
 
-        let transition_matrix = Matrix2::new(1.0, dt, 0.0, 1.0);
+        let transition_matrix = Matrix2::<ChosenFixedPointType>::new(
+            ChosenFixedPointType::from_num(1),
+            dt,
+            ChosenFixedPointType::from_num(0),
+            ChosenFixedPointType::from_num(1),
+        );
 
         let process_uncertainty = Matrix2::new(
-            dt * dt * dt * dt * 0.25,
-            dt * dt * dt * 0.5,
-            dt * dt * dt * 0.5,
+            dt * dt * dt * dt * ChosenFixedPointType::from_num(0.25),
+            dt * dt * dt * ChosenFixedPointType::from_num(0.5),
+            dt * dt * dt * ChosenFixedPointType::from_num(0.5),
             dt * dt,
-        ) * self.accelerometer_variance;
+        )
+        .map(|x| x * self.accelerometer_variance);
 
-        self.current_state =
-            (transition_matrix * self.current_state) + (control_input_matrix * accel_input);
+        // self.current_state = (transition_matrix * self.current_state);
+        // self.current_state =
+        //     (transition_matrix * self.current_state) + (control_input_matrix * accel_input);
+        let new_state_0 = transition_matrix[(0, 0)] * self.current_state[(0, 0)]
+            + transition_matrix[(0, 1)] * self.current_state[(1, 0)]
+            + control_input_matrix[(0, 0)] * accel_input;
 
-        self.uncertainty_matrix = ((transition_matrix * self.uncertainty_matrix)
-            * transition_matrix.transpose())
-            + process_uncertainty;
+        let new_state_1 = transition_matrix[(1, 0)] * self.current_state[(0, 0)]
+            + transition_matrix[(1, 1)] * self.current_state[(1, 0)]
+            + control_input_matrix[(1, 0)] * accel_input;
+
+        self.current_state = Matrix2x1::new(new_state_0, new_state_1);
+
+        // self.uncertainty_matrix = ((transition_matrix * self.uncertainty_matrix)
+        //     * transition_matrix.transpose())
+        //     + process_uncertainty;
+
+        let tp = Matrix2::new(
+            transition_matrix[(0, 0)] * self.uncertainty_matrix[(0, 0)]
+                + transition_matrix[(0, 1)] * self.uncertainty_matrix[(1, 0)],
+            transition_matrix[(0, 0)] * self.uncertainty_matrix[(0, 1)]
+                + transition_matrix[(0, 1)] * self.uncertainty_matrix[(1, 1)],
+            transition_matrix[(1, 0)] * self.uncertainty_matrix[(0, 0)]
+                + transition_matrix[(1, 1)] * self.uncertainty_matrix[(1, 0)],
+            transition_matrix[(1, 0)] * self.uncertainty_matrix[(0, 1)]
+                + transition_matrix[(1, 1)] * self.uncertainty_matrix[(1, 1)],
+        );
+
+        let tpt = Matrix2::new(
+            tp[(0, 0)] * transition_matrix[(0, 0)] + tp[(0, 1)] * transition_matrix[(0, 1)],
+            tp[(0, 0)] * transition_matrix[(1, 0)] + tp[(0, 1)] * transition_matrix[(1, 1)],
+            tp[(1, 0)] * transition_matrix[(0, 0)] + tp[(1, 1)] * transition_matrix[(0, 1)],
+            tp[(1, 0)] * transition_matrix[(1, 0)] + tp[(1, 1)] * transition_matrix[(1, 1)],
+        );
+
+        self.uncertainty_matrix = Matrix2::new(
+            tpt[(0, 0)] + process_uncertainty[(0, 0)],
+            tpt[(0, 1)] + process_uncertainty[(0, 1)],
+            tpt[(1, 0)] + process_uncertainty[(1, 0)],
+            tpt[(1, 1)] + process_uncertainty[(1, 1)],
+        );
 
         self.last_accelerometer = accel_input;
         self.last_reading_accel = cur_time;
@@ -149,18 +227,30 @@ impl PressureSensor {
             return;
         }
 
-        let baro_reading = self.pressure_to_meters(read_pressure() as i32);
+        let baro_reading: ChosenFixedPointType = ChosenFixedPointType::from_num(
+            self.pressure_to_meters(I32F0::from_num(read_pressure() as i32)),
+        );
 
-        let mut kalman_gain: Matrix2x1<f32> =
-            self.uncertainty_matrix * self.observation_matrix.transpose();
+        // let mut kalman_gain: Matrix2x1<ChosenFixedPointType> =
+        // self.uncertainty_matrix * self.observation_matrix.transpose();
 
-        let inovation_variance = (((self.observation_matrix * self.uncertainty_matrix)
-            * self.observation_matrix.transpose())
-        .x + self.barometer_variance);
+        let mut kalman_gain: Matrix2x1<ChosenFixedPointType> = Matrix2x1::new(
+            self.uncertainty_matrix[(0, 0)] * self.observation_matrix[(0, 0)]
+                + self.uncertainty_matrix[(0, 1)] * self.observation_matrix[(0, 1)],
+            self.uncertainty_matrix[(1, 0)] * self.observation_matrix[(0, 0)]
+                + self.uncertainty_matrix[(1, 1)] * self.observation_matrix[(0, 1)],
+        );
+
+        // let inovation_variance = (((self.observation_matrix * self.uncertainty_matrix)
+        //     * self.observation_matrix.transpose())
+        // .x + self.barometer_variance);
+
+        let inovation_variance = self.uncertainty_matrix[(0, 0)] + self.barometer_variance;
 
         kalman_gain = kalman_gain / inovation_variance;
 
-        let inovation = (baro_reading - (self.observation_matrix * self.current_state).x);
+        // let inovation = (baro_reading - (self.observation_matrix * self.current_state)[(0, 0)]);
+        let inovation = baro_reading - self.current_state[(0, 0)];
 
         // if inovation.abs() > 15.0 * inovation_variance.sqrt() {
         //     return;
@@ -168,11 +258,57 @@ impl PressureSensor {
 
         self.current_state = self.current_state + (kalman_gain * inovation);
 
-        let i = Matrix2::identity();
-        self.uncertainty_matrix = (i - kalman_gain * self.observation_matrix)
-            * self.uncertainty_matrix
-            * (i - kalman_gain * self.observation_matrix).transpose()
-            + kalman_gain * self.barometer_variance * kalman_gain.transpose();
+        let i: Matrix2<ChosenFixedPointType> = Matrix2::<ChosenFixedPointType>::new(
+            ChosenFixedPointType::from_num(1),
+            ChosenFixedPointType::from_num(0),
+            ChosenFixedPointType::from_num(0),
+            ChosenFixedPointType::from_num(1),
+        );
+
+        // self.uncertainty_matrix = (i - (kalman_gain * self.observation_matrix))
+        //     * self.uncertainty_matrix
+        //     * (i - kalman_gain * self.observation_matrix).transpose()
+        //     + kalman_gain * self.barometer_variance * kalman_gain.transpose();
+
+        let k0 = kalman_gain[(0, 0)];
+        let k1 = kalman_gain[(1, 0)];
+
+        let i_minus_kh = Matrix2::new(
+            ChosenFixedPointType::from_num(1) - k0,
+            ChosenFixedPointType::from_num(0),
+            -k1,
+            ChosenFixedPointType::from_num(1),
+        );
+
+        // i_minus_kh * P * i_minus_kh^T
+        let ikp = Matrix2::new(
+            i_minus_kh[(0, 0)] * self.uncertainty_matrix[(0, 0)]
+                + i_minus_kh[(0, 1)] * self.uncertainty_matrix[(1, 0)],
+            i_minus_kh[(0, 0)] * self.uncertainty_matrix[(0, 1)]
+                + i_minus_kh[(0, 1)] * self.uncertainty_matrix[(1, 1)],
+            i_minus_kh[(1, 0)] * self.uncertainty_matrix[(0, 0)]
+                + i_minus_kh[(1, 1)] * self.uncertainty_matrix[(1, 0)],
+            i_minus_kh[(1, 0)] * self.uncertainty_matrix[(0, 1)]
+                + i_minus_kh[(1, 1)] * self.uncertainty_matrix[(1, 1)],
+        );
+
+        let ikpiT = Matrix2::new(
+            ikp[(0, 0)] * i_minus_kh[(0, 0)] + ikp[(0, 1)] * i_minus_kh[(0, 1)],
+            ikp[(0, 0)] * i_minus_kh[(1, 0)] + ikp[(0, 1)] * i_minus_kh[(1, 1)],
+            ikp[(1, 0)] * i_minus_kh[(0, 0)] + ikp[(1, 1)] * i_minus_kh[(0, 1)],
+            ikp[(1, 0)] * i_minus_kh[(1, 0)] + ikp[(1, 1)] * i_minus_kh[(1, 1)],
+        );
+
+        // K * R * K^T where R is scalar barometer_variance
+        let r = self.barometer_variance;
+        let kkT = Matrix2::new(k0 * k0 * r, k0 * k1 * r, k1 * k0 * r, k1 * k1 * r);
+
+        self.uncertainty_matrix = Matrix2::new(
+            ikpiT[(0, 0)] + kkT[(0, 0)],
+            ikpiT[(0, 1)] + kkT[(0, 1)],
+            ikpiT[(1, 0)] + kkT[(1, 0)],
+            ikpiT[(1, 1)] + kkT[(1, 1)],
+        );
 
         self.last_barometer = baro_reading;
         self.last_reading_baro = cur_time;
@@ -183,7 +319,7 @@ impl PressureSensor {
         self.correction();
     }
 
-    pub fn get_reading(&self) -> f32 {
-        return self.current_state.x;
+    pub fn get_reading(&self) -> ChosenFixedPointType {
+        return self.current_state[(0, 0)];
     }
 }

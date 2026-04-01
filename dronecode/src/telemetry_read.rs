@@ -3,6 +3,7 @@ use core::time::Duration;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::state_context::StateContext;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
+use fixed::types::I32F0;
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::command::FSMState;
 use my_hdlc::telemetry_data::CalibrationInfo;
@@ -122,13 +123,13 @@ impl TelemetryRead for TelemetryData {
         let data_to_send = DeviceCommand::Telemetry(TelemetryData::PositionData(PositionData {
             logged_in_flash: logged_in_flash,
 
-            yaw: ypr.yaw,
-            pitch: ypr.pitch,
-            roll: ypr.roll,
+            yaw: ypr.yaw.to_num::<f32>(),
+            pitch: ypr.pitch.to_num::<f32>(),
+            roll: ypr.roll.to_num::<f32>(),
 
-            yaw_kalman: kalman_pos.yaw,
-            pitch_kalman: kalman_pos.pitch,
-            roll_kalman: kalman_pos.roll,
+            yaw_kalman: kalman_pos.yaw.to_num::<f32>(),
+            pitch_kalman: kalman_pos.pitch.to_num::<f32>(),
+            roll_kalman: kalman_pos.roll.to_num::<f32>(),
         }));
 
         if encoded {
@@ -147,12 +148,12 @@ impl TelemetryRead for TelemetryData {
     ) -> ReturnType {
         let pres = ctx
             .pressure_sensor_filter
-            .pressure_to_meters(read_pressure() as i32);
+            .pressure_to_meters(I32F0::from_num(read_pressure() as i32));
         let data_to_send = DeviceCommand::Telemetry(TelemetryData::PressureData(PressureData {
             logged_in_flash: logged_in_flash,
 
-            pres: pres,
-            pressure_filtered: ctx.pressure_sensor_filter.get_reading(),
+            pres: pres.to_num::<f32>(),
+            pressure_filtered: ctx.pressure_sensor_filter.get_reading().to_num::<f32>(),
         }));
 
         if encoded {
