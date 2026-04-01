@@ -1,6 +1,6 @@
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
-use crate::util::constants_file::ChosenFixedPointType;
+use crate::util::constants_file::{SensorFixedType, TimeDifferenceType};
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;
@@ -49,7 +49,7 @@ impl ImuHandler for DmpReadings {
 
         sampled_yaw_pitch_roll = sampled_yaw_pitch_roll - self.calibration_offset;
 
-        sampled_yaw_pitch_roll.pressure = ChosenFixedPointType::from_num(read_pressure());
+        sampled_yaw_pitch_roll.pressure = SensorFixedType::from_num(read_pressure());
 
         if self.last_sampled_time.is_none() {
             self.last_sampled_time = Some(Instant::now());
@@ -59,7 +59,7 @@ impl ImuHandler for DmpReadings {
         }
         let current_time: Instant = Instant::now();
 
-        let passed_time = ChosenFixedPointType::from_num(
+        let passed_time = TimeDifferenceType::from_num(
             current_time
                 .duration_since(self.last_sampled_time.unwrap())
                 .as_secs_f32(),

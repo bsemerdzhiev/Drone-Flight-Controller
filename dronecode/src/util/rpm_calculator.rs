@@ -1,3 +1,4 @@
+use fixed::types::{I16F16, I26F6, I32F0, I32F32, I3F29};
 use micromath::F32Ext;
 use my_hdlc::{
     command::{DebugRpms, DeviceCommand},
@@ -6,30 +7,31 @@ use my_hdlc::{
 use tudelft_quadrupel::{motor, uart::send_bytes};
 
 use crate::util::{
-    approx_funcs::approx_sqrt,
-    constants_file::{ChosenFixedPointType, MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE},
+    approx_funcs::{approx_sqrt, approx_sqrt_rpm},
+    constants_file::{
+        DegreeType, RPMFixedType, SensorFixedType, MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE,
+    },
     yaw_pitch_roll::YawPitchRoll,
 };
 
 //------------------------------------------------------
 
 // chosen by trial and error in Desmos
-const THRUST_COEFFICIENT: ChosenFixedPointType = ChosenFixedPointType::lit("14e-8");
-const DRAG_COEFFICIENT: ChosenFixedPointType = ChosenFixedPointType::lit("2e-6");
 
 const MIN_PWM: u16 = 50;
-const MAX_RPMS: ChosenFixedPointType = ChosenFixedPointType::lit("9800");
 
 pub const THRESHOLD_LIFT: f32 = 0.1;
 
-fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [ChosenFixedPointType]) {
-    let cur_maxes = ChosenFixedPointType::from_num(motor::get_motor_max());
+fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [I26F6]) {
+    let MAX_RPMS: I16F16 = I16F16::from_num(9800);
+
+    let cur_maxes = I16F16::from_num(motor::get_motor_max());
 
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
 
     let mut k: usize = 0;
     for x in rpms_square {
-        let squared_number: ChosenFixedPointType = approx_sqrt(*x);
+        let squared_number: I16F16 = I16F16::from_num(approx_sqrt_rpm(*x));
 
         let rpm_ratio = squared_number / MAX_RPMS;
 
@@ -53,17 +55,17 @@ fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [ChosenFixedPoin
 }
 
 pub fn actuate_motors_with_direct_joystick_input(input_from_controller: &ManualInput) {
-    let N = YAW_RATE * ChosenFixedPointType::from_num(input_from_controller.get_yaw());
-    let M = PITCH_DEGREE * ChosenFixedPointType::from_num(input_from_controller.get_pitch());
-    let Z = MAX_LIFT * ChosenFixedPointType::from_num(-input_from_controller.get_lift());
-    let L = ROLL_DEGREE * ChosenFixedPointType::from_num(input_from_controller.get_roll());
+    let N = YAW_RATE * DegreeType::from_num(input_from_controller.get_yaw());
+    let M = PITCH_DEGREE * DegreeType::from_num(input_from_controller.get_pitch());
+    let Z = MAX_LIFT * DegreeType::from_num(-input_from_controller.get_lift());
+    let L = ROLL_DEGREE * DegreeType::from_num(input_from_controller.get_roll());
 
     let raw_lift: f32 = input_from_controller.get_lift();
 
-    let omega_one = Z + M - N;
-    let omega_two = Z + L + N;
-    let omega_three = Z - M - N;
-    let omega_four = Z - L + N;
+    let omega_one: I26F6 = I26F6::from_num(Z + M - N);
+    let omega_two: I26F6 = I26F6::from_num(Z + L + N);
+    let omega_three: I26F6 = I26F6::from_num(Z - M - N);
+    let omega_four: I26F6 = I26F6::from_num(Z - L + N);
 
     map_rpm_square_to_pwm(
         raw_lift,
@@ -71,23 +73,21 @@ pub fn actuate_motors_with_direct_joystick_input(input_from_controller: &ManualI
     );
 }
 
-pub fn actuate_motors_with_rates(input_from_controller: &YawPitchRoll, raw_lift: f32) {
-    let Nb: ChosenFixedPointType = input_from_controller.yaw * THRUST_COEFFICIENT;
-    let Md: ChosenFixedPointType = input_from_controller.pitch * DRAG_COEFFICIENT;
-    let Zd: ChosenFixedPointType = -input_from_controller.lift * DRAG_COEFFICIENT;
-    let Ld: ChosenFixedPointType = input_from_controller.roll * DRAG_COEFFICIENT;
+// const THRUST_COEFFICIENT: I26F6 = I26F6::lit("0.00000014");
+// const DRAG_COEFFICIENT: I26F6 = I26F6::lit("0.000002");
+const THR_DIV: I26F6 = I26F6::lit("125000");
+const DRG_DIV: I26F6 = I26F6::lit("1785714.286");
 
-    let FOUR_TIMES_BD: ChosenFixedPointType =
-        ChosenFixedPointType::lit("4") * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
+pub fn actuate_motors_with_rates(input: &YawPitchRoll, raw_lift: f32) {
+    let n = I26F6::from_num(input.yaw) * THR_DIV;
+    let m = I26F6::from_num(input.pitch) * DRG_DIV;
+    let z = I26F6::from_num(-input.lift) * DRG_DIV;
+    let l = I26F6::from_num(input.roll) * DRG_DIV;
 
-    let omega_one: ChosenFixedPointType =
-        ((-Nb + (2 * Md) - Zd) / (FOUR_TIMES_BD)).max(ChosenFixedPointType::from_num(0));
-    let omega_two: ChosenFixedPointType =
-        ((Nb - (2 * Ld) - Zd) / (FOUR_TIMES_BD)).max(ChosenFixedPointType::from_num(0));
-    let omega_three: ChosenFixedPointType =
-        ((-Nb - (2 * Md) - Zd) / (FOUR_TIMES_BD)).max(ChosenFixedPointType::from_num(0));
-    let omega_four: ChosenFixedPointType =
-        ((Nb + (2 * Ld) - Zd) / (FOUR_TIMES_BD)).max(ChosenFixedPointType::from_num(0));
+    let omega_one = (m + m - n - z).max(I26F6::ZERO);
+    let omega_two = (n - l - l - z).max(I26F6::ZERO);
+    let omega_three = (-n - m - m - z).max(I26F6::ZERO);
+    let omega_four = (n + l + l - z).max(I26F6::ZERO);
 
     map_rpm_square_to_pwm(
         raw_lift,

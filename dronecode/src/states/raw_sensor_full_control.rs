@@ -10,7 +10,7 @@ use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
-use crate::util::constants_file::ChosenFixedPointType;
+use crate::util::constants_file::DegreeType;
 use crate::util::pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
@@ -68,7 +68,7 @@ impl FSMControl for FSMRawFullControl {
 
                 prev_state: self,
                 initial_pressure: ctx.pressure_sensor_filter.get_reading(),
-                initial_lift: ChosenFixedPointType::from_num(
+                initial_lift: DegreeType::from_num(
                     ctx.input_from_controller.as_ref().unwrap().get_lift(),
                 ),
             }),
