@@ -3,8 +3,8 @@ use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 
-static mut RX_BUF: [u8; 8] = [0; 8];
-static mut TX_BUF: [u8; 8] = [0; 8];
+static mut RX_BUF: [u8; 1] = [0; 1];
+static mut TX_BUF: [u8; 1] = [0; 1];
 const PACKET_SIZE: u8 = 16;
 
 pub fn radio_init() -> RADIO {
