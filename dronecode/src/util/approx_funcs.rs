@@ -18,12 +18,29 @@ pub fn approx_sqrt<F: FixedSigned>(n: F) -> F {
     if n == F::ZERO {
         return F::ZERO;
     }
-    let sqrt_tol = F::from_num(0.001f32);
     let mut x = n;
-    let mut root: F;
-    loop {
+    let mut root: F = F::ZERO;
+    let mut prev = F::ZERO;
+    for _i in 0..3 {
         root = (x + (n / x)) / F::from_num(2);
-        if (x - root).abs() < sqrt_tol {
+        if x == root || root == prev {
+            break;
+        }
+        x = root;
+    }
+    root
+}
+
+pub fn approx_sqrt_rpm<F: FixedSigned>(n: F) -> F {
+    if n == F::ZERO {
+        return F::ZERO;
+    }
+    let mut x: F = F::from_num(7350);
+    let mut root: F = F::ZERO;
+    let mut prev = F::ZERO;
+    for _i in 0..5 {
+        root = (x + (n / x)) / F::from_num(2);
+        if x == root || root == prev {
             break;
         }
         x = root;

@@ -1,6 +1,6 @@
 use core::time::Duration;
 
-use fixed::types::I32F0;
+use fixed::types::{I16F16, I32F0, I64F0};
 use micromath::F32Ext;
 use nalgebra::{Matrix1x2, Matrix2, Matrix2x1, Vector2};
 use tudelft_quadrupel::{barometer::read_pressure, mpu::read_raw, time::Instant};
@@ -11,7 +11,7 @@ use crate::{
         sensors_handler::ImuHandler,
     },
     states::state_structures::calibration_state::LSB_FOR_ACCEL,
-    util::constants_file::ChosenFixedPointType,
+    util::constants_file::SensorFixedType,
 };
 type Scalar = f32;
 
@@ -28,18 +28,17 @@ const BARO_SAMPLE_DURATION: Duration = Duration::from_millis(10);
 
 pub struct PressureSensor {
     // ------------------------------------
-    current_state: Matrix2x1<ChosenFixedPointType>,
-    observation_matrix: Matrix1x2<ChosenFixedPointType>,
-    uncertainty_matrix: Matrix2<ChosenFixedPointType>,
+    current_state: Matrix2x1<SensorFixedType>,
+    observation_matrix: Matrix1x2<SensorFixedType>,
+    uncertainty_matrix: Matrix2<SensorFixedType>,
 
     // ------------------------------------
-    barometer_variance: ChosenFixedPointType,
-    accelerometer_variance: ChosenFixedPointType,
+    barometer_variance: SensorFixedType,
+    accelerometer_variance: SensorFixedType,
 
     // ------------------------------------
-    last_barometer: ChosenFixedPointType,
-    last_accelerometer: ChosenFixedPointType,
-
+    // last_barometer: SensorFixedType,
+    // last_accelerometer: SensorFixedType,
     last_reading_accel: Instant,
     last_reading_baro: Instant,
 
@@ -50,26 +49,25 @@ impl PressureSensor {
     pub fn new() -> Self {
         Self {
             current_state: Matrix2x1::new(
-                ChosenFixedPointType::from_num(0),
-                ChosenFixedPointType::from_num(0),
+                SensorFixedType::from_num(0),
+                SensorFixedType::from_num(0),
             ),
             observation_matrix: Matrix1x2::new(
-                ChosenFixedPointType::from_num(1),
-                ChosenFixedPointType::from_num(0),
+                SensorFixedType::from_num(1),
+                SensorFixedType::from_num(0),
             ),
-            uncertainty_matrix: Matrix2::<ChosenFixedPointType>::new(
-                ChosenFixedPointType::from_num(1),
-                ChosenFixedPointType::from_num(0),
-                ChosenFixedPointType::from_num(0),
-                ChosenFixedPointType::from_num(1),
+            uncertainty_matrix: Matrix2::<SensorFixedType>::new(
+                SensorFixedType::from_num(1),
+                SensorFixedType::from_num(0),
+                SensorFixedType::from_num(0),
+                SensorFixedType::from_num(1),
             ),
 
-            accelerometer_variance: ChosenFixedPointType::from_num(0.6f32),
-            barometer_variance: ChosenFixedPointType::from_num(5e-2),
+            accelerometer_variance: SensorFixedType::from_num(0.6f32),
+            barometer_variance: SensorFixedType::from_num(5e-2),
 
-            last_barometer: ChosenFixedPointType::from_num(0.0),
-            last_accelerometer: ChosenFixedPointType::from_num(1.0),
-
+            // last_barometer: ChosenFixedPointType::from_num(0.0),
+            // last_accelerometer: ChosenFixedPointType::from_num(1.0),
             last_reading_accel: Instant::now(),
             last_reading_baro: Instant::now(),
 
@@ -79,19 +77,17 @@ impl PressureSensor {
 
     pub fn reset(&mut self) {
         self.baseline_pressure = I32F0::from_num(read_pressure());
-        self.current_state = Matrix2x1::new(
-            ChosenFixedPointType::from_num(0),
-            ChosenFixedPointType::from_num(0),
-        );
+        self.current_state =
+            Matrix2x1::new(SensorFixedType::from_num(0), SensorFixedType::from_num(0));
         self.uncertainty_matrix = Matrix2::new(
-            ChosenFixedPointType::from_num(1),
-            ChosenFixedPointType::from_num(0),
-            ChosenFixedPointType::from_num(0),
-            ChosenFixedPointType::from_num(1),
+            SensorFixedType::from_num(1),
+            SensorFixedType::from_num(0),
+            SensorFixedType::from_num(0),
+            SensorFixedType::from_num(1),
         );
     }
 
-    pub fn pressure_to_meters(&mut self, pressure_reading: I32F0) -> I32F0 {
+    pub fn pressure_to_meters(&mut self, pressure_reading: I32F0) -> SensorFixedType {
         // NOTE: more physics accurate formula
         // return 44330.0
         //     * (1.0
@@ -99,7 +95,8 @@ impl PressureSensor {
         //             pressure_reading as f32 / self.baseline_pressure as f32,
         //             (1.0 / 5.255),
         //         )));
-        return (-pressure_reading + self.baseline_pressure) / I32F0::from_num(12);
+        return SensorFixedType::from_num(-pressure_reading + self.baseline_pressure)
+            / SensorFixedType::from_num(12);
     }
 
     pub fn prediction(&mut self, filtered_position: &mut KalmanFilter) {
@@ -110,67 +107,73 @@ impl PressureSensor {
 
         let mut raw_accel = read_raw().unwrap().0;
 
-        let mut raw_accel_x = (ChosenFixedPointType::from_num(raw_accel.x)
-            - ChosenFixedPointType::from_num(filtered_position.calibration_offset.0.x))
-            / ChosenFixedPointType::from_num(LSB_FOR_ACCEL);
+        let mut raw_accel_x = SensorFixedType::from_num(
+            (I16F16::from_num(raw_accel.x)
+                - I16F16::from_num(filtered_position.calibration_offset.0.x))
+                / I16F16::from_num(LSB_FOR_ACCEL),
+        );
 
-        let mut raw_accel_y = (ChosenFixedPointType::from_num(raw_accel.y)
-            - ChosenFixedPointType::from_num(filtered_position.calibration_offset.0.y))
-            / ChosenFixedPointType::from_num(LSB_FOR_ACCEL);
+        let mut raw_accel_y = SensorFixedType::from_num(
+            (I16F16::from_num(raw_accel.y)
+                - I16F16::from_num(filtered_position.calibration_offset.0.y))
+                / I16F16::from_num(LSB_FOR_ACCEL),
+        );
 
-        let mut raw_accel_z = (ChosenFixedPointType::from_num(raw_accel.z)
-            - ChosenFixedPointType::from_num(filtered_position.calibration_offset.0.z))
-            / ChosenFixedPointType::from_num(LSB_FOR_ACCEL);
+        let mut raw_accel_z = SensorFixedType::from_num(
+            (I16F16::from_num(raw_accel.z)
+                - I16F16::from_num(filtered_position.calibration_offset.0.z))
+                / I16F16::from_num(LSB_FOR_ACCEL),
+        );
 
-        let mut accel_input: ChosenFixedPointType = (-raw_accel_x
-            * ChosenFixedPointType::from_num(micromath::F32Ext::sin(
+        let mut accel_input: SensorFixedType = (-raw_accel_x
+            * SensorFixedType::from_num(micromath::F32Ext::sin(
                 filtered_position.pitch.to_num::<f32>(),
             )))
             + (raw_accel_y
-                * ChosenFixedPointType::from_num(micromath::F32Ext::sin(
+                * SensorFixedType::from_num(micromath::F32Ext::sin(
                     filtered_position.roll.to_num::<f32>(),
                 ))
-                * ChosenFixedPointType::from_num(micromath::F32Ext::cos(
+                * SensorFixedType::from_num(micromath::F32Ext::cos(
                     filtered_position.pitch.to_num::<f32>(),
                 )))
             + (raw_accel_z
-                * ChosenFixedPointType::from_num(micromath::F32Ext::cos(
+                * SensorFixedType::from_num(micromath::F32Ext::cos(
                     filtered_position.roll.to_num::<f32>(),
                 ))
-                * ChosenFixedPointType::from_num(micromath::F32Ext::cos(
+                * SensorFixedType::from_num(micromath::F32Ext::cos(
                     filtered_position.pitch.to_num::<f32>(),
                 )));
 
-        accel_input -= ChosenFixedPointType::from_num(1);
+        accel_input -= SensorFixedType::from_num(1);
 
-        accel_input *= ChosenFixedPointType::from_num(9.81);
+        accel_input *= SensorFixedType::from_num(9.81);
         // ----------------------------------------------------------------------
         /*
          *  Math is:
          *   x_(k+1) = F*x_k + B*u_k
          *   P_(k+1) = F*P*F^T + Q
          */
-        let dt: ChosenFixedPointType = ChosenFixedPointType::from_num(
+        let dt: SensorFixedType = SensorFixedType::from_num(
             cur_time
                 .duration_since(self.last_reading_accel)
                 .as_secs_f32()
                 .clamp(0.001, 0.03),
         );
 
-        let control_input_matrix: Matrix2x1<ChosenFixedPointType> =
-            Matrix2x1::new(dt * dt * ChosenFixedPointType::from_num(0.5), dt);
+        let control_input_matrix: Matrix2x1<SensorFixedType> =
+            Matrix2x1::new(dt * dt * SensorFixedType::from_num(0.5), dt);
 
-        let transition_matrix = Matrix2::<ChosenFixedPointType>::new(
-            ChosenFixedPointType::from_num(1),
+        let transition_matrix = Matrix2::<SensorFixedType>::new(
+            SensorFixedType::from_num(1),
             dt,
-            ChosenFixedPointType::from_num(0),
-            ChosenFixedPointType::from_num(1),
+            SensorFixedType::from_num(0),
+            SensorFixedType::from_num(1),
         );
 
         let process_uncertainty = Matrix2::new(
-            dt * dt * dt * dt * ChosenFixedPointType::from_num(0.25),
-            dt * dt * dt * ChosenFixedPointType::from_num(0.5),
-            dt * dt * dt * ChosenFixedPointType::from_num(0.5),
+            dt * dt * dt * dt * SensorFixedType::from_num(0.25),
+            dt * dt * dt * SensorFixedType::from_num(0.5),
+            dt * dt * dt * SensorFixedType::from_num(0.5),
             dt * dt,
         )
         .map(|x| x * self.accelerometer_variance);
@@ -217,7 +220,6 @@ impl PressureSensor {
             tpt[(1, 1)] + process_uncertainty[(1, 1)],
         );
 
-        self.last_accelerometer = accel_input;
         self.last_reading_accel = cur_time;
     }
 
@@ -227,14 +229,13 @@ impl PressureSensor {
             return;
         }
 
-        let baro_reading: ChosenFixedPointType = ChosenFixedPointType::from_num(
-            self.pressure_to_meters(I32F0::from_num(read_pressure() as i32)),
-        );
+        let baro_reading: SensorFixedType =
+            self.pressure_to_meters(I32F0::from_num(read_pressure() as i32));
 
         // let mut kalman_gain: Matrix2x1<ChosenFixedPointType> =
         // self.uncertainty_matrix * self.observation_matrix.transpose();
 
-        let mut kalman_gain: Matrix2x1<ChosenFixedPointType> = Matrix2x1::new(
+        let mut kalman_gain: Matrix2x1<SensorFixedType> = Matrix2x1::new(
             self.uncertainty_matrix[(0, 0)] * self.observation_matrix[(0, 0)]
                 + self.uncertainty_matrix[(0, 1)] * self.observation_matrix[(0, 1)],
             self.uncertainty_matrix[(1, 0)] * self.observation_matrix[(0, 0)]
@@ -258,11 +259,11 @@ impl PressureSensor {
 
         self.current_state = self.current_state + (kalman_gain * inovation);
 
-        let i: Matrix2<ChosenFixedPointType> = Matrix2::<ChosenFixedPointType>::new(
-            ChosenFixedPointType::from_num(1),
-            ChosenFixedPointType::from_num(0),
-            ChosenFixedPointType::from_num(0),
-            ChosenFixedPointType::from_num(1),
+        let i: Matrix2<SensorFixedType> = Matrix2::<SensorFixedType>::new(
+            SensorFixedType::from_num(1),
+            SensorFixedType::from_num(0),
+            SensorFixedType::from_num(0),
+            SensorFixedType::from_num(1),
         );
 
         // self.uncertainty_matrix = (i - (kalman_gain * self.observation_matrix))
@@ -274,10 +275,10 @@ impl PressureSensor {
         let k1 = kalman_gain[(1, 0)];
 
         let i_minus_kh = Matrix2::new(
-            ChosenFixedPointType::from_num(1) - k0,
-            ChosenFixedPointType::from_num(0),
+            SensorFixedType::from_num(1) - k0,
+            SensorFixedType::from_num(0),
             -k1,
-            ChosenFixedPointType::from_num(1),
+            SensorFixedType::from_num(1),
         );
 
         // i_minus_kh * P * i_minus_kh^T
@@ -310,7 +311,6 @@ impl PressureSensor {
             ikpiT[(1, 1)] + kkT[(1, 1)],
         );
 
-        self.last_barometer = baro_reading;
         self.last_reading_baro = cur_time;
     }
 
@@ -319,7 +319,7 @@ impl PressureSensor {
         self.correction();
     }
 
-    pub fn get_reading(&self) -> ChosenFixedPointType {
+    pub fn get_reading(&self) -> SensorFixedType {
         return self.current_state[(0, 0)];
     }
 }

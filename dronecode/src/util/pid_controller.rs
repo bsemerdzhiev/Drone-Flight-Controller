@@ -1,45 +1,44 @@
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::time::Instant;
 
-use crate::util::{constants_file::ChosenFixedPointType, yaw_pitch_roll::YawPitchRoll};
+use crate::util::{
+    constants_file::{DegreeType, PIDValuesType, SensorFixedType, TimeDifferenceType},
+    yaw_pitch_roll::YawPitchRoll,
+};
 
-pub const K_P: [ChosenFixedPointType; 4] = [
-    ChosenFixedPointType::lit("4"),
-    ChosenFixedPointType::lit("0.005"),
-    ChosenFixedPointType::lit("0.005"),
-    ChosenFixedPointType::lit("8"),
+pub const K_P: [PIDValuesType; 4] = [
+    PIDValuesType::lit("4"),
+    PIDValuesType::lit("0.005"),
+    PIDValuesType::lit("0.005"),
+    PIDValuesType::lit("8"),
 ];
-pub const K_I: [ChosenFixedPointType; 4] = [
-    ChosenFixedPointType::lit("0"),
-    ChosenFixedPointType::lit("0"),
-    ChosenFixedPointType::lit("0"),
-    ChosenFixedPointType::lit("0"),
+pub const K_I: [PIDValuesType; 4] = [
+    PIDValuesType::lit("0"),
+    PIDValuesType::lit("0"),
+    PIDValuesType::lit("0"),
+    PIDValuesType::lit("0"),
 ];
-pub const K_D: [ChosenFixedPointType; 4] = [
-    ChosenFixedPointType::lit("0"),
-    ChosenFixedPointType::lit("0"),
-    ChosenFixedPointType::lit("0"),
-    ChosenFixedPointType::lit("0"),
+pub const K_D: [PIDValuesType; 4] = [
+    PIDValuesType::lit("0"),
+    PIDValuesType::lit("0"),
+    PIDValuesType::lit("0"),
+    PIDValuesType::lit("0"),
 ];
 
 pub fn add_trims(
     manual_input: &ManualInput,
-) -> (
-    [ChosenFixedPointType; 4],
-    [ChosenFixedPointType; 4],
-    [ChosenFixedPointType; 4],
-) {
-    let mut k_p: [ChosenFixedPointType; 4] = K_P;
-    let mut k_i: [ChosenFixedPointType; 4] = K_I;
-    let mut k_d: [ChosenFixedPointType; 4] = K_D;
+) -> ([PIDValuesType; 4], [PIDValuesType; 4], [PIDValuesType; 4]) {
+    let mut k_p: [PIDValuesType; 4] = K_P;
+    let mut k_i: [PIDValuesType; 4] = K_I;
+    let mut k_d: [PIDValuesType; 4] = K_D;
 
-    k_p[0] += ChosenFixedPointType::from_num(manual_input.yaw_p_trim);
+    k_p[0] += PIDValuesType::from_num(manual_input.yaw_p_trim);
 
-    k_p[1] += ChosenFixedPointType::from_num(manual_input.roll_pitch_p_trim);
-    k_p[2] += ChosenFixedPointType::from_num(manual_input.roll_pitch_p_trim);
+    k_p[1] += PIDValuesType::from_num(manual_input.roll_pitch_p_trim);
+    k_p[2] += PIDValuesType::from_num(manual_input.roll_pitch_p_trim);
 
-    k_d[1] += ChosenFixedPointType::from_num(manual_input.roll_pitch_d_trim);
-    k_d[2] += ChosenFixedPointType::from_num(manual_input.roll_pitch_d_trim);
+    k_d[1] += PIDValuesType::from_num(manual_input.roll_pitch_d_trim);
+    k_d[2] += PIDValuesType::from_num(manual_input.roll_pitch_d_trim);
 
     return (k_p, k_i, k_d);
 }
@@ -56,9 +55,9 @@ pub enum ControllerFlags {
 }
 
 // in kg
-const DRONE_WEIGHT: ChosenFixedPointType = ChosenFixedPointType::lit("0.5");
+const DRONE_WEIGHT: DegreeType = DegreeType::lit("0.5");
 
-const GRAVITY_CONSTANT: ChosenFixedPointType = ChosenFixedPointType::lit("9.8");
+const GRAVITY_CONSTANT: DegreeType = DegreeType::lit("9.8");
 
 pub struct PIDController {
     prev_error: YawPitchRoll,
@@ -81,9 +80,9 @@ impl PIDController {
         &mut self,
         input: YawPitchRoll,
         target: YawPitchRoll,
-        k_p: [ChosenFixedPointType; 4],
-        k_i: [ChosenFixedPointType; 4],
-        k_d: [ChosenFixedPointType; 4],
+        k_p: [PIDValuesType; 4],
+        k_i: [PIDValuesType; 4],
+        k_d: [PIDValuesType; 4],
         controller_flags: u8,
     ) -> YawPitchRoll {
         /*
@@ -95,7 +94,7 @@ impl PIDController {
         let calculated_error = (target - input);
 
         let current_time = Instant::now();
-        let delta_t = ChosenFixedPointType::from_num(
+        let delta_t = TimeDifferenceType::from_num(
             current_time
                 .duration_since(self.last_timestamp)
                 .as_secs_f32()

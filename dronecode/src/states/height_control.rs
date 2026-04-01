@@ -11,7 +11,7 @@ use crate::{
         state_structures::state_context::StateContext,
     },
     util::{
-        constants_file::ChosenFixedPointType,
+        constants_file::{DegreeType, SensorFixedType},
         pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P},
         rpm_calculator::{actuate_motors_with_rates, THRESHOLD_LIFT},
         yaw_pitch_roll::YawPitchRoll,
@@ -22,8 +22,8 @@ pub struct FSMHeightControl {
     pub pid_controller: Box<PIDController>,
     pub prev_state: Box<dyn FSMControl>,
 
-    pub initial_lift: ChosenFixedPointType,
-    pub initial_pressure: ChosenFixedPointType,
+    pub initial_lift: DegreeType,
+    pub initial_pressure: SensorFixedType,
 }
 
 impl FSMControl for FSMHeightControl {
@@ -39,7 +39,7 @@ impl FSMControl for FSMHeightControl {
         }
 
         // if lift is changed, return to previous state
-        if (ChosenFixedPointType::from_num(ctx.input_from_controller.as_ref().unwrap().get_lift())
+        if (DegreeType::from_num(ctx.input_from_controller.as_ref().unwrap().get_lift())
             - self.initial_lift)
             != 0
         {
