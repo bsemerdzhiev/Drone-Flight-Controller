@@ -7,7 +7,10 @@ static mut RX_BUF: [u8; 130] = [0; 130];
 static mut TX_BUF: [u8; 130] = [0; 130];
 
 pub fn radio_init() -> RADIO {
-    let p = Peripherals::take().unwrap();
+    // have to steal because peripherals is already taken in the init
+    let p = unsafe {
+        Peripherals::steal()
+    };
     let clock = p.CLOCK;
     let radio = p.RADIO;
 
@@ -75,9 +78,9 @@ pub fn radio_init() -> RADIO {
     radio.shorts.write(|w| w.ready_start().enabled().end_disable().enabled());
 
     // unmask interrupts (possible use later)
-    unsafe {
-        NVIC::unmask(nrf51_pac::Interrupt::RADIO);
-    }
+    // unsafe {
+    //     NVIC::unmask(nrf51_pac::Interrupt::RADIO);
+    // }
 
     radio
 }
