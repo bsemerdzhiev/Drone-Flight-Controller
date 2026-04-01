@@ -65,7 +65,6 @@ pub fn main_loop() -> ! {
     let mut flash_head = 0u32;
     let mut flash_tail = 0u32;
     let mut wireless_toggle = false;
-    let mut wireless_toggle = false;
     let mut wireless_option = WirelessOptions::PCSide;
 
     let mut ctx = StateContext {
@@ -194,15 +193,6 @@ pub fn main_loop() -> ! {
             current_state.get_state(),
         );
         current_time = now;
-
-        // -------------------------------------------------------------------------
-        // send information about the drone state to PC
-        let to_write = ctx
-            .trv
-            .write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
-                current_state.get_state(),
-                read_battery(),
-            )));
 
         wait_for_next_tick();
     }
