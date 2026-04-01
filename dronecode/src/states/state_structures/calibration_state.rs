@@ -3,6 +3,7 @@ use core::{ops::Add, time::Duration};
 use tudelft_quadrupel::{
     barometer::read_pressure,
     block,
+    fixed::types::{I32F0, I64F0},
     mpu::{
         read_dmp_bytes, read_raw,
         structs::{Accel, Gyro},
@@ -10,7 +11,7 @@ use tudelft_quadrupel::{
     time::Instant,
 };
 
-use crate::util::{axis::Axis, yaw_pitch_roll::YawPitchRoll};
+use crate::util::{axis::Axis, constants_file::ChosenFixedPointType, yaw_pitch_roll::YawPitchRoll};
 
 // since the accelerometer uses +-2G(16'384 LSB/g),
 // this number needs to be subtracted from the calibrated
@@ -22,37 +23,45 @@ const CALIBRATION_TIME: Duration = Duration::from_secs(5);
 
 #[derive(Copy, Clone, Debug)]
 pub struct CalibrationState {
-    accelerometer_sum: Axis<i64>,
-    gyro_sum: Axis<i64>,
+    accelerometer_sum: Axis<I64F0>,
+    gyro_sum: Axis<I64F0>,
 
     ypr_sum: YawPitchRoll,
-    sample_cnt: i32,
+    sample_cnt: I64F0,
 
     pub start_time: Instant,
 
-    pub accelerometer_offset: Axis<i32>,
-    pub gyro_offset: Axis<i32>,
+    pub accelerometer_offset: Axis<I32F0>,
+    pub gyro_offset: Axis<I32F0>,
     pub ypr_offset: YawPitchRoll,
 }
 
 impl CalibrationState {
     pub fn new() -> Self {
         Self {
-            accelerometer_sum: Axis::<i64>::default(),
-            gyro_sum: Axis::<i64>::default(),
+            accelerometer_sum: Axis::<I64F0>::default(),
+            gyro_sum: Axis::<I64F0>::default(),
             ypr_sum: YawPitchRoll::new(),
-            sample_cnt: 0,
+            sample_cnt: I64F0::from_num(0),
             start_time: Instant::now(),
 
-            accelerometer_offset: Axis { x: 0, y: 0, z: 0 },
-            gyro_offset: Axis { x: 0, y: 0, z: 0 },
+            accelerometer_offset: Axis {
+                x: I32F0::from_num(0),
+                y: I32F0::from_num(0),
+                z: I32F0::from_num(0),
+            },
+            gyro_offset: Axis {
+                x: I32F0::from_num(0),
+                y: I32F0::from_num(0),
+                z: I32F0::from_num(0),
+            },
 
             ypr_offset: YawPitchRoll {
-                yaw: 0.0,
-                pitch: 0.0,
-                roll: 0.0,
-                lift: 0.0,
-                pressure: 0.0,
+                yaw: ChosenFixedPointType::from_num(0),
+                pitch: ChosenFixedPointType::from_num(0),
+                roll: ChosenFixedPointType::from_num(0),
+                lift: ChosenFixedPointType::from_num(0),
+                pressure: ChosenFixedPointType::from_num(0),
             },
         }
     }
@@ -69,29 +78,29 @@ impl CalibrationState {
         self.gyro_sum = self.gyro_sum + raw_read.1;
 
         self.ypr_sum = self.ypr_sum + ypr_sample;
-        self.sample_cnt += 1;
+        self.sample_cnt += I64F0::from_num(0);
     }
 
     pub fn finalize_calibration(&mut self) {
         self.accelerometer_offset = Axis {
-            x: (self.accelerometer_sum.x / self.sample_cnt as i64) as i32,
-            y: (self.accelerometer_sum.y / self.sample_cnt as i64) as i32,
-            z: (self.accelerometer_sum.z / self.sample_cnt as i64) as i32,
+            x: I32F0::from_num(self.accelerometer_sum.x / self.sample_cnt),
+            y: I32F0::from_num(self.accelerometer_sum.y / self.sample_cnt),
+            z: I32F0::from_num(self.accelerometer_sum.z / self.sample_cnt),
         };
-        self.accelerometer_offset.z -= LSB_FOR_ACCEL;
+        self.accelerometer_offset.z -= I32F0::from_num(LSB_FOR_ACCEL);
 
         self.gyro_offset = Axis {
-            x: (self.gyro_sum.x / self.sample_cnt as i64) as i32,
-            y: (self.gyro_sum.y / self.sample_cnt as i64) as i32,
-            z: (self.gyro_sum.z / self.sample_cnt as i64) as i32,
+            x: I32F0::from_num(self.gyro_sum.x / self.sample_cnt),
+            y: I32F0::from_num(self.gyro_sum.y / self.sample_cnt),
+            z: I32F0::from_num(self.gyro_sum.z / self.sample_cnt),
         };
 
         self.ypr_offset = YawPitchRoll {
-            lift: 0.0,
-            yaw: self.ypr_sum.yaw / self.sample_cnt as f32,
-            pitch: self.ypr_sum.pitch / self.sample_cnt as f32,
-            roll: self.ypr_sum.roll / self.sample_cnt as f32,
-            pressure: 0.0,
+            lift: ChosenFixedPointType::from_num(0),
+            yaw: self.ypr_sum.yaw / ChosenFixedPointType::from_num(self.sample_cnt),
+            pitch: self.ypr_sum.pitch / ChosenFixedPointType::from_num(self.sample_cnt),
+            roll: self.ypr_sum.roll / ChosenFixedPointType::from_num(self.sample_cnt),
+            pressure: ChosenFixedPointType::from_num(0),
         };
     }
     pub fn should_finish(&mut self) -> bool {

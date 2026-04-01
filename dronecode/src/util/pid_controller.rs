@@ -1,24 +1,45 @@
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::time::Instant;
 
-use crate::util::yaw_pitch_roll::YawPitchRoll;
+use crate::util::{constants_file::ChosenFixedPointType, yaw_pitch_roll::YawPitchRoll};
 
-pub const K_P: [f32; 4] = [4f32, 0.005f32, 0.005f32, 8f32];
-pub const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-pub const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
+pub const K_P: [ChosenFixedPointType; 4] = [
+    ChosenFixedPointType::lit("4"),
+    ChosenFixedPointType::lit("0.005"),
+    ChosenFixedPointType::lit("0.005"),
+    ChosenFixedPointType::lit("8"),
+];
+pub const K_I: [ChosenFixedPointType; 4] = [
+    ChosenFixedPointType::lit("0"),
+    ChosenFixedPointType::lit("0"),
+    ChosenFixedPointType::lit("0"),
+    ChosenFixedPointType::lit("0"),
+];
+pub const K_D: [ChosenFixedPointType; 4] = [
+    ChosenFixedPointType::lit("0"),
+    ChosenFixedPointType::lit("0"),
+    ChosenFixedPointType::lit("0"),
+    ChosenFixedPointType::lit("0"),
+];
 
-pub fn add_trims(manual_input: &ManualInput) -> ([f32; 4], [f32; 4], [f32; 4]) {
-    let mut k_p: [f32; 4] = K_P;
-    let mut k_i: [f32; 4] = K_I;
-    let mut k_d: [f32; 4] = K_D;
+pub fn add_trims(
+    manual_input: &ManualInput,
+) -> (
+    [ChosenFixedPointType; 4],
+    [ChosenFixedPointType; 4],
+    [ChosenFixedPointType; 4],
+) {
+    let mut k_p: [ChosenFixedPointType; 4] = K_P;
+    let mut k_i: [ChosenFixedPointType; 4] = K_I;
+    let mut k_d: [ChosenFixedPointType; 4] = K_D;
 
-    k_p[0] += manual_input.yaw_p_trim;
+    k_p[0] += ChosenFixedPointType::from_num(manual_input.yaw_p_trim);
 
-    k_p[1] += manual_input.roll_pitch_p_trim;
-    k_p[2] += manual_input.roll_pitch_p_trim;
+    k_p[1] += ChosenFixedPointType::from_num(manual_input.roll_pitch_p_trim);
+    k_p[2] += ChosenFixedPointType::from_num(manual_input.roll_pitch_p_trim);
 
-    k_d[1] += manual_input.roll_pitch_d_trim;
-    k_d[2] += manual_input.roll_pitch_d_trim;
+    k_d[1] += ChosenFixedPointType::from_num(manual_input.roll_pitch_d_trim);
+    k_d[2] += ChosenFixedPointType::from_num(manual_input.roll_pitch_d_trim);
 
     return (k_p, k_i, k_d);
 }
@@ -35,9 +56,9 @@ pub enum ControllerFlags {
 }
 
 // in kg
-const DRONE_WEIGHT: f32 = 0.5f32;
+const DRONE_WEIGHT: ChosenFixedPointType = ChosenFixedPointType::lit("0.5");
 
-const GRAVITY_CONSTANT: f32 = 9.8f32;
+const GRAVITY_CONSTANT: ChosenFixedPointType = ChosenFixedPointType::lit("9.8");
 
 pub struct PIDController {
     prev_error: YawPitchRoll,
@@ -60,9 +81,9 @@ impl PIDController {
         &mut self,
         input: YawPitchRoll,
         target: YawPitchRoll,
-        k_p: [f32; 4],
-        k_i: [f32; 4],
-        k_d: [f32; 4],
+        k_p: [ChosenFixedPointType; 4],
+        k_i: [ChosenFixedPointType; 4],
+        k_d: [ChosenFixedPointType; 4],
         controller_flags: u8,
     ) -> YawPitchRoll {
         /*
@@ -74,10 +95,12 @@ impl PIDController {
         let calculated_error = (target - input);
 
         let current_time = Instant::now();
-        let delta_t = current_time
-            .duration_since(self.last_timestamp)
-            .as_secs_f32()
-            .clamp(0.001, 0.02);
+        let delta_t = ChosenFixedPointType::from_num(
+            current_time
+                .duration_since(self.last_timestamp)
+                .as_secs_f32()
+                .clamp(0.001, 0.02),
+        );
 
         // compute P part
         if ((controller_flags & (ControllerFlags::AddP as u8)) != 0) {

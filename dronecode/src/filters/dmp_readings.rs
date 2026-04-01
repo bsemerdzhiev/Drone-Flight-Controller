@@ -1,5 +1,6 @@
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
+use crate::util::constants_file::ChosenFixedPointType;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;
@@ -48,7 +49,7 @@ impl ImuHandler for DmpReadings {
 
         sampled_yaw_pitch_roll = sampled_yaw_pitch_roll - self.calibration_offset;
 
-        sampled_yaw_pitch_roll.pressure = read_pressure() as f32;
+        sampled_yaw_pitch_roll.pressure = ChosenFixedPointType::from_num(read_pressure());
 
         if self.last_sampled_time.is_none() {
             self.last_sampled_time = Some(Instant::now());
@@ -58,9 +59,11 @@ impl ImuHandler for DmpReadings {
         }
         let current_time: Instant = Instant::now();
 
-        let passed_time = current_time
-            .duration_since(self.last_sampled_time.unwrap())
-            .as_secs_f32();
+        let passed_time = ChosenFixedPointType::from_num(
+            current_time
+                .duration_since(self.last_sampled_time.unwrap())
+                .as_secs_f32(),
+        );
 
         // derive rate
         let calculated_rate =
