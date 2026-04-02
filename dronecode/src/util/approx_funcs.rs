@@ -7,7 +7,7 @@ pub fn approx_sqrt<F: FixedSigned>(n: F) -> F {
     let mut x = n;
     let mut root: F = F::ZERO;
     let mut prev = F::ZERO;
-    for _i in 0..3 {
+    for _i in 0..9 {
         root = (x + (n / x)) / F::from_num(2);
         if x == root || root == prev {
             break;
@@ -88,7 +88,7 @@ pub fn atan2_cordic<F: FixedSigned>(y_in: F, x_in: F) -> F {
     }
 
     let mut z = F::ZERO;
-    for i in 0..5usize {
+    for i in 0..10usize {
         let y_sgn = if y.is_negative() {
             F::from_num(-1)
         } else {
