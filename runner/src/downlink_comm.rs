@@ -20,7 +20,7 @@ use crate::{
 };
 use my_hdlc::telemetry_data::TELEMETERY_DATA_SIZE;
 
-const DEBUG_BOARD_MODE: bool = true;
+const DEBUG_BOARD_MODE: bool = false;
 
 pub fn downlink_main_loop(
     rcv_mut: &Arc<Mutex<HdlcTransceiver>>,

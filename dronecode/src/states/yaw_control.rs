@@ -41,7 +41,7 @@ impl FSMControl for FSMYaw {
             ControllerFlags::AddP as u8,
         );
 
-        target.yaw += correction.yaw;
+        target.yaw -= correction.yaw;
         actuate_motors_with_rates(&target, ctx.input_from_controller.get_lift());
 
         return self;

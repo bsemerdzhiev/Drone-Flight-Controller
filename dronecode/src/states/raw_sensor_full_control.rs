@@ -41,10 +41,10 @@ impl FSMControl for FSMRawFullControl {
             k_p,
             k_i,
             k_d,
-            ControllerFlags::AddP as u8,
+            ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8 | ControllerFlags::AddI as u8,
         );
 
-        target.yaw += correction.yaw;
+        target.yaw -= correction.yaw;
         target.roll += correction.roll;
         target.pitch += correction.pitch;
 
