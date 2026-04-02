@@ -1,5 +1,6 @@
 use core::ops::Add;
 
+use fixed::types::I16F16;
 use tudelft_quadrupel::{
     fixed::types::{I32F0, I64F0},
     mpu::structs::{Accel, Gyro},
@@ -36,27 +37,27 @@ impl Add<Gyro> for Axis<I64F0> {
     }
 }
 
-impl From<Accel> for Axis<I32F0> {
-    fn from(input: Accel) -> Axis<I32F0> {
+impl From<Accel> for Axis<I16F16> {
+    fn from(input: Accel) -> Axis<I16F16> {
         Axis {
-            x: I32F0::from_num(input.x),
-            y: I32F0::from_num(input.y),
-            z: I32F0::from_num(input.z),
+            x: I16F16::from_num(input.x),
+            y: I16F16::from_num(input.y),
+            z: I16F16::from_num(input.z),
         }
     }
 }
 
-impl From<Gyro> for Axis<I32F0> {
-    fn from(input: Gyro) -> Axis<I32F0> {
+impl From<Gyro> for Axis<I16F16> {
+    fn from(input: Gyro) -> Axis<I16F16> {
         Axis {
-            x: I32F0::from_num(input.x),
-            y: I32F0::from_num(input.y),
-            z: I32F0::from_num(input.z),
+            x: I16F16::from_num(input.x),
+            y: I16F16::from_num(input.y),
+            z: I16F16::from_num(input.z),
         }
     }
 }
 
-impl Axis<I32F0> {
+impl Axis<I16F16> {
     pub fn to_array(&mut self) -> [i32; 3] {
         return [
             self.x.to_num::<i32>(),

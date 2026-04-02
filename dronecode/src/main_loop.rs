@@ -10,7 +10,7 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
 use alloc::format;
-use fixed::types::{I26F6, I2F30, I4F28};
+use fixed::types::{I16F16, I26F6, I2F30, I4F28};
 use my_hdlc::telemetry_data::*;
 
 use tudelft_quadrupel::flash::flash_write_bytes;
@@ -69,9 +69,11 @@ pub fn main_loop() -> ! {
     let mut transceiver: Box<HdlcTransceiver> = Box::new(HdlcTransceiver::new());
 
     let mut received_manual_input: ManualInput = ManualInput::zero();
-    let mut input_as_ypr: YawPitchRoll = YawPitchRoll::<I26F6, I4F28>::new();
+    let mut input_as_ypr: YawPitchRoll<I16F16, I16F16> = YawPitchRoll::<I16F16, I16F16>::new();
 
-    let mut calibration_state: CalibrationState = CalibrationState::new();
+    let mut calibration_state: CalibrationState<I4F28, I4F28> =
+        CalibrationState::<I4F28, I4F28>::new();
+
     let mut flash_head = 0usize;
     let mut flash_tail = 0usize;
 
@@ -110,8 +112,6 @@ pub fn main_loop() -> ! {
     // used for determining whether we should panic
     let mut time_for_last_received_message: Instant = Instant::now();
     let mut last_send_message: Instant = Instant::now();
-
-    let cal = CalibrationState::new();
 
     // used to determine whether battery voltage is too low
     let mut battery_panic = false;
@@ -152,7 +152,7 @@ pub fn main_loop() -> ! {
                     }
                     DeviceCommand::ManualInput(manual_input) => {
                         *ctx.input_from_controller = manual_input;
-                        *ctx.input_as_ypr = YawPitchRoll::<I26F6, I2F30>::from_manual_input(
+                        *ctx.input_as_ypr = YawPitchRoll::<I16F16, I16F16>::from_manual_input(
                             ctx.input_from_controller,
                         );
                     }

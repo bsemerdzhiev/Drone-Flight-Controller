@@ -1,4 +1,4 @@
-use fixed::types::{I16F16, I26F6, I32F0, I32F32, I3F29};
+use fixed::types::{I16F16, I26F6, I32F0, I32F32, I3F29, I4F28};
 use micromath::F32Ext;
 use my_hdlc::{
     command::{DebugRpms, DeviceCommand},
@@ -53,13 +53,13 @@ fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [I26F6]) {
 }
 
 pub fn actuate_motors_with_direct_joystick_input(
-    input_from_controller: &YawPitchRoll<I26F6, I26F6>,
+    input_from_controller: &YawPitchRoll<I16F16, I16F16>,
     raw_lift: f32,
 ) {
-    let N = input_from_controller.yaw;
-    let M = input_from_controller.pitch;
-    let Z = -input_from_controller.lift;
-    let L = input_from_controller.roll;
+    let N = I26F6::from_num(input_from_controller.yaw);
+    let M = I26F6::from_num(input_from_controller.pitch);
+    let Z = I26F6::from_num(-input_from_controller.lift);
+    let L = I26F6::from_num(input_from_controller.roll);
 
     let omega_one: I26F6 = Z + M - N;
     let omega_two: I26F6 = Z + L + N;
@@ -77,11 +77,11 @@ pub fn actuate_motors_with_direct_joystick_input(
 const THR_DIV: I26F6 = I26F6::lit("125000");
 const DRG_DIV: I26F6 = I26F6::lit("1785714.286");
 
-pub fn actuate_motors_with_rates(input: &YawPitchRoll<I26F6, I26F6>, raw_lift: f32) {
-    let n = input.yaw * THR_DIV;
-    let m = input.pitch * DRG_DIV;
-    let z = -input.lift * DRG_DIV;
-    let l = input.roll * DRG_DIV;
+pub fn actuate_motors_with_rates(input: &YawPitchRoll<I16F16, I16F16>, raw_lift: f32) {
+    let n = I26F6::from_num(input.yaw) * THR_DIV;
+    let m = I26F6::from_num(input.pitch) * DRG_DIV;
+    let z = I26F6::from_num(-input.lift) * DRG_DIV;
+    let l = I26F6::from_num(input.roll) * DRG_DIV;
 
     let omega_one = (m + m - n - z).max(I26F6::ZERO);
     let omega_two = (n - l - l - z).max(I26F6::ZERO);

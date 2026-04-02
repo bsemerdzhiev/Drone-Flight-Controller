@@ -1,6 +1,6 @@
 use core::ops::{Add, Div, Mul, Sub};
 
-use fixed::traits::Fixed;
+use fixed::traits::{Fixed, FixedSigned};
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
@@ -14,8 +14,8 @@ use crate::util::{
 #[derive(Debug, Copy, Clone)]
 pub struct YawPitchRoll<T, Y>
 where
-    T: Fixed,
-    Y: Fixed,
+    T: FixedSigned,
+    Y: FixedSigned,
 {
     pub lift: T,
     pub yaw: T,
@@ -27,8 +27,8 @@ where
 
 impl<T, Y> Sub for YawPitchRoll<T, Y>
 where
-    T: Fixed,
-    Y: Fixed,
+    T: FixedSigned,
+    Y: FixedSigned,
 {
     type Output = Self;
 
@@ -45,8 +45,8 @@ where
 
 impl<T, Y> Add for YawPitchRoll<T, Y>
 where
-    T: Fixed,
-    Y: Fixed,
+    T: FixedSigned,
+    Y: FixedSigned,
 {
     type Output = Self;
 
@@ -63,9 +63,9 @@ where
 
 impl<T, Y, Z> Mul<Z> for YawPitchRoll<T, Y>
 where
-    T: Fixed,
-    Y: Fixed,
-    Z: Fixed,
+    T: FixedSigned,
+    Y: FixedSigned,
+    Z: FixedSigned,
 {
     type Output = Self;
 
@@ -82,9 +82,9 @@ where
 
 impl<T, Y, Z> Div<Z> for YawPitchRoll<T, Y>
 where
-    T: Fixed,
-    Y: Fixed,
-    Z: Fixed,
+    T: FixedSigned,
+    Y: FixedSigned,
+    Z: FixedSigned,
 {
     type Output = Self;
 
@@ -99,29 +99,10 @@ where
     }
 }
 
-impl<T, Y, Z> Mul<[Z; 4]> for YawPitchRoll<T, Y, Z>
-where
-    T: Fixed,
-    Y: Fixed,
-    Z: Fixed,
-{
-    type Output = Self;
-
-    fn mul(self, scalar: [Z; 4]) -> Self::Output {
-        Self {
-            lift: self.lift,
-            yaw: self.yaw * T::from_num(scalar[0]),
-            pitch: self.pitch * T::from_num(scalar[1]),
-            roll: self.roll * T::from_num(scalar[2]),
-            pressure: self.pressure * Y::from_num(scalar[3]),
-        }
-    }
-}
-
 impl<T, Y> From<Quaternion> for YawPitchRoll<T, Y>
 where
-    T: Fixed,
-    Y: Fixed,
+    T: FixedSigned,
+    Y: FixedSigned,
 {
     /// Creates a YawPitchRoll from a Quaternion
     fn from(q: Quaternion) -> Self {
@@ -131,16 +112,19 @@ where
         let y = T::from_num(y);
         let z = T::from_num(z);
 
-        let gx: T = 2 * (x * z - w * y);
-        let gy: T = 2 * (w * x + y * z);
+        let gx: T = T::from_num(2) * (x * z - w * y);
+        let gy: T = T::from_num(2) * (w * x + y * z);
         let gz: T = w * w - x * x - y * y + z * z;
 
-        let yaw: T = approx_atan2(
-            T::from_num(2) * (w * z + x * y),
-            T::from_num(1) - T::from_num(2) * (y * y + z * z),
-        ) / 2;
-        // let yaw =
-        // micromath::F32Ext::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)) / 2.0;
+        // let yaw: T = approx_atan2::<T>(
+        //     T::from_num(2) * (w * z + x * y),
+        //     T::from_num(1) - T::from_num(2) * (y * y + z * z),
+        // ) / T::from_num(2);
+        let yaw = micromath::F32Ext::atan2(
+            2.0 * (w.to_num::<f32>() * z.to_num::<f32>() + x.to_num::<f32>() * y.to_num::<f32>()),
+            1.0 - 2.0
+                * (y.to_num::<f32>() * y.to_num::<f32>() + z.to_num::<f32>() * z.to_num::<f32>()),
+        ) / 2.0;
 
         // pitch: (nose up/down, about Y axis)
         // let pitch = micromath::F32Ext::atan2(gx, micromath::F32Ext::sqrt(gy * gy + gz * gz));
@@ -162,8 +146,8 @@ where
 
 impl<T, Y> YawPitchRoll<T, Y>
 where
-    T: Fixed,
-    Y: Fixed,
+    T: FixedSigned,
+    Y: FixedSigned,
 {
     pub fn new() -> Self {
         YawPitchRoll {
@@ -190,15 +174,30 @@ where
         rad_to_degree: W_T,
     ) -> YawPitchRoll<W_T, W_Y>
     where
-        T: Fixed,
-        Y: Fixed,
+        T: FixedSigned,
+        Y: FixedSigned,
+        W_T: FixedSigned,
+        W_Y: FixedSigned,
     {
         YawPitchRoll::<W_T, W_Y> {
             lift: W_T::from_num(0),
             yaw: (rad_to_degree * W_T::from_num((self.yaw - prev_sample.yaw) / duration_in_sec)),
             pitch: (rad_to_degree * W_T::from_num(self.pitch)),
             roll: (rad_to_degree * W_T::from_num(self.roll)),
-            pressure: W_T::from_num(0),
+            pressure: W_Y::from_num(0),
+        }
+    }
+
+    pub fn mul_pid_values<Z>(&self, scalar: [Z; 4]) -> Self
+    where
+        Z: FixedSigned,
+    {
+        Self {
+            lift: self.lift,
+            yaw: self.yaw * T::from_num(scalar[0]),
+            pitch: self.pitch * T::from_num(scalar[1]),
+            roll: self.roll * T::from_num(scalar[2]),
+            pressure: self.pressure * Y::from_num(scalar[3]),
         }
     }
 

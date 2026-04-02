@@ -1,4 +1,5 @@
 use alloc::boxed::Box;
+use fixed::types::{I16F16, I26F6, I4F28};
 use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand, FSMState};
 use tudelft_quadrupel::{
     barometer::read_pressure, mpu::read_raw, once_cell, time::Instant, uart::send_bytes,
@@ -18,11 +19,11 @@ use crate::{
 };
 
 pub struct FSMHeightControl {
-    pub pid_controller: Box<PIDController>,
+    pub pid_controller: Box<PIDController<I16F16, I16F16>>,
     pub prev_state: Box<dyn FSMControl>,
 
-    pub initial_lift: DegreeType,
-    pub initial_pressure: SensorFixedType,
+    pub initial_lift: I16F16,
+    pub initial_pressure: I16F16,
 }
 
 impl FSMControl for FSMHeightControl {
@@ -31,29 +32,23 @@ impl FSMControl for FSMHeightControl {
         ctx.pid_info.selected_height = self.initial_pressure.to_num::<f32>();
 
         // read sensor data
-        let mut input: YawPitchRoll = ctx.kalman_position.get_reading();
-
-        if ctx.input_from_controller.is_none() {
-            return self;
-        }
+        let mut input: YawPitchRoll<I16F16, I16F16> =
+            ctx.kalman_position.get_reading::<I16F16, I16F16>();
 
         // if lift is changed, return to previous state
-        if (DegreeType::from_num(ctx.input_from_controller.as_ref().unwrap().get_lift())
-            - self.initial_lift)
-            != 0
-        {
+        if (ctx.input_as_ypr.lift != self.initial_lift) {
             return self.prev_state;
         }
 
         input.pressure = ctx.pressure_sensor_filter.get_reading();
 
-        let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller.as_ref().unwrap());
+        let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller);
 
         // the target
         // let mut target: YawPitchRoll =
         // YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
 
-        let mut target: YawPitchRoll = *ctx.input_as_ypr;
+        let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
         target.pressure = self.initial_pressure;
 
         // calculate the error correction
