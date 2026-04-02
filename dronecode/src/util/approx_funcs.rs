@@ -1,4 +1,4 @@
-use fixed::traits::FixedSigned;
+use fixed::{traits::FixedSigned, types::I17F15};
 
 pub fn approx_sqrt<F: FixedSigned>(n: F) -> F {
     if n == F::ZERO {
