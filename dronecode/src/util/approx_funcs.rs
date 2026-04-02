@@ -33,6 +33,7 @@ pub fn approx_sqrt_rpm<F: FixedSigned>(n: F) -> F {
     }
     root
 }
+const PI: I17F15 = I17F15::lit("3.14");
 
 pub fn atan2_approx<F: FixedSigned>(y: F, x: F) -> F {
     let pi = F::from_num(3.14f32);
@@ -66,6 +67,7 @@ const ATAN_TABLE: [I17F15; 16] = [
     I17F15::lit("0.0000610"),   // atan(2^-14)
     I17F15::lit("0.0000305"),   // atan(2^-15)
 ];
+
 pub fn atan2_cordic<F: FixedSigned>(y_in: F, x_in: F) -> F {
     let mut x: F;
     let mut y: F;
@@ -82,11 +84,11 @@ pub fn atan2_cordic<F: FixedSigned>(y_in: F, x_in: F) -> F {
         };
         x = -x_in;
         y = -y_in;
-        angle_offset = y_sgn * F::from_num(3.14);
+        angle_offset = y_sgn * F::from_num(PI);
     }
 
     let mut z = F::ZERO;
-    for i in 0..14usize {
+    for i in 0..5usize {
         let y_sgn = if y.is_negative() {
             F::from_num(-1)
         } else {

@@ -25,7 +25,7 @@ pub struct StateContext<'a> {
     pub flash_head: &'a mut usize,
     pub flash_tail: &'a mut usize,
 
-    pub time_for_main_loop: f32,
+    pub time_for_main_loop: i32,
 
     pub pid_info: &'a mut Box<PIDInfo>,
 }

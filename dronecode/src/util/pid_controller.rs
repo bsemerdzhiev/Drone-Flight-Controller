@@ -111,11 +111,8 @@ where
 
         let current_time = Instant::now();
         let delta_t = ControllerValues::from_num(
-            current_time
-                .duration_since(self.last_timestamp)
-                .as_secs_f32()
-                .clamp(0.001, 0.02),
-        );
+            current_time.duration_since(self.last_timestamp).as_millis(),
+        ) / 1000;
 
         // compute P part
         if ((controller_flags & (ControllerFlags::AddP as u8)) != 0) {

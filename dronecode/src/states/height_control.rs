@@ -28,9 +28,6 @@ pub struct FSMHeightControl {
 
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        // send chosen height
-        ctx.pid_info.selected_height = self.initial_pressure.to_num::<f32>();
-
         // read sensor data
         let mut input: YawPitchRoll<I16F16, I16F16> =
             ctx.kalman_position.get_reading::<I16F16, I16F16>();
@@ -43,10 +40,6 @@ impl FSMControl for FSMHeightControl {
         input.pressure = ctx.pressure_sensor_filter.get_reading();
 
         let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller);
-
-        // the target
-        // let mut target: YawPitchRoll =
-        // YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
 
         let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
         target.pressure = self.initial_pressure;

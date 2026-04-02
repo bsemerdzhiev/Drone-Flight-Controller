@@ -10,7 +10,7 @@ pub const TELEMETERY_DATA_SIZE: usize = core::mem::size_of::<TelemetryData>();
 pub struct GeneralData {
     pub logged_in_flash: bool,
     pub dt: u32,
-    pub time_for_main_loop: f32,
+    pub time_for_main_loop: i32,
 
     pub bat: u16,
     pub cur_state: FSMState,

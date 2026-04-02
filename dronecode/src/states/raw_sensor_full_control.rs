@@ -57,13 +57,17 @@ impl FSMControl for FSMRawFullControl {
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
-            FSMState::HeightControlMode => Box::new(FSMHeightControl {
-                pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
+            FSMState::HeightControlMode => {
+                let z = Box::new(FSMHeightControl {
+                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
 
-                prev_state: self,
-                initial_pressure: ctx.pressure_sensor_filter.get_reading(),
-                initial_lift: I16F16::from_num(ctx.input_from_controller.get_lift()),
-            }),
+                    prev_state: self,
+                    initial_pressure: ctx.pressure_sensor_filter.get_reading(),
+                    initial_lift: I16F16::from_num(ctx.input_as_ypr.lift),
+                });
+                ctx.pid_info.selected_height = z.initial_pressure.to_num::<f32>();
+                return z;
+            }
 
             _ => self,
         }

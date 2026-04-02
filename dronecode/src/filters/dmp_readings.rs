@@ -67,8 +67,8 @@ impl ImuHandler for DmpReadings {
         let passed_time = I4F28::from_num(
             current_time
                 .duration_since(self.last_sampled_time.unwrap())
-                .as_secs_f32(),
-        );
+                .as_millis(),
+        ) / 1000;
 
         // derive rate
         let calculated_rate = sampled_yaw_pitch_roll.calculate_rate_per_sec::<T, Y>(

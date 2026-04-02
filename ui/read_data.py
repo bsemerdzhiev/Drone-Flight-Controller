@@ -70,7 +70,7 @@ def serial_reader():
                         to_add_to.time_data.append(time.time() - start_time)
 
                         to_add_to.general_data["time_for_main_loop"].append(
-                            t["time_for_main_loop"]
+                            t["time_for_main_loop"] / 1000
                         )
 
                         # Battery Raw
