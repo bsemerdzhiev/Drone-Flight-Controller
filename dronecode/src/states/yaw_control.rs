@@ -42,7 +42,7 @@ impl FSMControl for FSMYaw {
         );
 
         target.yaw -= correction.yaw;
-        actuate_motors_with_rates(&target, ctx.input_from_controller.get_lift());
+        actuate_motors_with_rates(&target, ctx.input_as_ypr.lift);
 
         return self;
     }

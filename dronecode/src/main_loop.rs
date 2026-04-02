@@ -40,7 +40,7 @@ const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 // in ms
 const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(1500);
 const DRONE_STATE_TIMER: Duration = Duration::from_millis(10);
-const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(100);
+const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(1);
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
 const MIN_BAT_LEVEL: u16 = 1050;
@@ -49,7 +49,7 @@ const MIN_BAT_LEVEL: u16 = 1050;
 
 pub fn main_loop() -> ! {
     // processor tick frequency
-    set_tick_frequency(1000);
+    set_tick_frequency(500);
     // -------------------------------------------------------------------------
 
     // buffer for receiving bytes from PC
@@ -113,6 +113,7 @@ pub fn main_loop() -> ! {
     // used for determining whether we should panic
     let mut time_for_last_received_message: Instant = Instant::now();
     let mut last_send_message: Instant = Instant::now();
+    let mut last_logged_message: Instant = Instant::now();
 
     // used to determine whether battery voltage is too low
     let mut battery_panic = false;
@@ -188,7 +189,10 @@ pub fn main_loop() -> ! {
             send_drone_data(current_state.get_state(), dt, &mut ctx);
         }
 
-        if !matches!(current_state.as_ref().get_state(), FSMState::SafeMode) {
+        if !matches!(current_state.as_ref().get_state(), FSMState::SafeMode)
+            && time_end.duration_since(last_logged_message) >= SAVE_TO_LOG_TIMER
+        {
+            last_logged_message = time_end;
             put_telemetry_data_on_flash(&mut ctx, dt, current_state.get_state());
         }
 

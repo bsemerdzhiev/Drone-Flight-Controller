@@ -47,7 +47,7 @@ impl FSMControl for FSMFullControl {
         target.pitch += correction.pitch;
 
         // output to motors
-        actuate_motors_with_rates(&target, ctx.input_from_controller.get_lift());
+        actuate_motors_with_rates(&target, ctx.input_as_ypr.lift);
 
         return self;
     }

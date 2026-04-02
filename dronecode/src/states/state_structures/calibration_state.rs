@@ -2,7 +2,7 @@ use core::{ops::Add, time::Duration};
 
 use fixed::{
     traits::{Fixed, FixedSigned},
-    types::{I16F16, I20F12, I26F6, I2F30, I4F28},
+    types::{I16F16, I20F12, I26F6, I2F30, I32F32, I4F28},
 };
 use tudelft_quadrupel::{
     barometer::read_pressure,
@@ -25,14 +25,16 @@ pub const LSB_FOR_ACCEL: i32 = 16384;
 
 const CALIBRATION_TIME: Duration = Duration::from_secs(5);
 
+const SAMPLE_COOL_DOWN: Duration = Duration::from_millis(2);
+
 #[derive(Copy, Clone, Debug)]
 pub struct CalibrationState<T, Y>
 where
     T: FixedSigned,
     Y: FixedSigned,
 {
-    accelerometer_sum: Axis<I64F0>,
-    gyro_sum: Axis<I64F0>,
+    accelerometer_sum: Axis<I32F0>,
+    gyro_sum: Axis<I32F0>,
 
     sample_cnt: I20F12,
 
@@ -43,6 +45,8 @@ where
 
     ypr_sum: Axis<I20F12>,
     pub ypr_offset: YawPitchRoll<T, Y>,
+
+    last_read: Instant,
 }
 
 impl<T, Y> CalibrationState<T, Y>
@@ -52,8 +56,8 @@ where
 {
     pub fn new() -> Self {
         Self {
-            accelerometer_sum: Axis::<I64F0>::default(),
-            gyro_sum: Axis::<I64F0>::default(),
+            accelerometer_sum: Axis::<I32F0>::default(),
+            gyro_sum: Axis::<I32F0>::default(),
 
             ypr_sum: Axis::<I20F12>::default(),
             sample_cnt: I20F12::from_num(0),
@@ -64,6 +68,7 @@ where
             gyro_offset: Axis::<I16F16>::default(),
 
             ypr_offset: YawPitchRoll::<T, Y>::new(),
+            last_read: Instant::now(),
         }
     }
     pub fn reset(&mut self) {
@@ -71,6 +76,12 @@ where
     }
 
     pub fn read_new_sample(&mut self) {
+        let cur_time = Instant::now();
+        if (cur_time.duration_since(self.last_read) < SAMPLE_COOL_DOWN) {
+            return;
+        }
+        self.last_read = cur_time;
+
         let ypr_sample = YawPitchRoll::<T, Y>::from(block!(read_dmp_bytes()).unwrap());
 
         let raw_read = read_raw().unwrap();
@@ -90,16 +101,16 @@ where
 
     pub fn finalize_calibration(&mut self) {
         self.accelerometer_offset = Axis {
-            x: I16F16::from_num(self.accelerometer_sum.x / I64F0::from_num(self.sample_cnt)),
-            y: I16F16::from_num(self.accelerometer_sum.y / I64F0::from_num(self.sample_cnt)),
-            z: I16F16::from_num(self.accelerometer_sum.z / I64F0::from_num(self.sample_cnt)),
+            x: I16F16::from_num(self.accelerometer_sum.x / I32F0::from_num(self.sample_cnt)),
+            y: I16F16::from_num(self.accelerometer_sum.y / I32F0::from_num(self.sample_cnt)),
+            z: I16F16::from_num(self.accelerometer_sum.z / I32F0::from_num(self.sample_cnt)),
         };
         self.accelerometer_offset.z -= I16F16::from_num(LSB_FOR_ACCEL);
 
         self.gyro_offset = Axis {
-            x: I16F16::from_num(self.gyro_sum.x / I64F0::from_num(self.sample_cnt)),
-            y: I16F16::from_num(self.gyro_sum.y / I64F0::from_num(self.sample_cnt)),
-            z: I16F16::from_num(self.gyro_sum.z / I64F0::from_num(self.sample_cnt)),
+            x: I16F16::from_num(self.gyro_sum.x / I32F0::from_num(self.sample_cnt)),
+            y: I16F16::from_num(self.gyro_sum.y / I32F0::from_num(self.sample_cnt)),
+            z: I16F16::from_num(self.gyro_sum.z / I32F0::from_num(self.sample_cnt)),
         };
 
         self.ypr_offset = YawPitchRoll::<T, Y> {

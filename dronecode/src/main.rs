@@ -34,7 +34,7 @@ pub mod util;
 
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
-const HEAP_SIZE: usize = 4096;
+const HEAP_SIZE: usize = 2048;
 
 #[entry]
 fn main() -> ! {

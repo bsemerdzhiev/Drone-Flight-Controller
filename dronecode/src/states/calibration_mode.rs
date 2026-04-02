@@ -25,12 +25,6 @@ pub struct FSMCalibration {}
 
 impl FSMControl for FSMCalibration {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        //
-        // let ypr = match read_dmp_bytes() {
-        //     Ok(quaternion) => YawPitchRoll::from(quaternion),
-        //     Err(_) => YawPitchRoll::new(),
-        // };
-
         // read new sample
         ctx.calibration_state.read_new_sample();
 

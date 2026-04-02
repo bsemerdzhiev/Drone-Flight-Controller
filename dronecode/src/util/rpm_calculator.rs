@@ -19,9 +19,11 @@ type OmegaType = I26F6;
 
 const MIN_PWM: u16 = 200;
 
-pub const THRESHOLD_LIFT: f32 = 0.05;
+// pub const THRESHOLD_LIFT: f32 = 0.05;
 
-fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [OmegaType]) {
+pub const ThresholdLift: I16F16 = I16F16::lit("1.25");
+
+fn map_rpm_square_to_pwm(lift_raw_value: I16F16, rpms_square: &mut [OmegaType]) {
     let MAX_RPMS: I16F16 = I16F16::from_num(980);
 
     let cur_maxes = I16F16::from_num(motor::get_motor_max());
@@ -40,7 +42,7 @@ fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [OmegaType]) {
     }
 
     //if lift is below threshold, then all motors are off
-    if lift_raw_value < THRESHOLD_LIFT {
+    if lift_raw_value < ThresholdLift {
         for cur_motor_rpm in &mut pwm_to_set {
             *cur_motor_rpm = 0;
         }
@@ -55,7 +57,7 @@ fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [OmegaType]) {
 
 pub fn actuate_motors_with_direct_joystick_input(
     input_from_controller: &YawPitchRoll<I16F16, I16F16>,
-    raw_lift: f32,
+    raw_lift: I16F16,
 ) {
     let N = OmegaType::from_num(input_from_controller.yaw);
     let M = OmegaType::from_num(input_from_controller.pitch);
@@ -78,7 +80,7 @@ pub fn actuate_motors_with_direct_joystick_input(
 const THR_DIV: OmegaType = OmegaType::lit("1250");
 const DRG_DIV: OmegaType = OmegaType::lit("17857.286");
 
-pub fn actuate_motors_with_rates(input: &YawPitchRoll<I16F16, I16F16>, raw_lift: f32) {
+pub fn actuate_motors_with_rates(input: &YawPitchRoll<I16F16, I16F16>, raw_lift: I16F16) {
     let n = OmegaType::from_num(input.yaw) * THR_DIV;
     let m = OmegaType::from_num(input.pitch) * DRG_DIV;
     let z = OmegaType::from_num(-input.lift) * DRG_DIV;
