@@ -16,9 +16,9 @@ use crate::util::{
 
 // chosen by trial and error in Desmos
 
-const MIN_PWM: u16 = 50;
+const MIN_PWM: u16 = 200;
 
-pub const THRESHOLD_LIFT: f32 = 0.1;
+pub const THRESHOLD_LIFT: f32 = 0.05;
 
 fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [I26F6]) {
     let MAX_RPMS: I16F16 = I16F16::from_num(9800);

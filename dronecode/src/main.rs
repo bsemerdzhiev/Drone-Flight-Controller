@@ -16,7 +16,7 @@ use tudelft_quadrupel::flash::flash_chip_erase;
 
 use tudelft_quadrupel::initialize::initialize;
 use tudelft_quadrupel::led::Led::{Blue, Green, Red, Yellow};
-use tudelft_quadrupel::motor::set_motors;
+use tudelft_quadrupel::motor::{set_motor_max, set_motors};
 use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
@@ -55,6 +55,7 @@ fn main() -> ! {
         }
     }
 
+    set_motor_max(800);
     // send_and_receive();
     // Ereasing Flash memory on boot
     Yellow.on();

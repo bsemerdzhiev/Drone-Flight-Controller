@@ -51,6 +51,8 @@ impl FSMControl for FSMHeightControl {
         let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
         target.pressure = self.initial_pressure;
 
+        target.lift = I16F16::from_num(0);
+
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
             input,
@@ -58,11 +60,11 @@ impl FSMControl for FSMHeightControl {
             k_p,
             k_i,
             k_d,
-            ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8,
+            ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8 | ControllerFlags::AddI as u8,
         );
 
         target.lift += correction.lift;
-        target.yaw += correction.yaw;
+        target.yaw -= correction.yaw;
         target.roll += correction.roll;
         target.pitch += correction.pitch;
 

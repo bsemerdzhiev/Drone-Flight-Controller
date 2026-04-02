@@ -133,15 +133,11 @@ pub fn read_keyboard(
                     }
                 }
                 KeyCode::Char('7') => {
-                    if joystick_info.is_zeroed() {
-                        send_transition(
-                            my_hdlc::command::FSMState::HeightControlMode,
-                            rcv_mut,
-                            serial_mut,
-                        );
-                    } else {
-                        println!("Ignored HeightControlMode request because joystick input is not zeroed");
-                    }
+                    send_transition(
+                        my_hdlc::command::FSMState::HeightControlMode,
+                        rcv_mut,
+                        serial_mut,
+                    );
                 }
                 KeyCode::Char('8') => {
                     if joystick_info.is_zeroed() {

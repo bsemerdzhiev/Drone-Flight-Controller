@@ -17,8 +17,8 @@ pub const K_P: [ControllerValues; 4] = [
 ];
 pub const K_I: [ControllerValues; 4] = [
     ControllerValues::lit("0"),
-    ControllerValues::lit("0.002"),
-    ControllerValues::lit("0.002"),
+    ControllerValues::lit("0.0002"),
+    ControllerValues::lit("0.0002"),
     ControllerValues::lit("0"),
 ];
 pub const K_D: [ControllerValues; 4] = [
@@ -65,6 +65,7 @@ pub enum ControllerFlags {
 // const DRONE_WEIGHT: ControllerValues = ControllerValues::lit("0.5");
 // const GRAVITY_CONSTANT: ControllerValues = ControllerValues::lit("9.8");
 const HOVER_FORCE: ControllerValues = ControllerValues::lit("18.5");
+const DRONE_WEIGHT: f32 = 2f32;
 
 pub struct PIDController<T, Y>
 where

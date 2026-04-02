@@ -13,8 +13,8 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
-const C1: I16F16 = I16F16::lit("1.4");
-const C2: I16F16 = I16F16::lit("1e-5");
+const C1: I16F16 = I16F16::lit("2.5");
+const C2: I16F16 = I16F16::lit("1e-3");
 
 const LSB_ACCEL_TO_GS: I16F16 = I16F16::lit("16384");
 const RAD_TO_DEGREE: I16F16 = I16F16::lit("57.2957");
