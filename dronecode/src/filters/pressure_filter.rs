@@ -1,6 +1,6 @@
 use core::time::Duration;
 
-use fixed::types::{I16F16, I2F30, I32F0, I64F0};
+use fixed::types::{I10F22, I16F16, I26F6, I2F30, I32F0, I4F28, I64F0};
 use micromath::F32Ext;
 use nalgebra::{Matrix1x2, Matrix2, Matrix2x1, Vector2};
 use tudelft_quadrupel::{barometer::read_pressure, mpu::read_raw, time::Instant};
@@ -25,7 +25,7 @@ const ACCEL_SAMPLE_RATE: Duration = Duration::from_millis(1);
 // TUDelft's library initializes it with the corresponding oversampling ratio
 const BARO_SAMPLE_DURATION: Duration = Duration::from_millis(10);
 
-type MeasurementType = I2F30;
+type MeasurementType = I10F22;
 
 pub struct PressureSensor {
     // ------------------------------------
@@ -320,7 +320,7 @@ impl PressureSensor {
         self.correction();
     }
 
-    pub fn get_reading(&self) -> MeasurementType {
-        return self.current_state[(0, 0)];
+    pub fn get_reading(&self) -> I16F16 {
+        return I16F16::from_num(self.current_state[(0, 0)]);
     }
 }
