@@ -8,9 +8,7 @@ use tudelft_quadrupel::{motor, uart::send_bytes};
 
 use crate::util::{
     approx_funcs::{approx_sqrt, approx_sqrt_rpm},
-    constants_file::{
-        DegreeType, RPMFixedType, SensorFixedType, MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE,
-    },
+    constants_file::{MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE},
     yaw_pitch_roll::YawPitchRoll,
 };
 
@@ -54,18 +52,19 @@ fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [I26F6]) {
     motor::set_motors(pwm_to_set);
 }
 
-pub fn actuate_motors_with_direct_joystick_input(input_from_controller: &ManualInput) {
-    let N = YAW_RATE * DegreeType::from_num(input_from_controller.get_yaw());
-    let M = PITCH_DEGREE * DegreeType::from_num(input_from_controller.get_pitch());
-    let Z = MAX_LIFT * DegreeType::from_num(-input_from_controller.get_lift());
-    let L = ROLL_DEGREE * DegreeType::from_num(input_from_controller.get_roll());
+pub fn actuate_motors_with_direct_joystick_input(
+    input_from_controller: &YawPitchRoll<I26F6, I26F6>,
+    raw_lift: f32,
+) {
+    let N = input_from_controller.yaw;
+    let M = input_from_controller.pitch;
+    let Z = -input_from_controller.lift;
+    let L = input_from_controller.roll;
 
-    let raw_lift: f32 = input_from_controller.get_lift();
-
-    let omega_one: I26F6 = I26F6::from_num(Z + M - N);
-    let omega_two: I26F6 = I26F6::from_num(Z + L + N);
-    let omega_three: I26F6 = I26F6::from_num(Z - M - N);
-    let omega_four: I26F6 = I26F6::from_num(Z - L + N);
+    let omega_one: I26F6 = Z + M - N;
+    let omega_two: I26F6 = Z + L + N;
+    let omega_three: I26F6 = Z - M - N;
+    let omega_four: I26F6 = Z - L + N;
 
     map_rpm_square_to_pwm(
         raw_lift,
@@ -78,11 +77,11 @@ pub fn actuate_motors_with_direct_joystick_input(input_from_controller: &ManualI
 const THR_DIV: I26F6 = I26F6::lit("125000");
 const DRG_DIV: I26F6 = I26F6::lit("1785714.286");
 
-pub fn actuate_motors_with_rates(input: &YawPitchRoll, raw_lift: f32) {
-    let n = I26F6::from_num(input.yaw) * THR_DIV;
-    let m = I26F6::from_num(input.pitch) * DRG_DIV;
-    let z = I26F6::from_num(-input.lift) * DRG_DIV;
-    let l = I26F6::from_num(input.roll) * DRG_DIV;
+pub fn actuate_motors_with_rates(input: &YawPitchRoll<I26F6, I26F6>, raw_lift: f32) {
+    let n = input.yaw * THR_DIV;
+    let m = input.pitch * DRG_DIV;
+    let z = -input.lift * DRG_DIV;
+    let l = input.roll * DRG_DIV;
 
     let omega_one = (m + m - n - z).max(I26F6::ZERO);
     let omega_two = (n - l - l - z).max(I26F6::ZERO);

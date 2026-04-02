@@ -6,9 +6,11 @@ use crate::filters::pressure_filter::PressureSensor;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::telemetry_read::TelemetryRead;
+use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
 use alloc::format;
+use fixed::types::{I26F6, I2F30, I4F28};
 use my_hdlc::telemetry_data::*;
 
 use tudelft_quadrupel::flash::flash_write_bytes;
@@ -66,7 +68,9 @@ pub fn main_loop() -> ! {
     // fields for the context
     let mut transceiver: Box<HdlcTransceiver> = Box::new(HdlcTransceiver::new());
 
-    let mut received_manual_input: Option<ManualInput> = None;
+    let mut received_manual_input: ManualInput = ManualInput::zero();
+    let mut input_as_ypr: YawPitchRoll = YawPitchRoll::<I26F6, I4F28>::new();
+
     let mut calibration_state: CalibrationState = CalibrationState::new();
     let mut flash_head = 0usize;
     let mut flash_tail = 0usize;
@@ -89,7 +93,9 @@ pub fn main_loop() -> ! {
         dmp_filter: dmp_sampler,
 
         trv: &mut transceiver,
+
         input_from_controller: &mut received_manual_input,
+        input_as_ypr: &mut input_as_ypr,
 
         flash_head: &mut flash_head,
         flash_tail: &mut flash_tail,
@@ -145,7 +151,10 @@ pub fn main_loop() -> ! {
                         send_ack(&mut ctx.trv);
                     }
                     DeviceCommand::ManualInput(manual_input) => {
-                        *ctx.input_from_controller = Some(manual_input);
+                        *ctx.input_from_controller = manual_input;
+                        *ctx.input_as_ypr = YawPitchRoll::<I26F6, I2F30>::from_manual_input(
+                            ctx.input_from_controller,
+                        );
                     }
                     _ => {}
                 }

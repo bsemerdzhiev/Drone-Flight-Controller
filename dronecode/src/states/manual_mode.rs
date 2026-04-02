@@ -24,7 +24,10 @@ impl FSMControl for FSMManual {
             return self;
         }
 
-        actuate_motors_with_direct_joystick_input(&ctx.input_from_controller.as_ref().unwrap());
+        actuate_motors_with_direct_joystick_input(
+            &ctx.input_as_ypr,
+            ctx.input_from_controller.as_ref().unwrap().get_lift(),
+        );
 
         self
     }

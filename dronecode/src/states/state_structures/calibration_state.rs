@@ -1,6 +1,6 @@
 use core::{ops::Add, time::Duration};
 
-use fixed::types::I20F12;
+use fixed::types::{I20F12, I26F6, I2F30, I4F28};
 use tudelft_quadrupel::{
     barometer::read_pressure,
     block,
@@ -12,11 +12,7 @@ use tudelft_quadrupel::{
     time::Instant,
 };
 
-use crate::util::{
-    axis::Axis,
-    constants_file::{DegreeType, RPMFixedType, SensorFixedType},
-    yaw_pitch_roll::YawPitchRoll,
-};
+use crate::util::{axis::Axis, yaw_pitch_roll::YawPitchRoll};
 
 // since the accelerometer uses +-2G(16'384 LSB/g),
 // this number needs to be subtracted from the calibrated
@@ -38,7 +34,7 @@ pub struct CalibrationState {
 
     pub accelerometer_offset: Axis<I32F0>,
     pub gyro_offset: Axis<I32F0>,
-    pub ypr_offset: YawPitchRoll,
+    pub ypr_offset: YawPitchRoll<I4F28, I4F28>,
 }
 
 impl CalibrationState {
@@ -63,13 +59,7 @@ impl CalibrationState {
                 z: I32F0::from_num(0),
             },
 
-            ypr_offset: YawPitchRoll {
-                yaw: DegreeType::from_num(0),
-                pitch: DegreeType::from_num(0),
-                roll: DegreeType::from_num(0),
-                lift: DegreeType::from_num(0),
-                pressure: SensorFixedType::from_num(0),
-            },
+            ypr_offset: YawPitchRoll::<I4F28, I4F28>::new(),
         }
     }
     pub fn reset(&mut self) {
@@ -77,7 +67,7 @@ impl CalibrationState {
     }
 
     pub fn read_new_sample(&mut self) {
-        let ypr_sample = YawPitchRoll::from(block!(read_dmp_bytes()).unwrap());
+        let ypr_sample = YawPitchRoll::<I2F30, I2F30>::from(block!(read_dmp_bytes()).unwrap());
 
         let raw_read = read_raw().unwrap();
 
@@ -108,14 +98,14 @@ impl CalibrationState {
             z: I32F0::from_num(self.gyro_sum.z / I64F0::from_num(self.sample_cnt)),
         };
 
-        self.ypr_offset = YawPitchRoll {
-            lift: DegreeType::from_num(0),
+        self.ypr_offset = YawPitchRoll::<I4F28, I4F28> {
+            lift: I4F28::from_num(0),
 
-            yaw: DegreeType::from_num(self.ypr_sum.x / self.sample_cnt),
-            pitch: DegreeType::from_num(self.ypr_sum.y / self.sample_cnt),
-            roll: DegreeType::from_num(self.ypr_sum.z / self.sample_cnt),
+            yaw: I4F28::from_num(self.ypr_sum.x / self.sample_cnt),
+            pitch: I4F28::from_num(self.ypr_sum.y / self.sample_cnt),
+            roll: I4F28::from_num(self.ypr_sum.z / self.sample_cnt),
 
-            pressure: SensorFixedType::from_num(0),
+            pressure: I4F28::from_num(0),
         };
     }
     pub fn should_finish(&mut self) -> bool {
