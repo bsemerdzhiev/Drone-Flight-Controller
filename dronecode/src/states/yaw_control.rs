@@ -27,8 +27,10 @@ impl FSMControl for FSMYaw {
             return self;
         }
 
-        let mut target: YawPitchRoll =
-            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+        // let mut target: YawPitchRoll =
+        // YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+
+        let mut target: YawPitchRoll = *ctx.input_as_ypr;
 
         let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller.as_ref().unwrap());
 

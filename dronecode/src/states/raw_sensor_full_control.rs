@@ -10,7 +10,6 @@ use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
-use crate::util::constants_file::DegreeType;
 use crate::util::pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
@@ -33,8 +32,10 @@ impl FSMControl for FSMRawFullControl {
         if ctx.input_from_controller.is_none() {
             return self;
         }
-        let mut target: YawPitchRoll =
-            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+        // let mut target: YawPitchRoll =
+        // YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+
+        let mut target: YawPitchRoll = *ctx.input_as_ypr;
 
         let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller.as_ref().unwrap());
         // calculate the error correction

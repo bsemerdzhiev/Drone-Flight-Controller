@@ -1,44 +1,48 @@
+use fixed::types::I16F16;
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::time::Instant;
 
-use crate::util::{
-    constants_file::{DegreeType, PIDValuesType, SensorFixedType, TimeDifferenceType},
-    yaw_pitch_roll::YawPitchRoll,
-};
+use crate::util::yaw_pitch_roll::YawPitchRoll;
 
-pub const K_P: [PIDValuesType; 4] = [
-    PIDValuesType::lit("4"),
-    PIDValuesType::lit("0.005"),
-    PIDValuesType::lit("0.005"),
-    PIDValuesType::lit("8"),
+type ControllerValues = I16F16;
+
+pub const K_P: [ControllerValues; 4] = [
+    ControllerValues::lit("4"),
+    ControllerValues::lit("0.005"),
+    ControllerValues::lit("0.005"),
+    ControllerValues::lit("8"),
 ];
-pub const K_I: [PIDValuesType; 4] = [
-    PIDValuesType::lit("0"),
-    PIDValuesType::lit("0"),
-    PIDValuesType::lit("0"),
-    PIDValuesType::lit("0"),
+pub const K_I: [ControllerValues; 4] = [
+    ControllerValues::lit("0"),
+    ControllerValues::lit("0"),
+    ControllerValues::lit("0"),
+    ControllerValues::lit("0"),
 ];
-pub const K_D: [PIDValuesType; 4] = [
-    PIDValuesType::lit("0"),
-    PIDValuesType::lit("0"),
-    PIDValuesType::lit("0"),
-    PIDValuesType::lit("0"),
+pub const K_D: [ControllerValues; 4] = [
+    ControllerValues::lit("0"),
+    ControllerValues::lit("0"),
+    ControllerValues::lit("0"),
+    ControllerValues::lit("0"),
 ];
 
 pub fn add_trims(
     manual_input: &ManualInput,
-) -> ([PIDValuesType; 4], [PIDValuesType; 4], [PIDValuesType; 4]) {
-    let mut k_p: [PIDValuesType; 4] = K_P;
-    let mut k_i: [PIDValuesType; 4] = K_I;
-    let mut k_d: [PIDValuesType; 4] = K_D;
+) -> (
+    [ControllerValues; 4],
+    [ControllerValues; 4],
+    [ControllerValues; 4],
+) {
+    let mut k_p: [ControllerValues; 4] = K_P;
+    let mut k_i: [ControllerValues; 4] = K_I;
+    let mut k_d: [ControllerValues; 4] = K_D;
 
-    k_p[0] += PIDValuesType::from_num(manual_input.yaw_p_trim);
+    k_p[0] += ControllerValues::from_num(manual_input.yaw_p_trim);
 
-    k_p[1] += PIDValuesType::from_num(manual_input.roll_pitch_p_trim);
-    k_p[2] += PIDValuesType::from_num(manual_input.roll_pitch_p_trim);
+    k_p[1] += ControllerValues::from_num(manual_input.roll_pitch_p_trim);
+    k_p[2] += ControllerValues::from_num(manual_input.roll_pitch_p_trim);
 
-    k_d[1] += PIDValuesType::from_num(manual_input.roll_pitch_d_trim);
-    k_d[2] += PIDValuesType::from_num(manual_input.roll_pitch_d_trim);
+    k_d[1] += ControllerValues::from_num(manual_input.roll_pitch_d_trim);
+    k_d[2] += ControllerValues::from_num(manual_input.roll_pitch_d_trim);
 
     return (k_p, k_i, k_d);
 }
@@ -55,9 +59,9 @@ pub enum ControllerFlags {
 }
 
 // in kg
-const DRONE_WEIGHT: DegreeType = DegreeType::lit("0.5");
-
-const GRAVITY_CONSTANT: DegreeType = DegreeType::lit("9.8");
+// const DRONE_WEIGHT: ControllerValues = ControllerValues::lit("0.5");
+// const GRAVITY_CONSTANT: ControllerValues = ControllerValues::lit("9.8");
+const HOVER_FORCE: ControllerValues = ControllerValues::lit("24.5");
 
 pub struct PIDController {
     prev_error: YawPitchRoll,
@@ -76,25 +80,25 @@ impl PIDController {
         }
     }
 
-    pub fn compute_pid_correction(
+    pub fn compute_pid_correction<T, Y>(
         &mut self,
-        input: YawPitchRoll,
-        target: YawPitchRoll,
-        k_p: [PIDValuesType; 4],
-        k_i: [PIDValuesType; 4],
-        k_d: [PIDValuesType; 4],
+        input: YawPitchRoll<T, Y>,
+        target: YawPitchRoll<T, Y>,
+        k_p: [ControllerValues; 4],
+        k_i: [ControllerValues; 4],
+        k_d: [ControllerValues; 4],
         controller_flags: u8,
-    ) -> YawPitchRoll {
+    ) -> YawPitchRoll<T, Y> {
         /*
          *  for calculations, check
          *  https://harikrishnansuresh.github.io/assets/QuadcopterControlFinalVersion.pdf
          */
 
-        let mut result = YawPitchRoll::new();
+        let mut result = YawPitchRoll::<T, Y>::new();
         let calculated_error = (target - input);
 
         let current_time = Instant::now();
-        let delta_t = TimeDifferenceType::from_num(
+        let delta_t = ControllerValues::from_num(
             current_time
                 .duration_since(self.last_timestamp)
                 .as_secs_f32()
@@ -123,15 +127,8 @@ impl PIDController {
         // unit of result.pressure in the end is m/s^2(in other words acceleration)
         // units of result.lift become Newtons
 
-        /* calculate lift based on pressure calculations
-         *
-         *
-         *                          since we want to hover
-         *                                   |
-         *            measured drone         |             calculated
-         *               weight              v               correction
-         */
-        result.lift = DRONE_WEIGHT * GRAVITY_CONSTANT + (result.pressure);
+        // calculate lift based on pressure calculations
+        result.lift = HOVER_FORCE + (result.pressure);
 
         return result;
     }

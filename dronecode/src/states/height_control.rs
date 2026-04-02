@@ -11,7 +11,6 @@ use crate::{
         state_structures::state_context::StateContext,
     },
     util::{
-        constants_file::{DegreeType, SensorFixedType},
         pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P},
         rpm_calculator::{actuate_motors_with_rates, THRESHOLD_LIFT},
         yaw_pitch_roll::YawPitchRoll,
@@ -51,8 +50,10 @@ impl FSMControl for FSMHeightControl {
         let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller.as_ref().unwrap());
 
         // the target
-        let mut target: YawPitchRoll =
-            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+        // let mut target: YawPitchRoll =
+        // YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+
+        let mut target: YawPitchRoll = *ctx.input_as_ypr;
         target.pressure = self.initial_pressure;
 
         // calculate the error correction

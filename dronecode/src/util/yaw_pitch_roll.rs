@@ -1,33 +1,38 @@
 use core::ops::{Add, Div, Mul, Sub};
 
+use fixed::traits::Fixed;
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
 use crate::util::{
     approx_funcs::{approx_atan2, approx_sqrt},
-    constants_file::{
-        DegreeType, PIDValuesType, QuaternionValuesType, SensorFixedType, TimeDifferenceType,
-        MAX_LIFT, PITCH_DEGREE, RAD_TO_DEGREE, ROLL_DEGREE, YAW_RATE,
-    },
-    yaw_pitch_roll,
+    constants_file::{MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE},
 };
 
-/// This struct holds the yaw, pitch, and roll that the drone things it is in.
-/// The struct is currently implemented using `f32`, you may want to change this to use fixed point arithmetic.
+// this structure is used to both store degrees and radians
+// newton(m)
 #[derive(Debug, Copy, Clone)]
-pub struct YawPitchRoll {
-    pub lift: DegreeType,
-    pub yaw: DegreeType,
-    pub pitch: DegreeType,
-    pub roll: DegreeType,
+pub struct YawPitchRoll<T, Y>
+where
+    T: Fixed,
+    Y: Fixed,
+{
+    pub lift: T,
+    pub yaw: T,
+    pub pitch: T,
+    pub roll: T,
 
-    pub pressure: SensorFixedType,
+    pub pressure: Y,
 }
 
-impl Sub for YawPitchRoll {
+impl<T, Y> Sub for YawPitchRoll<T, Y>
+where
+    T: Fixed,
+    Y: Fixed,
+{
     type Output = Self;
 
-    fn sub(self, other: YawPitchRoll) -> Self::Output {
+    fn sub(self, other: YawPitchRoll<T, Y>) -> Self::Output {
         Self {
             lift: self.lift - other.lift,
             yaw: self.yaw - other.yaw,
@@ -38,10 +43,14 @@ impl Sub for YawPitchRoll {
     }
 }
 
-impl Add for YawPitchRoll {
+impl<T, Y> Add for YawPitchRoll<T, Y>
+where
+    T: Fixed,
+    Y: Fixed,
+{
     type Output = Self;
 
-    fn add(self, other: YawPitchRoll) -> Self::Output {
+    fn add(self, other: YawPitchRoll<T, Y>) -> Self::Output {
         Self {
             lift: self.lift + other.lift,
             yaw: self.yaw + other.yaw,
@@ -52,119 +61,144 @@ impl Add for YawPitchRoll {
     }
 }
 
-impl Mul<PIDValuesType> for YawPitchRoll {
+impl<T, Y, Z> Mul<Z> for YawPitchRoll<T, Y>
+where
+    T: Fixed,
+    Y: Fixed,
+    Z: Fixed,
+{
     type Output = Self;
 
-    fn mul(self, scalar: PIDValuesType) -> Self::Output {
+    fn mul(self, scalar: Z) -> Self::Output {
         Self {
-            lift: self.lift * DegreeType::from_num(scalar),
-            yaw: self.yaw * DegreeType::from_num(scalar),
-            pitch: self.pitch * DegreeType::from_num(scalar),
-            roll: self.roll * DegreeType::from_num(scalar),
-            pressure: self.pressure * SensorFixedType::from_num(scalar),
+            lift: self.lift * T::from_num(scalar),
+            yaw: self.yaw * T::from_num(scalar),
+            pitch: self.pitch * T::from_num(scalar),
+            roll: self.roll * T::from_num(scalar),
+            pressure: self.pressure * Y::from_num(scalar),
         }
     }
 }
 
-impl Div<PIDValuesType> for YawPitchRoll {
+impl<T, Y, Z> Div<Z> for YawPitchRoll<T, Y>
+where
+    T: Fixed,
+    Y: Fixed,
+    Z: Fixed,
+{
     type Output = Self;
 
-    fn div(self, scalar: PIDValuesType) -> Self::Output {
+    fn div(self, scalar: Z) -> Self::Output {
         Self {
-            lift: self.lift / DegreeType::from_num(scalar),
-            yaw: self.yaw / DegreeType::from_num(scalar),
-            pitch: self.pitch / DegreeType::from_num(scalar),
-            roll: self.roll / DegreeType::from_num(scalar),
-            pressure: self.pressure / SensorFixedType::from_num(scalar),
+            lift: self.lift / T::from_num(scalar),
+            yaw: self.yaw / T::from_num(scalar),
+            pitch: self.pitch / T::from_num(scalar),
+            roll: self.roll / T::from_num(scalar),
+            pressure: self.pressure / Y::from_num(scalar),
         }
     }
 }
 
-impl Mul<[PIDValuesType; 4]> for YawPitchRoll {
+impl<T, Y, Z> Mul<[Z; 4]> for YawPitchRoll<T, Y, Z>
+where
+    T: Fixed,
+    Y: Fixed,
+    Z: Fixed,
+{
     type Output = Self;
 
-    fn mul(self, scalar: [PIDValuesType; 4]) -> Self::Output {
+    fn mul(self, scalar: [Z; 4]) -> Self::Output {
         Self {
             lift: self.lift,
-            yaw: self.yaw * DegreeType::from_num(scalar[0]),
-            pitch: self.pitch * DegreeType::from_num(scalar[1]),
-            roll: self.roll * DegreeType::from_num(scalar[2]),
-            pressure: self.pressure * SensorFixedType::from_num(scalar[3]),
+            yaw: self.yaw * T::from_num(scalar[0]),
+            pitch: self.pitch * T::from_num(scalar[1]),
+            roll: self.roll * T::from_num(scalar[2]),
+            pressure: self.pressure * Y::from_num(scalar[3]),
         }
     }
 }
 
-impl From<Quaternion> for YawPitchRoll {
+impl<T, Y> From<Quaternion> for YawPitchRoll<T, Y>
+where
+    T: Fixed,
+    Y: Fixed,
+{
     /// Creates a YawPitchRoll from a Quaternion
     fn from(q: Quaternion) -> Self {
         let Quaternion { w, x, y, z } = q;
-        let w = QuaternionValuesType::from_num(w);
-        let x = QuaternionValuesType::from_num(x);
-        let y = QuaternionValuesType::from_num(y);
-        let z = QuaternionValuesType::from_num(z);
+        let w = T::from_num(w);
+        let x = T::from_num(x);
+        let y = T::from_num(y);
+        let z = T::from_num(z);
 
-        let gx: QuaternionValuesType = 2 * (x * z - w * y);
-        let gy: QuaternionValuesType = 2 * (w * x + y * z);
-        let gz: QuaternionValuesType = w * w - x * x - y * y + z * z;
+        let gx: T = 2 * (x * z - w * y);
+        let gy: T = 2 * (w * x + y * z);
+        let gz: T = w * w - x * x - y * y + z * z;
 
-        let yaw: QuaternionValuesType = approx_atan2(
-            QuaternionValuesType::from_num(2) * (w * z + x * y),
-            QuaternionValuesType::from_num(1) - QuaternionValuesType::from_num(2) * (y * y + z * z),
+        let yaw: T = approx_atan2(
+            T::from_num(2) * (w * z + x * y),
+            T::from_num(1) - T::from_num(2) * (y * y + z * z),
         ) / 2;
         // let yaw =
         // micromath::F32Ext::atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z)) / 2.0;
 
         // pitch: (nose up/down, about Y axis)
         // let pitch = micromath::F32Ext::atan2(gx, micromath::F32Ext::sqrt(gy * gy + gz * gz));
-        let pitch: QuaternionValuesType = approx_atan2(gx, approx_sqrt(gy * gy + gz * gz));
+        let pitch: T = approx_atan2(gx, approx_sqrt(gy * gy + gz * gz));
 
         // roll: (tilt left/right, about X axis)
         // let roll = micromath::F32Ext::atan2(gy, gz);
-        let roll: QuaternionValuesType = approx_atan2(gy, gz);
+        let roll: T = approx_atan2(gy, gz);
 
         Self {
-            lift: DegreeType::from_num(0),
-            yaw: DegreeType::from_num(yaw),
-            pitch: DegreeType::from_num(pitch),
-            roll: DegreeType::from_num(roll),
-            pressure: SensorFixedType::from_num(0),
+            lift: T::from_num(0),
+            yaw: T::from_num(yaw),
+            pitch: T::from_num(pitch),
+            roll: T::from_num(roll),
+            pressure: Y::from_num(0),
         }
     }
 }
 
-impl YawPitchRoll {
+impl<T, Y> YawPitchRoll<T, Y>
+where
+    T: Fixed,
+    Y: Fixed,
+{
     pub fn new() -> Self {
         YawPitchRoll {
-            lift: DegreeType::from_num(0),
-            yaw: DegreeType::from_num(0),
-            pitch: DegreeType::from_num(0),
-            roll: DegreeType::from_num(0),
-            pressure: SensorFixedType::from_num(0),
+            lift: T::from_num(0),
+            yaw: T::from_num(0),
+            pitch: T::from_num(0),
+            roll: T::from_num(0),
+            pressure: Y::from_num(0),
         }
     }
     pub fn from_manual_input(input: &ManualInput) -> Self {
         Self {
-            lift: MAX_LIFT * DegreeType::from_num(input.get_lift()),
-            yaw: YAW_RATE * DegreeType::from_num(input.get_yaw()),
-            pitch: PITCH_DEGREE * DegreeType::from_num(input.get_pitch()),
-            roll: ROLL_DEGREE * DegreeType::from_num(input.get_roll()),
-            pressure: SensorFixedType::from_num(0),
+            lift: T::from_num(MAX_LIFT) * T::from_num(input.get_lift()),
+            yaw: T::from_num(YAW_RATE) * T::from_num(input.get_yaw()),
+            pitch: T::from_num(PITCH_DEGREE) * T::from_num(input.get_pitch()),
+            roll: T::from_num(ROLL_DEGREE) * T::from_num(input.get_roll()),
+            pressure: Y::from_num(0),
         }
     }
-    pub fn calculate_rate_per_sec(
+    pub fn calculate_rate_per_sec<W_T, W_Y>(
         &self,
-        prev_sample: YawPitchRoll,
-        duration_in_sec: TimeDifferenceType,
-    ) -> Self {
-        // let PI: f32 = micromath::F32Ext::acos(-1.0);
-        // let TO_DEGREES: f32 = 180.0 / PI;
-        YawPitchRoll {
-            lift: DegreeType::from_num(0),
-            yaw: (RAD_TO_DEGREE * (self.yaw - prev_sample.yaw))
-                / DegreeType::from_num(duration_in_sec),
-            pitch: (RAD_TO_DEGREE * self.pitch),
-            roll: (RAD_TO_DEGREE * self.roll),
-            pressure: self.pressure,
+        prev_sample: YawPitchRoll<T, Y>,
+        duration_in_sec: T,
+        rad_to_degree: W_T,
+    ) -> YawPitchRoll<W_T, W_Y>
+    where
+        T: Fixed,
+        Y: Fixed,
+    {
+        YawPitchRoll::<W_T, W_Y> {
+            lift: W_T::from_num(0),
+            yaw: (rad_to_degree * W_T::from_num((self.yaw - prev_sample.yaw) / duration_in_sec)),
+            pitch: (rad_to_degree * W_T::from_num(self.pitch)),
+            roll: (rad_to_degree * W_T::from_num(self.roll)),
+            pressure: W_T::from_num(0),
         }
     }
 
