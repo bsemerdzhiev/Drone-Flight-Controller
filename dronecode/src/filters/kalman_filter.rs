@@ -3,7 +3,7 @@ use core::time::Duration;
 
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::{CalibrationState, LSB_FOR_ACCEL};
-use crate::util::approx_funcs::{approx_atan2, approx_sqrt};
+use crate::util::approx_funcs::{approx_sqrt, atan2_approx, atan2_cordic};
 use crate::util::axis::Axis;
 use crate::util::yaw_pitch_roll::*;
 use fixed::traits::{Fixed, FixedSigned};
@@ -52,7 +52,7 @@ impl KalmanFilter {
     fn update_roll(&mut self, dt: I16F16) {
         let p_clean = (self.reading.1.x) * DEGREE_TO_RAD - self.bias_p;
         // let raw_roll = atan2f(self.reading.0.y as f32, self.reading.0.z as f32);
-        let raw_roll = approx_atan2(self.reading.0.y, self.reading.0.z);
+        let raw_roll = atan2_cordic(self.reading.0.y, self.reading.0.z);
 
         let estimated_roll = self.roll + p_clean * dt;
         let e = estimated_roll - raw_roll;
@@ -65,7 +65,7 @@ impl KalmanFilter {
 
         let q_clean: I16F16 = (self.reading.1.y * DEGREE_TO_RAD) - self.bias_q;
 
-        let raw_pitch: I16F16 = I16F16::from_num(approx_atan2(
+        let raw_pitch: I16F16 = I16F16::from_num(atan2_cordic(
             -self.reading.0.x,
             approx_sqrt(ay * ay + az * az),
         ));

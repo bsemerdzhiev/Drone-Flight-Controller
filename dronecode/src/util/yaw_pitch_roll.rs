@@ -5,7 +5,7 @@ use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
 use crate::util::{
-    approx_funcs::{approx_atan2, approx_sqrt},
+    approx_funcs::{approx_sqrt, atan2_cordic},
     constants_file::{MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE},
 };
 
@@ -116,23 +116,23 @@ where
         let gy: T = T::from_num(2) * (w * x + y * z);
         let gz: T = w * w - x * x - y * y + z * z;
 
-        // let yaw: T = approx_atan2::<T>(
-        //     T::from_num(2) * (w * z + x * y),
-        //     T::from_num(1) - T::from_num(2) * (y * y + z * z),
-        // ) / T::from_num(2);
-        let yaw = micromath::F32Ext::atan2(
-            2.0 * (w.to_num::<f32>() * z.to_num::<f32>() + x.to_num::<f32>() * y.to_num::<f32>()),
-            1.0 - 2.0
-                * (y.to_num::<f32>() * y.to_num::<f32>() + z.to_num::<f32>() * z.to_num::<f32>()),
-        ) / 2.0;
+        let yaw: T = atan2_cordic::<T>(
+            T::from_num(2) * (w * z + x * y),
+            T::from_num(1) - T::from_num(2) * (y * y + z * z),
+        ) / T::from_num(2);
+        // let yaw = micromath::F32Ext::atan2(
+        // 2.0 * (w.to_num::<f32>() * z.to_num::<f32>() + x.to_num::<f32>() * y.to_num::<f32>()),
+        // 1.0 - 2.0
+        // * (y.to_num::<f32>() * y.to_num::<f32>() + z.to_num::<f32>() * z.to_num::<f32>()),
+        // ) / 2.0;
 
         // pitch: (nose up/down, about Y axis)
         // let pitch = micromath::F32Ext::atan2(gx, micromath::F32Ext::sqrt(gy * gy + gz * gz));
-        let pitch: T = approx_atan2(gx, approx_sqrt(gy * gy + gz * gz));
+        let pitch: T = atan2_cordic(gx, approx_sqrt(gy * gy + gz * gz));
 
         // roll: (tilt left/right, about X axis)
         // let roll = micromath::F32Ext::atan2(gy, gz);
-        let roll: T = approx_atan2(gy, gz);
+        let roll: T = atan2_cordic(gy, gz);
 
         Self {
             lift: T::from_num(0),

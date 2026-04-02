@@ -10,21 +10,21 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 type ControllerValues = I16F16;
 
 pub const K_P: [ControllerValues; 4] = [
-    ControllerValues::lit("4"),
-    ControllerValues::lit("0.005"),
-    ControllerValues::lit("0.005"),
-    ControllerValues::lit("8"),
+    ControllerValues::lit("1.5"),
+    ControllerValues::lit("0.05"),
+    ControllerValues::lit("0.05"),
+    ControllerValues::lit("12"),
 ];
 pub const K_I: [ControllerValues; 4] = [
     ControllerValues::lit("0"),
-    ControllerValues::lit("0"),
-    ControllerValues::lit("0"),
+    ControllerValues::lit("0.002"),
+    ControllerValues::lit("0.002"),
     ControllerValues::lit("0"),
 ];
 pub const K_D: [ControllerValues; 4] = [
     ControllerValues::lit("0"),
-    ControllerValues::lit("0"),
-    ControllerValues::lit("0"),
+    ControllerValues::lit("0.001"),
+    ControllerValues::lit("0.001"),
     ControllerValues::lit("0"),
 ];
 
@@ -64,7 +64,7 @@ pub enum ControllerFlags {
 // in kg
 // const DRONE_WEIGHT: ControllerValues = ControllerValues::lit("0.5");
 // const GRAVITY_CONSTANT: ControllerValues = ControllerValues::lit("9.8");
-const HOVER_FORCE: ControllerValues = ControllerValues::lit("24.5");
+const HOVER_FORCE: ControllerValues = ControllerValues::lit("18.5");
 
 pub struct PIDController<T, Y>
 where
