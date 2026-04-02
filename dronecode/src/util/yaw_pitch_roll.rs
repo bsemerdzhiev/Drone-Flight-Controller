@@ -6,7 +6,7 @@ use tudelft_quadrupel::mpu::structs::Quaternion;
 
 use crate::util::{
     approx_funcs::{approx_sqrt, atan2_cordic},
-    constants_file::{MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE},
+    MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE,
 };
 
 // this structure is used to both store degrees and radians

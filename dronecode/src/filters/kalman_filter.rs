@@ -16,6 +16,8 @@ use tudelft_quadrupel::time::Instant;
 const C1: I16F16 = I16F16::lit("2.5");
 const C2: I16F16 = I16F16::lit("1e-3");
 
+const ACCEL_SAMPLE_RATE: Duration = Duration::from_millis(1);
+
 const LSB_ACCEL_TO_GS: I16F16 = I16F16::lit("16384");
 const RAD_TO_DEGREE: I16F16 = I16F16::lit("57.2957");
 const DEGREE_TO_RAD: I16F16 = I16F16::lit("0.0174");
@@ -92,6 +94,11 @@ impl KalmanFilter {
 
 impl ImuHandler for KalmanFilter {
     fn append_new_reading(&mut self) {
+        let cur_time = Instant::now();
+        if cur_time.duration_since(self.last_read_time) < ACCEL_SAMPLE_RATE {
+            return;
+        }
+
         let raw_read = read_raw().unwrap();
 
         let parsed_raw_read = (
@@ -99,45 +106,20 @@ impl ImuHandler for KalmanFilter {
             Axis::<I16F16>::from(raw_read.1),
         );
 
-        self.reading.0.x = I16F16::from_num(
-            parsed_raw_read
-                .0
-                .x
-                .saturating_sub(self.calibration_offset.0.x),
-        ) / LSB_ACCEL_TO_GS;
-        self.reading.0.y = I16F16::from_num(
-            parsed_raw_read
-                .0
-                .y
-                .saturating_sub(self.calibration_offset.0.y),
-        ) / LSB_ACCEL_TO_GS;
-        self.reading.0.z = I16F16::from_num(
-            parsed_raw_read
-                .0
-                .z
-                .saturating_sub(self.calibration_offset.0.z),
-        ) / LSB_ACCEL_TO_GS;
+        self.reading.0.x =
+            I16F16::from_num(parsed_raw_read.0.x - self.calibration_offset.0.x) / LSB_ACCEL_TO_GS;
+        self.reading.0.y =
+            I16F16::from_num(parsed_raw_read.0.y - self.calibration_offset.0.y) / LSB_ACCEL_TO_GS;
+        self.reading.0.z =
+            I16F16::from_num(parsed_raw_read.0.z - self.calibration_offset.0.z) / LSB_ACCEL_TO_GS;
 
-        self.reading.1.x = parsed_raw_read
-            .1
-            .x
-            .saturating_sub(self.calibration_offset.1.x);
-        self.reading.1.y = parsed_raw_read
-            .1
-            .y
-            .saturating_sub(self.calibration_offset.1.y);
-        self.reading.1.z = parsed_raw_read
-            .1
-            .z
-            .saturating_sub(self.calibration_offset.1.z);
+        self.reading.1.x = parsed_raw_read.1.x - self.calibration_offset.1.x;
+        self.reading.1.y = parsed_raw_read.1.y - self.calibration_offset.1.y;
+        self.reading.1.z = parsed_raw_read.1.z - self.calibration_offset.1.z;
 
-        let cur_time = Instant::now();
-        let dt: I16F16 = I16F16::from_num(
-            cur_time
-                .duration_since(self.last_read_time)
-                .as_secs_f32()
-                .clamp(0.001, 0.03),
-        );
+        let dt: I16F16 =
+            I16F16::from_num(cur_time.duration_since(self.last_read_time).as_millis()) / 1000;
+        // .clamp(0.001, 0.03),
 
         self.update_pitch(dt);
         self.update_roll(dt);

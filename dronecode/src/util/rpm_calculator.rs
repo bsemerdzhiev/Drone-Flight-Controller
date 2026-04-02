@@ -1,4 +1,4 @@
-use fixed::types::{I16F16, I26F6, I32F0, I32F32, I3F29, I4F28};
+use fixed::types::{I16F16, I26F6, I28F4, I29F3, I32F0, I32F32, I3F29, I40F24, I4F28};
 use micromath::F32Ext;
 use my_hdlc::{
     command::{DebugRpms, DeviceCommand},
@@ -8,11 +8,12 @@ use tudelft_quadrupel::{motor, uart::send_bytes};
 
 use crate::util::{
     approx_funcs::{approx_sqrt, approx_sqrt_rpm},
-    constants_file::{MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE},
     yaw_pitch_roll::YawPitchRoll,
 };
 
 //------------------------------------------------------
+
+type OmegaType = I26F6;
 
 // chosen by trial and error in Desmos
 
@@ -20,8 +21,8 @@ const MIN_PWM: u16 = 200;
 
 pub const THRESHOLD_LIFT: f32 = 0.05;
 
-fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [I26F6]) {
-    let MAX_RPMS: I16F16 = I16F16::from_num(9800);
+fn map_rpm_square_to_pwm(lift_raw_value: f32, rpms_square: &mut [OmegaType]) {
+    let MAX_RPMS: I16F16 = I16F16::from_num(980);
 
     let cur_maxes = I16F16::from_num(motor::get_motor_max());
 
@@ -56,15 +57,15 @@ pub fn actuate_motors_with_direct_joystick_input(
     input_from_controller: &YawPitchRoll<I16F16, I16F16>,
     raw_lift: f32,
 ) {
-    let N = I26F6::from_num(input_from_controller.yaw);
-    let M = I26F6::from_num(input_from_controller.pitch);
-    let Z = I26F6::from_num(-input_from_controller.lift);
-    let L = I26F6::from_num(input_from_controller.roll);
+    let N = OmegaType::from_num(input_from_controller.yaw);
+    let M = OmegaType::from_num(input_from_controller.pitch);
+    let Z = OmegaType::from_num(-input_from_controller.lift);
+    let L = OmegaType::from_num(input_from_controller.roll);
 
-    let omega_one: I26F6 = Z + M - N;
-    let omega_two: I26F6 = Z + L + N;
-    let omega_three: I26F6 = Z - M - N;
-    let omega_four: I26F6 = Z - L + N;
+    let omega_one: OmegaType = Z + M - N;
+    let omega_two: OmegaType = Z + L + N;
+    let omega_three: OmegaType = Z - M - N;
+    let omega_four: OmegaType = Z - L + N;
 
     map_rpm_square_to_pwm(
         raw_lift,
@@ -72,21 +73,21 @@ pub fn actuate_motors_with_direct_joystick_input(
     );
 }
 
-// const THRUST_COEFFICIENT: I26F6 = I26F6::lit("0.00000014");
-// const DRAG_COEFFICIENT: I26F6 = I26F6::lit("0.000002");
-const THR_DIV: I26F6 = I26F6::lit("125000");
-const DRG_DIV: I26F6 = I26F6::lit("1785714.286");
+// const THRUST_COEFFICIENT: OmegaType = OmegaType::lit("0.00000014");
+// const DRAG_COEFFICIENT: OmegaType = OmegaType::lit("0.000002");
+const THR_DIV: OmegaType = OmegaType::lit("1250");
+const DRG_DIV: OmegaType = OmegaType::lit("17857.286");
 
 pub fn actuate_motors_with_rates(input: &YawPitchRoll<I16F16, I16F16>, raw_lift: f32) {
-    let n = I26F6::from_num(input.yaw) * THR_DIV;
-    let m = I26F6::from_num(input.pitch) * DRG_DIV;
-    let z = I26F6::from_num(-input.lift) * DRG_DIV;
-    let l = I26F6::from_num(input.roll) * DRG_DIV;
+    let n = OmegaType::from_num(input.yaw) * THR_DIV;
+    let m = OmegaType::from_num(input.pitch) * DRG_DIV;
+    let z = OmegaType::from_num(-input.lift) * DRG_DIV;
+    let l = OmegaType::from_num(input.roll) * DRG_DIV;
 
-    let omega_one = (m + m - n - z).max(I26F6::ZERO);
-    let omega_two = (n - l - l - z).max(I26F6::ZERO);
-    let omega_three = (-n - m - m - z).max(I26F6::ZERO);
-    let omega_four = (n + l + l - z).max(I26F6::ZERO);
+    let omega_one = (m + m - n - z).max(OmegaType::ZERO);
+    let omega_two = (n - l - l - z).max(OmegaType::ZERO);
+    let omega_three = (-n - m - m - z).max(OmegaType::ZERO);
+    let omega_four = (n + l + l - z).max(OmegaType::ZERO);
 
     map_rpm_square_to_pwm(
         raw_lift,

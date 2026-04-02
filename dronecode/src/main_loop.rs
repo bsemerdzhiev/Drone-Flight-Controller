@@ -40,6 +40,7 @@ const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 // in ms
 const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(1500);
 const DRONE_STATE_TIMER: Duration = Duration::from_millis(100);
+const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(100);
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
 const MIN_BAT_LEVEL: u16 = 1050;
@@ -48,7 +49,7 @@ const MIN_BAT_LEVEL: u16 = 1050;
 
 pub fn main_loop() -> ! {
     // processor tick frequency
-    set_tick_frequency(500);
+    set_tick_frequency(1000);
     // -------------------------------------------------------------------------
 
     // buffer for receiving bytes from PC
@@ -102,7 +103,7 @@ pub fn main_loop() -> ! {
         flash_head: &mut flash_head,
         flash_tail: &mut flash_tail,
 
-        time_for_main_loop: 0f32,
+        time_for_main_loop: 0i32,
 
         pid_info: &mut pid_info,
     };
@@ -118,7 +119,6 @@ pub fn main_loop() -> ! {
     // -------------------------------------------------------------------------
     for i in 0.. {
         let time_start = Instant::now();
-
         let _ = Blue.toggle();
         // -------------------------------------------------------------------------
         // Check battery level and switch to panic
@@ -164,12 +164,12 @@ pub fn main_loop() -> ! {
 
         // update filter readings
         ctx.kalman_position.append_new_reading();
+
         ctx.pressure_sensor_filter
             .update_readings(&mut ctx.kalman_position);
 
         // run the loop of the state
         current_state = current_state.run_state_loop(&mut ctx);
-
         let time_end = Instant::now();
 
         if time_end.duration_since(time_for_last_received_message) >= WATCHDOG_TIMER_FOR_PANICKING {
@@ -178,7 +178,7 @@ pub fn main_loop() -> ! {
 
         let dt = time_end.duration_since(current_time);
 
-        ctx.time_for_main_loop = time_end.duration_since(time_start).as_secs_f32();
+        ctx.time_for_main_loop = time_end.duration_since(time_start).as_millis() as i32;
 
         if matches!(current_state.as_ref().get_state(), FSMState::SafeMode)
             || time_end.duration_since(last_send_message) >= DRONE_STATE_TIMER

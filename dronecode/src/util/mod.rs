@@ -13,9 +13,6 @@ pub mod pid_controller;
 #[cfg(target_arch = "arm")]
 pub mod axis;
 
-#[cfg(target_arch = "arm")]
-pub mod constants_file;
-
 pub const MAX_LIFT: f32 = 25f32;
 
 pub const YAW_RATE: f32 = 375f32;

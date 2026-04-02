@@ -126,40 +126,35 @@ impl PressureSensor {
                 / I16F16::from_num(LSB_FOR_ACCEL),
         );
 
-        let mut accel_input: MeasurementType = (-raw_accel_x
-            * MeasurementType::from_num(micromath::F32Ext::sin(
-                filtered_position.pitch.to_num::<f32>(),
-            )))
-            + (raw_accel_y
-                * MeasurementType::from_num(micromath::F32Ext::sin(
-                    filtered_position.roll.to_num::<f32>(),
-                ))
-                * MeasurementType::from_num(micromath::F32Ext::cos(
-                    filtered_position.pitch.to_num::<f32>(),
-                )))
-            + (raw_accel_z
-                * MeasurementType::from_num(micromath::F32Ext::cos(
-                    filtered_position.roll.to_num::<f32>(),
-                ))
-                * MeasurementType::from_num(micromath::F32Ext::cos(
-                    filtered_position.pitch.to_num::<f32>(),
-                )));
+        let mut accel_input: MeasurementType = raw_accel_z;
+
+        //TODO: Bring back the world view below
+        // let mut accel_input: MeasurementType = (-raw_accel_x
+        //     * MeasurementType::from_num(micromath::F32Ext::sin(
+        //         filtered_position.pitch.to_num::<f32>(),
+        //     )))
+        //     + (raw_accel_y
+        //         * MeasurementType::from_num(micromath::F32Ext::sin(
+        //             filtered_position.roll.to_num::<f32>(),
+        //         ))
+        //         * MeasurementType::from_num(micromath::F32Ext::cos(
+        //             filtered_position.pitch.to_num::<f32>(),
+        //         )))
+        //     + (raw_accel_z
+        //         * MeasurementType::from_num(micromath::F32Ext::cos(
+        //             filtered_position.roll.to_num::<f32>(),
+        //         ))
+        //         * MeasurementType::from_num(micromath::F32Ext::cos(
+        //             filtered_position.pitch.to_num::<f32>(),
+        //         )));
 
         accel_input -= MeasurementType::from_num(1);
 
         accel_input *= MeasurementType::from_num(9.81);
-        // ----------------------------------------------------------------------
-        /*
-         *  Math is:
-         *   x_(k+1) = F*x_k + B*u_k
-         *   P_(k+1) = F*P*F^T + Q
-         */
-        let dt: MeasurementType = MeasurementType::from_num(
-            cur_time
-                .duration_since(self.last_reading_accel)
-                .as_secs_f32()
-                .clamp(0.001, 0.03),
-        );
+
+        let dt: MeasurementType =
+            MeasurementType::from_num(cur_time.duration_since(self.last_reading_accel).as_millis())
+                / 1000;
 
         let control_input_matrix: Matrix2x1<MeasurementType> =
             Matrix2x1::new(dt * dt * MeasurementType::from_num(0.5), dt);
@@ -191,10 +186,6 @@ impl PressureSensor {
             + control_input_matrix[(1, 0)] * accel_input;
 
         self.current_state = Matrix2x1::new(new_state_0, new_state_1);
-
-        // self.uncertainty_matrix = ((transition_matrix * self.uncertainty_matrix)
-        //     * transition_matrix.transpose())
-        //     + process_uncertainty;
 
         let tp = Matrix2::new(
             transition_matrix[(0, 0)] * self.uncertainty_matrix[(0, 0)]
@@ -233,9 +224,6 @@ impl PressureSensor {
         let baro_reading: MeasurementType =
             self.pressure_to_meters(I32F0::from_num(read_pressure() as i32));
 
-        // let mut kalman_gain: Matrix2x1<ChosenFixedPointType> =
-        // self.uncertainty_matrix * self.observation_matrix.transpose();
-
         let mut kalman_gain: Matrix2x1<MeasurementType> = Matrix2x1::new(
             self.uncertainty_matrix[(0, 0)] * self.observation_matrix[(0, 0)]
                 + self.uncertainty_matrix[(0, 1)] * self.observation_matrix[(0, 1)],
@@ -243,20 +231,12 @@ impl PressureSensor {
                 + self.uncertainty_matrix[(1, 1)] * self.observation_matrix[(0, 1)],
         );
 
-        // let inovation_variance = (((self.observation_matrix * self.uncertainty_matrix)
-        //     * self.observation_matrix.transpose())
-        // .x + self.barometer_variance);
-
         let inovation_variance = self.uncertainty_matrix[(0, 0)] + self.barometer_variance;
 
         kalman_gain = kalman_gain / inovation_variance;
 
         // let inovation = (baro_reading - (self.observation_matrix * self.current_state)[(0, 0)]);
         let inovation = baro_reading - self.current_state[(0, 0)];
-
-        // if inovation.abs() > 15.0 * inovation_variance.sqrt() {
-        //     return;
-        // }
 
         self.current_state = self.current_state + (kalman_gain * inovation);
 
@@ -266,11 +246,6 @@ impl PressureSensor {
             MeasurementType::from_num(0),
             MeasurementType::from_num(1),
         );
-
-        // self.uncertainty_matrix = (i - (kalman_gain * self.observation_matrix))
-        //     * self.uncertainty_matrix
-        //     * (i - kalman_gain * self.observation_matrix).transpose()
-        //     + kalman_gain * self.barometer_variance * kalman_gain.transpose();
 
         let k0 = kalman_gain[(0, 0)];
         let k1 = kalman_gain[(1, 0)];
