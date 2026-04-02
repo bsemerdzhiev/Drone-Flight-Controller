@@ -13,26 +13,26 @@ pub struct Axis<T> {
     pub z: T,
 }
 
-impl Add<Accel> for Axis<I64F0> {
-    type Output = Axis<I64F0>;
+impl Add<Accel> for Axis<I32F0> {
+    type Output = Axis<I32F0>;
 
     fn add(self, input: Accel) -> Self::Output {
-        Axis::<I64F0> {
-            x: self.x + I64F0::from_num(input.x),
-            y: self.y + I64F0::from_num(input.y),
-            z: self.z + I64F0::from_num(input.z),
+        Axis::<I32F0> {
+            x: self.x + I32F0::from_num(input.x),
+            y: self.y + I32F0::from_num(input.y),
+            z: self.z + I32F0::from_num(input.z),
         }
     }
 }
 
-impl Add<Gyro> for Axis<I64F0> {
-    type Output = Axis<I64F0>;
+impl Add<Gyro> for Axis<I32F0> {
+    type Output = Axis<I32F0>;
 
     fn add(self, input: Gyro) -> Self::Output {
-        Axis::<I64F0> {
-            x: self.x + I64F0::from_num(input.x),
-            y: self.y + I64F0::from_num(input.y),
-            z: self.z + I64F0::from_num(input.z),
+        Axis::<I32F0> {
+            x: self.x + I32F0::from_num(input.x),
+            y: self.y + I32F0::from_num(input.y),
+            z: self.z + I32F0::from_num(input.z),
         }
     }
 }

@@ -13,7 +13,7 @@ use crate::{
     },
     util::{
         pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P},
-        rpm_calculator::{actuate_motors_with_rates, THRESHOLD_LIFT},
+        rpm_calculator::{actuate_motors_with_rates, ThresholdLift},
         yaw_pitch_roll::YawPitchRoll,
     },
 };
@@ -63,7 +63,7 @@ impl FSMControl for FSMHeightControl {
 
         // output to motors
         // raw_lift is set to threshold lift, as we want to hover at the same position
-        actuate_motors_with_rates(&target, THRESHOLD_LIFT);
+        actuate_motors_with_rates(&target, ThresholdLift);
 
         return self;
     }
