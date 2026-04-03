@@ -115,8 +115,6 @@ pub fn main_loop() -> ! {
     let mut last_send_message: Instant = Instant::now();
     let mut last_logged_message: Instant = Instant::now();
 
-    // used to determine whether battery voltage is too low
-    let mut battery_panic = false;
     // -------------------------------------------------------------------------
     for i in 0.. {
         let time_start = Instant::now();
@@ -126,10 +124,6 @@ pub fn main_loop() -> ! {
         let bat_level = read_battery();
         if SHOULD_CHECK_BATTERY_LEVEL && bat_level < MIN_BAT_LEVEL {
             current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
-            battery_panic = true;
-        } else if battery_panic && bat_level >= MIN_BAT_LEVEL {
-            current_state = current_state.step(command::FSMState::SafeMode, &mut ctx);
-            battery_panic = false;
         }
         // -------------------------------------------------------------------------
 
