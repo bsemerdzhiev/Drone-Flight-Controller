@@ -6,6 +6,10 @@
 extern crate alloc;
 
 use crate::main_loop::main_loop;
+use crate::util::ble_communication::ble_init;
+
+use template_project::util::ble_communication::ble_send;
+use util::ble_communication;
 
 use alloc::format;
 use core::alloc::Layout;
@@ -52,6 +56,10 @@ fn main() -> ! {
         // program doesn't run, you know that the boot procedure has failed.
         unsafe {
             initialize(addr_of_mut!(HEAP_MEMORY), true);
+            // ble_init();
+
+            // let arr = [0u8; 5];
+            // ble_send(arr.as_ptr(), 1);
         }
     }
 
