@@ -1,8 +1,9 @@
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
+use cordic::CordicNumber;
 use fixed::traits::{Fixed, FixedSigned};
-use fixed::types::{I26F6, I2F30, I4F28};
+use fixed::types::{I16F16, I26F6, I2F30, I32F0, I4F28, I8F24};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;
 
@@ -27,13 +28,13 @@ const RAD_TO_DEGREE: I26F6 = I26F6::lit("57.2957795");
 */
 pub struct DmpReadings {
     last_sampled_time: Option<Instant>,
-    last_sample: Option<YawPitchRoll<I4F28, I4F28>>,
+    last_sample: Option<YawPitchRoll<I8F24, I8F24>>,
 
-    calibration_offset: YawPitchRoll<I4F28, I4F28>,
+    calibration_offset: YawPitchRoll<I8F24, I8F24>,
 }
 
 impl DmpReadings {
-    pub fn new(offset: YawPitchRoll<I4F28, I4F28>) -> Self {
+    pub fn new(offset: YawPitchRoll<I8F24, I8F24>) -> Self {
         DmpReadings {
             last_sampled_time: None,
             last_sample: None,
@@ -45,14 +46,14 @@ impl DmpReadings {
 impl ImuHandler for DmpReadings {
     fn get_reading<T, Y>(&mut self) -> YawPitchRoll<T, Y>
     where
-        T: FixedSigned,
+        T: FixedSigned + CordicNumber,
         Y: FixedSigned,
     {
         let sampled_dmp_res = block!(read_dmp_bytes());
 
         let sampled_quaternion = sampled_dmp_res.unwrap();
 
-        let mut sampled_yaw_pitch_roll = YawPitchRoll::<I4F28, I4F28>::from(sampled_quaternion);
+        let mut sampled_yaw_pitch_roll = YawPitchRoll::<I8F24, I8F24>::from(sampled_quaternion);
 
         sampled_yaw_pitch_roll = sampled_yaw_pitch_roll - self.calibration_offset;
 
@@ -64,11 +65,14 @@ impl ImuHandler for DmpReadings {
         }
         let current_time: Instant = Instant::now();
 
-        let passed_time = I4F28::from_num(
-            current_time
-                .duration_since(self.last_sampled_time.unwrap())
-                .as_millis(),
-        ) / 1000;
+        let passed_time: I8F24 = I8F24::from_num(
+            (I16F16::from_num(
+                current_time
+                    .duration_since(self.last_sampled_time.unwrap())
+                    .as_micros() as u32,
+            ) / I16F16::from_num(1000))
+                / I16F16::from_num(1000),
+        );
 
         // derive rate
         let calculated_rate = sampled_yaw_pitch_roll.calculate_rate_per_sec::<T, Y>(

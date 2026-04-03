@@ -1,6 +1,7 @@
 use core::time::Duration;
 
-use fixed::types::{I10F22, I16F16, I26F6, I2F30, I32F0, I4F28, I64F0};
+use cordic::{cos, sin};
+use fixed::types::{I10F22, I16F16, I26F6, I2F30, I32F0, I4F28, I64F0, I8F24};
 use micromath::F32Ext;
 use nalgebra::{Matrix1x2, Matrix2, Matrix2x1, Vector2};
 use tudelft_quadrupel::{barometer::read_pressure, mpu::read_raw, time::Instant};
@@ -25,7 +26,7 @@ const ACCEL_SAMPLE_RATE: Duration = Duration::from_millis(1);
 // TUDelft's library initializes it with the corresponding oversampling ratio
 const BARO_SAMPLE_DURATION: Duration = Duration::from_millis(10);
 
-type MeasurementType = I10F22;
+type MeasurementType = I8F24;
 
 pub struct PressureSensor {
     // ------------------------------------
@@ -109,52 +110,41 @@ impl PressureSensor {
         let mut raw_accel = read_raw().unwrap().0;
 
         let mut raw_accel_x = MeasurementType::from_num(
-            (I16F16::from_num(raw_accel.x)
-                - I16F16::from_num(filtered_position.calibration_offset.0.x))
+            (I16F16::from_num(raw_accel.x) - filtered_position.calibration_offset.0.x)
                 / I16F16::from_num(LSB_FOR_ACCEL),
         );
 
         let mut raw_accel_y = MeasurementType::from_num(
-            (I16F16::from_num(raw_accel.y)
-                - I16F16::from_num(filtered_position.calibration_offset.0.y))
+            (I16F16::from_num(raw_accel.y) - filtered_position.calibration_offset.0.y)
                 / I16F16::from_num(LSB_FOR_ACCEL),
         );
 
         let mut raw_accel_z = MeasurementType::from_num(
-            (I16F16::from_num(raw_accel.z)
-                - I16F16::from_num(filtered_position.calibration_offset.0.z))
+            (I16F16::from_num(raw_accel.z) - filtered_position.calibration_offset.0.z)
                 / I16F16::from_num(LSB_FOR_ACCEL),
         );
 
-        let mut accel_input: MeasurementType = raw_accel_z;
+        // let mut accel_input: MeasurementType = raw_accel_z;
 
         //TODO: Bring back the world view below
-        // let mut accel_input: MeasurementType = (-raw_accel_x
-        //     * MeasurementType::from_num(micromath::F32Ext::sin(
-        //         filtered_position.pitch.to_num::<f32>(),
-        //     )))
-        //     + (raw_accel_y
-        //         * MeasurementType::from_num(micromath::F32Ext::sin(
-        //             filtered_position.roll.to_num::<f32>(),
-        //         ))
-        //         * MeasurementType::from_num(micromath::F32Ext::cos(
-        //             filtered_position.pitch.to_num::<f32>(),
-        //         )))
-        //     + (raw_accel_z
-        //         * MeasurementType::from_num(micromath::F32Ext::cos(
-        //             filtered_position.roll.to_num::<f32>(),
-        //         ))
-        //         * MeasurementType::from_num(micromath::F32Ext::cos(
-        //             filtered_position.pitch.to_num::<f32>(),
-        //         )));
+        let mut accel_input: MeasurementType = (-raw_accel_x
+            * MeasurementType::from_num(sin(filtered_position.pitch)))
+            + (raw_accel_y
+                * MeasurementType::from_num(sin(filtered_position.roll))
+                * MeasurementType::from_num(cos(filtered_position.pitch)))
+            + (raw_accel_z
+                * MeasurementType::from_num(cos(filtered_position.roll))
+                * MeasurementType::from_num(cos(filtered_position.pitch)));
 
         accel_input -= MeasurementType::from_num(1);
 
         accel_input *= MeasurementType::from_num(9.81);
 
-        let dt: MeasurementType =
-            MeasurementType::from_num(cur_time.duration_since(self.last_reading_accel).as_millis())
-                / 1000;
+        let dt: MeasurementType = MeasurementType::from_num(
+            (I16F16::from_num(cur_time.duration_since(self.last_reading_accel).as_micros() as u32)
+                / I16F16::from_num(1000))
+                / I16F16::from_num(1000),
+        );
 
         let control_input_matrix: Matrix2x1<MeasurementType> =
             Matrix2x1::new(dt * dt * MeasurementType::from_num(0.5), dt);
@@ -240,12 +230,12 @@ impl PressureSensor {
 
         self.current_state = self.current_state + (kalman_gain * inovation);
 
-        let i: Matrix2<MeasurementType> = Matrix2::<MeasurementType>::new(
-            MeasurementType::from_num(1),
-            MeasurementType::from_num(0),
-            MeasurementType::from_num(0),
-            MeasurementType::from_num(1),
-        );
+        // let i: Matrix2<MeasurementType> = Matrix2::<MeasurementType>::new(
+        //     MeasurementType::from_num(1),
+        //     MeasurementType::from_num(0),
+        //     MeasurementType::from_num(0),
+        //     MeasurementType::from_num(1),
+        // );
 
         let k0 = kalman_gain[(0, 0)];
         let k1 = kalman_gain[(1, 0)];

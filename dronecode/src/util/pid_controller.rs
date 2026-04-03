@@ -1,6 +1,7 @@
+use cordic::CordicNumber;
 use fixed::{
     traits::{Fixed, FixedSigned},
-    types::I16F16,
+    types::{I16F16, I32F0},
 };
 use my_hdlc::pc_command::ManualInput;
 use tudelft_quadrupel::time::Instant;
@@ -69,7 +70,7 @@ const DRONE_WEIGHT: f32 = 2f32;
 
 pub struct PIDController<T, Y>
 where
-    T: FixedSigned,
+    T: FixedSigned + CordicNumber,
     Y: FixedSigned,
 {
     prev_error: YawPitchRoll<T, Y>,
@@ -80,7 +81,7 @@ where
 
 impl<T, Y> PIDController<T, Y>
 where
-    T: FixedSigned,
+    T: FixedSigned + CordicNumber,
     Y: FixedSigned,
 {
     pub fn new() -> Self {
@@ -110,9 +111,12 @@ where
         let calculated_error = (target - input);
 
         let current_time = Instant::now();
-        let delta_t = ControllerValues::from_num(
-            current_time.duration_since(self.last_timestamp).as_millis(),
-        ) / 1000;
+
+        let delta_t: ControllerValues = ControllerValues::from_num(
+            (I16F16::from_num(current_time.duration_since(self.last_timestamp).as_micros() as u32)
+                / I16F16::from_num(1000))
+                / I16F16::from_num(1000),
+        );
 
         // compute P part
         if ((controller_flags & (ControllerFlags::AddP as u8)) != 0) {

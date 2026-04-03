@@ -1,5 +1,6 @@
 use core::{ops::Add, time::Duration};
 
+use cordic::CordicNumber;
 use fixed::{
     traits::{Fixed, FixedSigned},
     types::{I16F16, I20F12, I26F6, I2F30, I32F32, I4F28},
@@ -30,20 +31,20 @@ const SAMPLE_COOL_DOWN: Duration = Duration::from_millis(2);
 #[derive(Copy, Clone, Debug)]
 pub struct CalibrationState<T, Y>
 where
-    T: FixedSigned,
+    T: FixedSigned + CordicNumber,
     Y: FixedSigned,
 {
     accelerometer_sum: Axis<I32F0>,
     gyro_sum: Axis<I32F0>,
 
-    sample_cnt: I20F12,
+    sample_cnt: I16F16,
 
     pub start_time: Instant,
 
     pub accelerometer_offset: Axis<I16F16>,
     pub gyro_offset: Axis<I16F16>,
 
-    ypr_sum: Axis<I20F12>,
+    ypr_sum: Axis<I16F16>,
     pub ypr_offset: YawPitchRoll<T, Y>,
 
     last_read: Instant,
@@ -51,7 +52,7 @@ where
 
 impl<T, Y> CalibrationState<T, Y>
 where
-    T: FixedSigned,
+    T: FixedSigned + CordicNumber,
     Y: FixedSigned,
 {
     pub fn new() -> Self {
@@ -59,8 +60,8 @@ where
             accelerometer_sum: Axis::<I32F0>::default(),
             gyro_sum: Axis::<I32F0>::default(),
 
-            ypr_sum: Axis::<I20F12>::default(),
-            sample_cnt: I20F12::from_num(0),
+            ypr_sum: Axis::<I16F16>::default(),
+            sample_cnt: I16F16::from_num(0),
 
             start_time: Instant::now(),
 
@@ -90,13 +91,13 @@ where
         self.gyro_sum = self.gyro_sum + raw_read.1;
 
         // self.ypr_sum = self.ypr_sum + ypr_sample;
-        self.ypr_sum = Axis::<I20F12> {
-            x: self.ypr_sum.x + I20F12::from_num(ypr_sample.yaw),
-            y: self.ypr_sum.y + I20F12::from_num(ypr_sample.pitch),
-            z: self.ypr_sum.z + I20F12::from_num(ypr_sample.roll),
+        self.ypr_sum = Axis::<I16F16> {
+            x: self.ypr_sum.x + I16F16::from_num(ypr_sample.yaw),
+            y: self.ypr_sum.y + I16F16::from_num(ypr_sample.pitch),
+            z: self.ypr_sum.z + I16F16::from_num(ypr_sample.roll),
         };
 
-        self.sample_cnt += I20F12::from_num(1);
+        self.sample_cnt += I16F16::from_num(1);
     }
 
     pub fn finalize_calibration(&mut self) {
