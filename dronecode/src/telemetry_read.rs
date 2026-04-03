@@ -3,9 +3,11 @@ use core::time::Duration;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::state_context::StateContext;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
+use fixed::types::I16F16;
 use fixed::types::I26F6;
 use fixed::types::I32F0;
 use fixed::types::I4F28;
+use fixed::types::I8F24;
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::command::FSMState;
 use my_hdlc::telemetry_data::CalibrationInfo;
@@ -108,10 +110,10 @@ impl TelemetryRead for TelemetryData {
     ) -> ReturnType {
         let quaternion = block!(read_dmp_bytes());
 
-        let kalman_pos = ctx.kalman_position.get_reading::<I26F6, I4F28>();
+        let kalman_pos = ctx.kalman_position.get_reading::<I16F16, I16F16>();
 
-        let mut ypr = if quaternion.is_ok() {
-            YawPitchRoll::<I4F28, I4F28>::from(quaternion.unwrap())
+        let mut ypr: YawPitchRoll<I8F24, I8F24> = if quaternion.is_ok() {
+            YawPitchRoll::<I8F24, I8F24>::from(quaternion.unwrap())
         } else {
             YawPitchRoll::new()
         };

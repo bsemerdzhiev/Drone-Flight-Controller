@@ -19,5 +19,7 @@ tudelft-quadrupel = "3"
 micromath = "2"
 my-hdlc = {path = "../my-hdlc/"}
 cortex-m = { version = "0.7", features = ["critical-section-single-core"]}
+
 nalgebra = { version = "0.34", default-features = false, features = ["libm"]}
 fixed = {version = "1.31.0"}
+cordic = {version = "0.1.5"}

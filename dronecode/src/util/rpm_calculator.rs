@@ -6,14 +6,11 @@ use my_hdlc::{
 };
 use tudelft_quadrupel::{motor, uart::send_bytes};
 
-use crate::util::{
-    approx_funcs::{approx_sqrt, approx_sqrt_rpm},
-    yaw_pitch_roll::YawPitchRoll,
-};
+use crate::util::{approx_funcs::approx_sqrt, yaw_pitch_roll::YawPitchRoll};
 
 //------------------------------------------------------
 
-type OmegaType = I26F6;
+type OmegaType = I28F4;
 
 // chosen by trial and error in Desmos
 
@@ -32,7 +29,7 @@ fn map_rpm_square_to_pwm(lift_raw_value: I16F16, rpms_square: &mut [OmegaType]) 
 
     let mut k: usize = 0;
     for x in rpms_square {
-        let squared_number: I16F16 = I16F16::from_num(approx_sqrt_rpm(*x));
+        let squared_number: I16F16 = I16F16::from_num(approx_sqrt(*x));
 
         let rpm_ratio = squared_number / MAX_RPMS;
 

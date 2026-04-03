@@ -3,18 +3,18 @@ use core::time::Duration;
 
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::{CalibrationState, LSB_FOR_ACCEL};
-use crate::util::approx_funcs::{approx_sqrt, atan2_approx, atan2_cordic};
+use crate::util::approx_funcs::approx_sqrt;
 use crate::util::axis::Axis;
 use crate::util::yaw_pitch_roll::*;
+use cordic::atan2;
 use fixed::traits::{Fixed, FixedSigned};
-use fixed::types::I16F16;
-use libm::{atan2f, sqrtf};
+use fixed::types::{I16F16, I32F0};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
 const C1: I16F16 = I16F16::lit("1.5");
-const C2: I16F16 = I16F16::lit("1e-5");
+const C2: I16F16 = I16F16::lit("1e-4");
 
 const ACCEL_SAMPLE_RATE: Duration = Duration::from_millis(1);
 
@@ -53,8 +53,8 @@ impl KalmanFilter {
     }
     fn update_roll(&mut self, dt: I16F16) {
         let p_clean = (self.reading.1.x) * DEGREE_TO_RAD - self.bias_p;
-        // let raw_roll = atan2f(self.reading.0.y as f32, self.reading.0.z as f32);
-        let raw_roll = atan2_cordic(self.reading.0.y, self.reading.0.z);
+        // let raw_roll = atan2f(self.reading.0.y as f32, self.reading.0.z as f32)1.1.xx;
+        let raw_roll = atan2(self.reading.0.y, self.reading.0.z);
 
         let estimated_roll = self.roll + p_clean * dt;
         let e = estimated_roll - raw_roll;
@@ -67,10 +67,8 @@ impl KalmanFilter {
 
         let q_clean: I16F16 = (self.reading.1.y * DEGREE_TO_RAD) - self.bias_q;
 
-        let raw_pitch: I16F16 = I16F16::from_num(atan2_cordic(
-            -self.reading.0.x,
-            approx_sqrt(ay * ay + az * az),
-        ));
+        let raw_pitch: I16F16 =
+            I16F16::from_num(atan2(-self.reading.0.x, approx_sqrt(ay * ay + az * az)));
 
         let estimated_pitch = self.pitch + q_clean * dt;
         let e = estimated_pitch - raw_pitch;
@@ -118,8 +116,9 @@ impl ImuHandler for KalmanFilter {
         self.reading.1.z = parsed_raw_read.1.z - self.calibration_offset.1.z;
 
         let dt: I16F16 =
-            I16F16::from_num(cur_time.duration_since(self.last_read_time).as_millis()) / 1000;
-        // .clamp(0.001, 0.03),
+            (I16F16::from_num(cur_time.duration_since(self.last_read_time).as_micros() as u32)
+                / I16F16::from_num(1000))
+                / I16F16::from_num(1000);
 
         self.update_pitch(dt);
         self.update_roll(dt);

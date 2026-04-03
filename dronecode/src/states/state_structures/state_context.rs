@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use fixed::types::{I16F16, I26F6, I2F30, I4F28};
+use fixed::types::{I16F16, I26F6, I2F30, I4F28, I8F24};
 use my_hdlc::{pc_command::ManualInput, HdlcTransceiver};
 
 use crate::{
@@ -19,7 +19,7 @@ pub struct StateContext<'a> {
 
     pub input_from_controller: &'a mut ManualInput,
 
-    pub calibration_state: &'a mut CalibrationState<I4F28, I4F28>,
+    pub calibration_state: &'a mut CalibrationState<I8F24, I8F24>,
     pub input_as_ypr: &'a mut YawPitchRoll<I16F16, I16F16>,
 
     pub flash_head: &'a mut usize,

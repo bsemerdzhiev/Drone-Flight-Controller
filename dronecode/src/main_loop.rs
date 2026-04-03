@@ -10,7 +10,7 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
 use alloc::format;
-use fixed::types::{I16F16, I26F6, I2F30, I4F28};
+use fixed::types::{I16F16, I26F6, I2F30, I4F28, I8F24};
 use my_hdlc::telemetry_data::*;
 
 use tudelft_quadrupel::flash::flash_write_bytes;
@@ -72,8 +72,8 @@ pub fn main_loop() -> ! {
     let mut received_manual_input: ManualInput = ManualInput::zero();
     let mut input_as_ypr: YawPitchRoll<I16F16, I16F16> = YawPitchRoll::<I16F16, I16F16>::new();
 
-    let mut calibration_state: CalibrationState<I4F28, I4F28> =
-        CalibrationState::<I4F28, I4F28>::new();
+    let mut calibration_state: CalibrationState<I8F24, I8F24> =
+        CalibrationState::<I8F24, I8F24>::new();
 
     let mut flash_head = 0usize;
     let mut flash_tail = 0usize;
@@ -181,9 +181,7 @@ pub fn main_loop() -> ! {
 
         ctx.time_for_main_loop = time_end.duration_since(time_start).as_millis() as i32;
 
-        if matches!(current_state.as_ref().get_state(), FSMState::SafeMode)
-            || time_end.duration_since(last_send_message) >= DRONE_STATE_TIMER
-        {
+        if time_end.duration_since(last_send_message) >= DRONE_STATE_TIMER {
             last_send_message = time_end;
 
             send_drone_data(current_state.get_state(), dt, &mut ctx);
