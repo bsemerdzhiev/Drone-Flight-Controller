@@ -420,6 +420,11 @@ static void advertising_init(void) {
   APP_ERROR_CHECK(err_code);
 }
 
+void ble_initial_init() {
+  APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
+  ble_stack_init();
+}
+
 /**@brief Application main function.
  */
 void ble_init() {
@@ -428,18 +433,16 @@ void ble_init() {
   // uint8_t start_string[] = START_STRING;
 
   // Initialize.
-  APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
   // uart_init();
   // buttons_leds_init(&erase_bonds);
-  // ble_stack_init();
-  // gap_params_init();
-  // services_init();
-  // advertising_init();
-  // conn_params_init();
+  gap_params_init();
+  services_init();
+  advertising_init();
+  conn_params_init();
 
   // printf("%s", start_string);
 
-  // ble_advertising_start(BLE_ADV_MODE_FAST);
+  ble_advertising_start(BLE_ADV_MODE_FAST);
 
   // Enter main loop.
   // for (;;) {
