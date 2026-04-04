@@ -3,3 +3,4 @@
 .direnv/
 .venv/
 ui/__pycache__/
+**/_build/
