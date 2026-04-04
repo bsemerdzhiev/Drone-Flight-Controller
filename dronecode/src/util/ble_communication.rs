@@ -10,6 +10,10 @@ extern "C" {
 #[no_mangle]
 pub extern "C" fn rust_ble_receive(data: *const u8, length: u16) {
     let as_arr = unsafe { core::slice::from_raw_parts(data, length as usize) };
+
+    unsafe {
+        ble_send(data, length);
+    }
     if (as_arr[0] == '1' as u8) {
         Yellow.toggle();
     }
