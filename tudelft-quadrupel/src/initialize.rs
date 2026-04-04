@@ -17,6 +17,7 @@ extern "C" {
     pub fn ble_init();
 
     pub fn SystemInit();
+    pub fn export_evt_wait();
 }
 #[no_mangle]
 pub extern "C" fn SWI2() {
@@ -27,6 +28,14 @@ pub extern "C" fn SWI2() {
         SWI2_IRQHandler();
     }
 }
+#[no_mangle]
+pub extern "C" fn SWI4() {}
+
+#[no_mangle]
+pub extern "C" fn SWI5() {}
+
+#[no_mangle]
+pub extern "C" fn POWER_CLOCK() {}
 
 /// Initialize the drone board. This should be run at boot.
 ///
@@ -105,6 +114,7 @@ pub unsafe fn initialize(heap_memory: *const [MaybeUninit<u8>], debug: bool) {
         gpio.p0_02,
         &mut cortex_m_peripherals.NVIC,
     );
+
     if debug {
         let _ = send_bytes(b"TWI initialized\n");
     }

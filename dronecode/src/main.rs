@@ -16,7 +16,7 @@ use core::ptr::addr_of_mut;
 use tudelft_quadrupel::flash::flash_chip_erase;
 use tudelft_quadrupel::{cortex_m_rt, led, nrf51_hal};
 
-use tudelft_quadrupel::initialize::initialize;
+use tudelft_quadrupel::initialize::{export_evt_wait, initialize};
 use tudelft_quadrupel::led::Led::{Blue, Green, Red, Yellow};
 use tudelft_quadrupel::motor::{set_motor_max, set_motors};
 use tudelft_quadrupel::time::assembly_delay;
@@ -71,6 +71,10 @@ fn main() -> ! {
 
     let mut k = 0;
     loop {
+        // unsafe {
+        //     export_evt_wait();
+        // }
+
         if k == 0 {
             Red.toggle();
         }

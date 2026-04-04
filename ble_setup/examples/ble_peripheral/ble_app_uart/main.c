@@ -149,6 +149,8 @@ static void gap_params_init(void) {
   APP_ERROR_CHECK(err_code);
 }
 
+// extern void rust_ble_receive(uint8_t *data, uint16_t length);
+
 /**@brief Function for handling the data from the Nordic UART Service.
  *
  * @details This function will process the data received from the Nordic UART
@@ -161,6 +163,7 @@ static void gap_params_init(void) {
 /**@snippet [Handling the data received over BLE] */
 static void nus_data_handler(ble_nus_t *p_nus, uint8_t *p_data,
                              uint16_t length) {
+  rust_ble_receive(p_data, length);
   // for (uint32_t i = 0; i < length; i++) {
   //   while (app_uart_put(p_data[i]) != NRF_SUCCESS)
   //     ;
@@ -228,7 +231,7 @@ static void conn_params_init(void) {
   cp_init.next_conn_params_update_delay = NEXT_CONN_PARAMS_UPDATE_DELAY;
   cp_init.max_conn_params_update_count = MAX_CONN_PARAMS_UPDATE_COUNT;
   cp_init.start_on_notify_cccd_handle = BLE_GATT_HANDLE_INVALID;
-  cp_init.disconnect_on_fail = false;
+  cp_init.disconnect_on_fail = true;
   cp_init.evt_handler = on_conn_params_evt;
   cp_init.error_handler = conn_params_error_handler;
 
@@ -272,7 +275,8 @@ static void on_adv_evt(ble_adv_evt_t ble_adv_evt) {
     // APP_ERROR_CHECK(err_code);
     break;
   case BLE_ADV_EVT_IDLE:
-    sleep_mode_enter();
+    ble_advertising_start(BLE_ADV_MODE_FAST);
+    // sleep_mode_enter();
     break;
   default:
     break;
@@ -515,6 +519,8 @@ static void power_manage(void) {
   APP_ERROR_CHECK(err_code);
 }
 
+void export_evt_wait(void) { sd_app_evt_wait(); }
+
 /**@brief Application main function.
  */
 void ble_init(void) {
@@ -523,14 +529,14 @@ void ble_init(void) {
   uint8_t start_string[] = START_STRING;
 
   // Initialize.
-  APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
+  // APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
   // uart_init();
   // buttons_leds_init(&erase_bonds);
   ble_stack_init();
   gap_params_init();
   services_init();
   advertising_init();
-  conn_params_init();
+  // conn_params_init();
 
   // printf("%s", start_string);
 
@@ -538,9 +544,9 @@ void ble_init(void) {
   // APP_ERROR_CHECK(err_code);
 
   // Enter main loop.
-  for (;;) {
-    power_manage();
-  }
+  // for (;;) {
+  // power_manage();
+  // }
 }
 
 /**
