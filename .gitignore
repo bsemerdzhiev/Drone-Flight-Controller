@@ -4,3 +4,5 @@
 .venv/
 ui/__pycache__/
 **/_build/
+.cache/
+__pycache__
