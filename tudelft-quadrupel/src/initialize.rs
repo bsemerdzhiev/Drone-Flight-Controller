@@ -12,7 +12,7 @@ static INITIALIZED: Mutex<bool> = Mutex::new(false);
 #[global_allocator]
 static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
 
-#[link(name = "ble_app", kind = "static")]
+// #[link(name = "ble_app", kind = "static")]
 extern "C" {
     pub fn ble_init();
 
