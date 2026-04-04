@@ -1,5 +1,5 @@
 [workspace]
-members = ["dronecode", "runner", "my-hdlc", "ble-c-extern", "tudelft-quadrupel"]
+members = ["dronecode", "runner", "my-hdlc", "tudelft-quadrupel"]
 default-members = ["dronecode"]
 resolver="2"
 

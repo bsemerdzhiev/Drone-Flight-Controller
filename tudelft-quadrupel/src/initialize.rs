@@ -12,6 +12,22 @@ static INITIALIZED: Mutex<bool> = Mutex::new(false);
 #[global_allocator]
 static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
 
+#[link(name = "ble_app", kind = "static")]
+extern "C" {
+    pub fn ble_init();
+
+    pub fn SystemInit();
+}
+#[no_mangle]
+pub extern "C" fn SWI2() {
+    extern "C" {
+        fn SWI2_IRQHandler();
+    }
+    unsafe {
+        SWI2_IRQHandler();
+    }
+}
+
 /// Initialize the drone board. This should be run at boot.
 ///
 /// `heap_memory` should be a pointer to statically allocated memory.
@@ -31,6 +47,17 @@ static ALLOCATOR: CortexMHeap = CortexMHeap::empty();
 /// # Safety
 /// safe is heap_memory is a valid pointer to memory
 pub unsafe fn initialize(heap_memory: *const [MaybeUninit<u8>], debug: bool) {
+    unsafe {
+        // Power on all RAM banks
+        core::ptr::write_volatile(
+            0x40000524 as *mut u32,
+            core::ptr::read_volatile(0x40000524 as *mut u32) | 0x3,
+        );
+        core::ptr::write_volatile(
+            0x40000554 as *mut u32,
+            core::ptr::read_volatile(0x40000554 as *mut u32) | 0x3,
+        );
+    }
     // Allow time for PC to start up. The drone board starts running code immediately after upload,
     // but at that time the PC may not be listening on UART etc.
     assembly_delay(2_500_000);
@@ -53,12 +80,16 @@ pub unsafe fn initialize(heap_memory: *const [MaybeUninit<u8>], debug: bool) {
     // * heap_memory is a valid pointer by the safety requirements of this function
     unsafe { ALLOCATOR.init(heap_memory.addr(), (heap_memory).len()) }
 
+    SystemInit();
+
     let gpio = nrf51_hal::gpio::p0::Parts::new(nrf51_peripherals.GPIO);
     led::initialize(gpio.p0_22, gpio.p0_24, gpio.p0_28, gpio.p0_30);
     // signal that leds have initialized
     // and that the other initialization processes are going on.
     // this also means that the processor at least booted successfully.
     Yellow.on();
+
+    ble_init();
 
     uart::initialize(nrf51_peripherals.UART0, &mut cortex_m_peripherals.NVIC);
     if debug {

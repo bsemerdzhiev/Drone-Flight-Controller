@@ -19,4 +19,4 @@ fixed = {version = "1.31.0"}
 cordic = {version = "0.1.5"}
 my-hdlc = {path = "../my-hdlc/"}
 tudelft-quadrupel = {path="../tudelft-quadrupel/"}
-ble-c-extern = {path="../ble-c-extern/"}
+# ble-c-extern = {path="../ble-c-extern/"}

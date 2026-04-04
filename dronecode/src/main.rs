@@ -6,7 +6,7 @@
 extern crate alloc;
 
 use crate::main_loop::main_loop;
-use crate::util::ble_communication::{ble_init, ble_initial_init};
+// use crate::util::ble_communication::ble_init;
 
 use alloc::format;
 use core::alloc::Layout;
@@ -55,10 +55,7 @@ fn main() -> ! {
         unsafe {
             // core::ptr::write_volatile(0x20000000 as *mut u32, 0x3);
             // core::ptr::write_volatile(0x20001000 as *mut u32, 0x3);
-            ble_initial_init();
-
             initialize(addr_of_mut!(HEAP_MEMORY), true);
-            ble_init();
 
             // let arr = [0u8; 5];
             // ble_send(arr.as_ptr(), 1);

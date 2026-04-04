@@ -150,13 +150,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "ble-c-extern"
-version = "0.1.0"
-dependencies = [
- "cc",
-]
-
-[[package]]
 name = "block2"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -250,16 +243,6 @@ name = "cast"
 version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "37b2a672a2cb129a2e41c10b1224bb368f9f37a2b16b612598138befd7b37eb5"
-
-[[package]]
-name = "cc"
-version = "1.2.59"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b7a4d3ec6524d28a329fc53654bbadc9bdd7b0431f5d65f1a56ffb28a1ee5283"
-dependencies = [
- "find-msvc-tools",
- "shlex",
-]
 
 [[package]]
 name = "cesu8"
@@ -621,12 +604,6 @@ dependencies = [
  "indenter",
  "once_cell",
 ]
-
-[[package]]
-name = "find-msvc-tools"
-version = "0.1.9"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5baebc0774151f905a1a2cc41989300b1e6fbb29aff0ceffa1064fdd3088d582"
 
 [[package]]
 name = "fixed"
@@ -1739,12 +1716,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "shlex"
-version = "1.3.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fda2ff0d084019ba4d7c6f371c95d8fd75ce3524c3cb8fb653a3023f6323e64"
-
-[[package]]
 name = "signal-hook"
 version = "0.3.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1863,7 +1834,6 @@ checksum = "55937e1799185b12863d447f42597ed69d9928686b8d88a1df17376a097d8369"
 name = "template-project"
 version = "0.1.0"
 dependencies = [
- "ble-c-extern",
  "cordic",
  "cortex-m",
  "fixed",

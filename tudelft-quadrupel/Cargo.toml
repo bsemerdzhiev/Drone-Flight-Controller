@@ -2,6 +2,7 @@
 name = "tudelft-quadrupel"
 version = "3.0.1"
 edition = "2021"
+build = "build.rs"
 authors = [
     "Anne Stijns <anstijns@gmail.com>",
     "Jonathan Brouwer <jonathantbrouwer@gmail.com>",
