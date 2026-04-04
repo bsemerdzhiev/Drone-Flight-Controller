@@ -1,6 +1,6 @@
 use crate::led::Led::Yellow;
 use crate::mutex::Mutex;
-use crate::time::assembly_delay;
+use crate::time::{assembly_delay, set_tick_frequency};
 use crate::uart::send_bytes;
 use crate::{barometer, battery, flash, led, motor, mpu, time, twi, uart};
 use alloc_cortex_m::CortexMHeap;
@@ -105,6 +105,7 @@ pub unsafe fn initialize(heap_memory: *const [MaybeUninit<u8>], debug: bool) {
         let _ = send_bytes(b"UART driver initialized\n");
     }
     time::initialize(nrf51_peripherals.RTC1, &mut cortex_m_peripherals.NVIC);
+
     if debug {
         let _ = send_bytes(b"RTC driver initialized\n");
     }

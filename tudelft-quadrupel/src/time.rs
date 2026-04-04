@@ -124,6 +124,10 @@ pub(crate) fn initialize(clock_instance: RTC1, nvic: &mut NVIC) {
         rtc.enable_event(RtcInterrupt::Compare0);
         rtc.enable_interrupt(RtcInterrupt::Compare0, Some(nvic));
         rtc.enable_counter();
+
+        unsafe {
+            nvic.set_priority(interrupt::RTC1, 2);
+        }
     });
 }
 

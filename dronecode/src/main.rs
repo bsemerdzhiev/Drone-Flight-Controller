@@ -53,15 +53,10 @@ fn main() -> ! {
         // That's also the last thing that's turned off. If the yellow led stays on and your
         // program doesn't run, you know that the boot procedure has failed.
         unsafe {
-            // core::ptr::write_volatile(0x20000000 as *mut u32, 0x3);
-            // core::ptr::write_volatile(0x20001000 as *mut u32, 0x3);
             initialize(addr_of_mut!(HEAP_MEMORY), true);
-
-            // let arr = [0u8; 5];
-            // ble_send(arr.as_ptr(), 1);
         }
     }
-
+    //;
     set_motor_max(800);
     // send_and_receive();
     // Ereasing Flash memory on boot
@@ -69,21 +64,8 @@ fn main() -> ! {
     _ = flash_chip_erase();
     Yellow.off();
 
-    let mut k = 0;
-    loop {
-        // unsafe {
-        //     export_evt_wait();
-        // }
-
-        if k == 0 {
-            Red.toggle();
-        }
-        k += 1;
-
-        k %= 10000;
-    }
-
-    // main_loop();
+    // loop {}
+    main_loop();
 }
 
 #[inline(never)]

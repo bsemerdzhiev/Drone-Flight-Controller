@@ -220,9 +220,9 @@ pub(crate) fn initialize(
         // Configure timer interrupts
         // Safety: We are not using priority-based critical sections.
         unsafe {
-            nvic.set_priority(Interrupt::TIMER2, 2);
+            nvic.set_priority(Interrupt::TIMER2, 3);
             NVIC::unpend(Interrupt::TIMER2);
-            nvic.set_priority(Interrupt::TIMER1, 2);
+            nvic.set_priority(Interrupt::TIMER1, 3);
             NVIC::unpend(Interrupt::TIMER1);
         }
 

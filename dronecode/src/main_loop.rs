@@ -48,6 +48,13 @@ const MIN_BAT_LEVEL: u16 = 1050;
 // -------------------------------------------------------------------------
 
 pub fn main_loop() -> ! {
+    let start = Instant::now();
+    loop {
+        if Instant::now().duration_since(start) >= Duration::from_secs(6) {
+            break;
+        }
+    }
+
     // processor tick frequency
     set_tick_frequency(500);
     // -------------------------------------------------------------------------
