@@ -29,7 +29,7 @@ pub static MAX_BYTES_PER_TICK: usize = STUFFED_MESSAGE_SIZE;
 pub static BUFFER_SIZE: usize = 1 << 15;
 
 #[cfg(not(feature = "pc"))]
-pub static BUFFER_SIZE: usize = 1 << 8;
+pub static BUFFER_SIZE: usize = 1 << 7;
 
 pub static MESSAGE_SIZE: usize = core::mem::size_of::<DeviceCommand>();
 // used as return size when serializing a structure

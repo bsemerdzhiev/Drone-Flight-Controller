@@ -5,7 +5,6 @@ fn main() {
     build
         .compiler("arm-none-eabi-gcc")
         .target("thumbv6m-none-eabi")
-        .flag("-DBOARD_PCA10028")
         .flag("-DSOFTDEVICE_PRESENT")
         .flag("-DNRF51")
         .flag("-DS110")
@@ -102,5 +101,5 @@ fn main() {
     build.compile("ble_app");
 
     println!("cargo:rerun-if-changed=src/ble_app.c");
-    println!("cargo:rustc-link-lib=static=ble_app");
+    // println!("cargo:rustc-link-lib=static=ble_app");
 }

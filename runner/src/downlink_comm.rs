@@ -72,7 +72,7 @@ pub fn downlink_main_loop(
                 &my_hdlc::command::DeviceCommand::ManualInput(cmd),
             );
 
-            serial.write(&send_buffer.0[0..send_buffer.1]);
+            // serial.write(&send_buffer.0[0..send_buffer.1]);
         }
 
         let json = serde_json::to_string(&serde_json::json!({

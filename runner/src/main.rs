@@ -1,3 +1,4 @@
+use crate::bluetooth::ble_connect;
 use crate::downlink_comm::downlink_main_loop;
 use crate::uplink_comm::uplink_main_loop;
 
@@ -7,11 +8,13 @@ pub use my_hdlc::pc_command;
 use my_hdlc::pc_command::ManualInput;
 pub use my_hdlc::HdlcTransceiver;
 use my_hdlc::STUFFED_MESSAGE_SIZE;
+use tokio;
 
 use tudelft_serial_upload::serial2::SerialPort;
 use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 
 use std::env::args;
+use std::error::Error;
 use std::fs;
 use std::io::Write;
 use std::os::unix::net::UnixListener;
@@ -27,12 +30,14 @@ use std::time::Instant;
 
 use serde_json;
 
+mod bluetooth;
 mod downlink_comm;
 mod read_joystick;
 mod read_keyboard;
 mod uplink_comm;
 
-fn main() {
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
     // get a filename from the command line. This filename will be uploaded to the drone
     // note that if no filename is given, the upload to the drone does not fail.
     // `upload_file_or_stop` will still try to detect the serial port on which the drone
@@ -81,8 +86,11 @@ fn main() {
         uplink_main_loop(&rcv_clone, &serial_clone, &python_clone);
     });
 
+    // ble_connect().await?;
     h1.join().unwrap();
     h2.join().unwrap();
+
+    Ok(())
 }
 
 #[allow(unused)]

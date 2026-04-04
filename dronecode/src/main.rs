@@ -6,10 +6,7 @@
 extern crate alloc;
 
 use crate::main_loop::main_loop;
-use crate::util::ble_communication::ble_init;
-
-use template_project::util::ble_communication::{ble_initial_init, ble_send};
-use util::ble_communication;
+use crate::util::ble_communication::{ble_init, ble_initial_init};
 
 use alloc::format;
 use core::alloc::Layout;
@@ -17,6 +14,7 @@ use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
 use core::ptr::addr_of_mut;
 use tudelft_quadrupel::flash::flash_chip_erase;
+use tudelft_quadrupel::{cortex_m_rt, led, nrf51_hal};
 
 use tudelft_quadrupel::initialize::initialize;
 use tudelft_quadrupel::led::Led::{Blue, Green, Red, Yellow};
@@ -55,7 +53,10 @@ fn main() -> ! {
         // That's also the last thing that's turned off. If the yellow led stays on and your
         // program doesn't run, you know that the boot procedure has failed.
         unsafe {
+            // core::ptr::write_volatile(0x20000000 as *mut u32, 0x3);
+            // core::ptr::write_volatile(0x20001000 as *mut u32, 0x3);
             ble_initial_init();
+
             initialize(addr_of_mut!(HEAP_MEMORY), true);
             ble_init();
 
@@ -71,11 +72,20 @@ fn main() -> ! {
     _ = flash_chip_erase();
     Yellow.off();
 
-    main_loop();
+    let mut k = 0;
+    loop {
+        if k == 0 {
+            Red.toggle();
+        }
+        k += 1;
+
+        k %= 10000;
+    }
+
+    // main_loop();
 }
 
 #[inline(never)]
-#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     // On panic:

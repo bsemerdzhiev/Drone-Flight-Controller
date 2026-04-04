@@ -29,12 +29,14 @@
 #include "ble_conn_params.h"
 #include "ble_hci.h"
 #include "ble_nus.h"
+#include "nrf51.h"
+#include "nrf_sdm.h"
 #include "softdevice_handler.h"
 #include <stddef.h>
 #include <stdint.h>
 #include <string.h>
 
-#include "ble_app.h"
+// #include "ble_app.h"
 
 #define IS_SRVC_CHANGED_CHARACT_PRESENT                                        \
   0 /**< Include the service_changed characteristic. If not enabled, the       \
@@ -92,9 +94,6 @@
   0xDEADBEEF /**< Value used as error code on stack dump, can be used to       \
                 identify stack location on stack unwind. */
 
-#define UART_TX_BUF_SIZE 256 /**< UART TX buffer size. */
-#define UART_RX_BUF_SIZE 256 /**< UART RX buffer size. */
-
 static ble_nus_t m_nus; /**< Structure to identify the Nordic UART Service. */
 static uint16_t m_conn_handle =
     BLE_CONN_HANDLE_INVALID; /**< Handle of the current connection. */
@@ -116,6 +115,13 @@ static ble_uuid_t m_adv_uuids[] = {
  */
 void assert_nrf_callback(uint16_t line_num, const uint8_t *p_file_name) {
   app_error_handler(DEAD_BEEF, line_num, p_file_name);
+}
+
+void HardFault_Handler(void) {
+  NRF_GPIO->DIRSET = (1 << 28); // blue LED
+  NRF_GPIO->OUTCLR = (1 << 28); // turn on
+  while (1)
+    ;
 }
 
 /**@brief Function for the GAP initialization.
@@ -320,16 +326,17 @@ static void ble_evt_dispatch(ble_evt_t *p_ble_evt) {
  * @details This function initializes the S110 SoftDevice and the BLE event
  * interrupt.
  */
-static void ble_stack_init(void) {
+static int32_t ble_stack_init(void) {
   uint32_t err_code;
 
   // Initialize SoftDevice.
-  SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_XTAL_20_PPM, NULL);
+  SOFTDEVICE_HANDLER_INIT(NRF_CLOCK_LFCLKSRC_RC_250_PPM_250MS_CALIBRATION,
+                          NULL);
 
   // Enable BLE stack.
   ble_enable_params_t ble_enable_params;
   memset(&ble_enable_params, 0, sizeof(ble_enable_params));
-#if (defined(S130) || defined(S132))
+#if (defined(S130) || defined(S133))
   ble_enable_params.gatts_enable_params.attr_tab_size =
       BLE_GATTS_ATTR_TAB_SIZE_DEFAULT;
 #endif
@@ -420,14 +427,14 @@ static void advertising_init(void) {
   APP_ERROR_CHECK(err_code);
 }
 
-void ble_initial_init() {
+void ble_initial_init(void) {
   APP_TIMER_INIT(APP_TIMER_PRESCALER, APP_TIMER_OP_QUEUE_SIZE, false);
   ble_stack_init();
 }
 
 /**@brief Application main function.
  */
-void ble_init() {
+void ble_init(void) {
   // uint32_t err_code;
   // bool erase_bonds;
   // uint8_t start_string[] = START_STRING;
