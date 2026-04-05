@@ -77,7 +77,6 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
             };
             joystick_turn ^= true;
 
-            println!("Currend mode {}\n\r", wireless_mode);
             if (wireless_mode) {
                 ctx.with_wireless_package(|s| {
                     if s.len() == 0 {

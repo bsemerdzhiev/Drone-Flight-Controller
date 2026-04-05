@@ -1,3 +1,5 @@
+use core::time::Duration;
+
 use crate::filters::dmp_readings::DmpReadings;
 use crate::states::calibration_mode::FSMCalibration;
 use crate::states::fsm_base_class::FSMControl;
@@ -19,21 +21,28 @@ use tudelft_quadrupel::flash::{flash_chip_erase, flash_read_bytes};
 use tudelft_quadrupel::led::Red;
 use tudelft_quadrupel::led::{Green, Yellow};
 use tudelft_quadrupel::motor::{self, *};
+use tudelft_quadrupel::time::Instant;
 use tudelft_quadrupel::uart::send_bytes;
+
+const SEND_LOG_TIMER: Duration = Duration::from_millis(10);
+
 pub struct FSMSafe {}
 
 impl FSMControl for FSMSafe {
     fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         set_motors([0, 0, 0, 0]);
-        if *ctx.flash_head != *ctx.flash_tail {
-            send_flash_data(ctx.flash_head, ctx.trv);
-        } else if *ctx.flash_head != 0 {
-            Yellow.on();
-            _ = flash_chip_erase();
-            Yellow.off();
 
-            *ctx.flash_head = 0;
-            *ctx.flash_tail = 0;
+        if !ctx.is_wireless && !ctx.wireless_log.forced_message {
+            if ctx.flash_head != ctx.flash_tail {
+                send_flash_data(ctx);
+            } else if ctx.flash_head != 0 {
+                Yellow.on();
+                _ = flash_chip_erase();
+                Yellow.off();
+
+                ctx.flash_head = 0;
+                ctx.flash_tail = 0;
+            }
         }
 
         return self;
@@ -83,22 +92,24 @@ fn is_throttle_zero() -> bool {
     return speed[0] == 0 && speed[1] == 0 && speed[2] == 0 && speed[3] == 0;
 }
 
-fn send_flash_data(flash_head: &mut usize, my_hdlc: &mut HdlcTransceiver) {
+fn send_flash_data(ctx: &mut StateContext) {
+    if Instant::now().duration_since(ctx.wireless_log.last_sent_logged_message) < SEND_LOG_TIMER {
+        return;
+    }
     Green.on();
+    ctx.wireless_log.last_sent_logged_message = Instant::now();
 
     let mut buffer = [0u8; (STUFFED_MESSAGE_SIZE) as usize];
     let mut msg = ([0u8; STUFFED_MESSAGE_SIZE], 0usize);
 
-    for _i in 0..7 {
-        _ = flash_read_bytes(*flash_head as u32, &mut buffer).unwrap();
-        *flash_head += STUFFED_MESSAGE_SIZE;
+    _ = flash_read_bytes(ctx.flash_head as u32, &mut buffer).unwrap();
+    ctx.flash_head += STUFFED_MESSAGE_SIZE;
 
-        let data: DeviceCommand = from_bytes(&buffer).unwrap();
-        let cmd = data;
-        msg = my_hdlc.write_structure(&cmd);
+    let data: DeviceCommand = from_bytes(&buffer).unwrap();
+    let cmd = data;
+    msg = ctx.trv.write_structure(&cmd);
 
-        send_bytes(&msg.0[0..msg.1]);
-    }
+    send_bytes(&msg.0[0..msg.1]);
 
     Green.off();
 }

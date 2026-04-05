@@ -17,8 +17,7 @@ pub fn uplink_main_loop(ctx: &Arc<RunnerContext>) {
     loop {
         let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
 
-        // if wireless_mode {
-        {
+        if !wireless_mode {
             let mut rcv = ctx.rcv_mut.lock().unwrap();
             let mut serial = ctx.serial_mut.lock().unwrap();
             if let Ok(num) = serial.read(&mut buf[0..rcv.bytes_to_read()]) {
@@ -34,8 +33,10 @@ pub fn uplink_main_loop(ctx: &Arc<RunnerContext>) {
                     DeviceCommand::Telemetry(telemetry) => {
                         match telemetry {
                             TelemetryData::GeneralData(data) => {
-                                ctx.with_current_state(|x| *x = data.cur_state);
-                                ctx.with_is_wireless(|x| *x = data.is_wireless);
+                                if !data.logged_in_flash {
+                                    ctx.with_current_state(|x| *x = data.cur_state);
+                                    ctx.with_is_wireless(|x| *x = data.is_wireless);
+                                }
                             }
                             _ => {}
                         }

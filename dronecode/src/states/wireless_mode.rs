@@ -11,8 +11,13 @@ pub struct FSMWireless {}
 
 impl FSMControl for FSMWireless {
     fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        *ctx.is_wireless ^= true;
-        Yellow.toggle();
+        ctx.is_wireless ^= true;
+        ctx.wireless_log.forced_message = true;
+
+        ctx.wireless_log.message_part = 0;
+        // set the message ind to 1 so that all messages that will be generated from 1 to 7 can clear the previous bits in
+        // the buffer
+        ctx.wireless_log.message_ind = 1;
 
         return Box::new(FSMPanic {});
     }

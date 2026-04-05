@@ -24,13 +24,11 @@ use tudelft_quadrupel::led::Led::Yellow;
 use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw, structs::*};
 
-type ReturnType = (([u8; STUFFED_MESSAGE_SIZE], usize));
+pub type ReturnType = (([u8; STUFFED_MESSAGE_SIZE], usize));
 
 pub trait TelemetryRead {
     fn read_general_data(
         ctx: &mut StateContext,
-        dt: Duration,
-        cur_state: FSMState,
         logged_in_flash: bool,
         encoded: bool,
     ) -> ReturnType;
@@ -63,8 +61,6 @@ pub trait TelemetryRead {
 impl TelemetryRead for TelemetryData {
     fn read_general_data(
         ctx: &mut StateContext,
-        dt: Duration,
-        cur_state: FSMState,
         logged_in_flash: bool,
         encoded: bool,
     ) -> ReturnType {
@@ -72,12 +68,12 @@ impl TelemetryRead for TelemetryData {
 
         let data_to_send = DeviceCommand::Telemetry(TelemetryData::GeneralData(GeneralData {
             logged_in_flash: logged_in_flash,
-            dt: dt.as_millis() as u32,
+            dt: ctx.dt.as_millis() as u32,
             time_for_main_loop: ctx.time_for_main_loop,
 
             bat: bat,
-            cur_state: cur_state,
-            is_wireless: *ctx.is_wireless,
+            cur_state: ctx.curent_state,
+            is_wireless: ctx.is_wireless,
         }));
 
         if encoded {

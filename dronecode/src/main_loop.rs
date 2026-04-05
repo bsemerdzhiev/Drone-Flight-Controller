@@ -5,8 +5,8 @@ use crate::filters::kalman_filter::KalmanFilter;
 use crate::filters::pressure_filter::PressureSensor;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
-use crate::telemetry_read::TelemetryRead;
-use crate::util::ble_communication::BLE_BUFFER;
+use crate::telemetry_read::{ReturnType, TelemetryRead};
+use crate::util::ble_communication::{BLE_BUFFER, BLE_BUFFER_SIZE};
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
@@ -14,13 +14,15 @@ use alloc::format;
 use fixed::types::{I16F16, I26F6, I2F30, I4F28, I8F24};
 use my_hdlc::telemetry_data::*;
 
-use template_project::util::ble_communication::rust_ble_receive;
+use template_project::util::ble_communication::{ble_send, rust_ble_receive};
 use tudelft_quadrupel::flash::flash_write_bytes;
 
 use crate::states::fsm_base_class::FSMControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
-use crate::states::state_structures::state_context::{PIDInfo, StateContext};
+use crate::states::state_structures::state_context::{
+    PIDInfo, SendMessageWirelessly, StateContext,
+};
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrims};
@@ -40,8 +42,8 @@ const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 // -------------------------------------------------------------------------
 
 // in ms
-const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(1500);
-const DRONE_STATE_TIMER: Duration = Duration::from_millis(50);
+const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(500);
+const DRONE_STATE_TIMER: Duration = Duration::from_millis(5);
 const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(10);
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
@@ -84,9 +86,6 @@ pub fn main_loop() -> ! {
     let mut calibration_state: CalibrationState<I8F24, I8F24> =
         CalibrationState::<I8F24, I8F24>::new();
 
-    let mut flash_head = 0usize;
-    let mut flash_tail = 0usize;
-
     let mut pressure_sensor_filter = PressureSensor::new();
     let mut position_kalman = KalmanFilter::new((
         calibration_state.accelerometer_offset,
@@ -97,8 +96,6 @@ pub fn main_loop() -> ! {
     let mut pid_info: Box<PIDInfo> = Box::new(PIDInfo {
         selected_height: 0f32,
     });
-
-    let mut is_wireless: bool = false;
 
     let mut ctx = StateContext {
         kalman_position: position_kalman,
@@ -111,14 +108,17 @@ pub fn main_loop() -> ! {
         trim_input: &mut manual_trim,
         input_as_ypr: &mut input_as_ypr,
 
-        flash_head: &mut flash_head,
-        flash_tail: &mut flash_tail,
+        flash_head: 0usize,
+        flash_tail: 0usize,
 
         time_for_main_loop: 0i32,
 
         pid_info: &mut pid_info,
 
-        is_wireless: &mut is_wireless,
+        is_wireless: false,
+        curent_state: FSMState::SafeMode,
+        dt: Duration::from_millis(0),
+        wireless_log: SendMessageWirelessly::default(),
     };
 
     // -------------------------------------------------------------------------
@@ -142,7 +142,7 @@ pub fn main_loop() -> ! {
 
         // Read Uart Buff
         let num_received = {
-            if *ctx.is_wireless {
+            if ctx.is_wireless {
                 BLE_BUFFER.modify(|x| {
                     for i in 0..x.1 {
                         receive_buffer[i] = x.0[i];
@@ -168,7 +168,7 @@ pub fn main_loop() -> ! {
                 match command {
                     DeviceCommand::ChangeMode(new_mode) => {
                         current_state = current_state.step(new_mode, &mut ctx);
-                        send_ack(&mut ctx.trv);
+                        // send_ack(&mut ctx.trv);
                     }
                     DeviceCommand::ManualInput(manual_input) => {
                         *ctx.input_as_ypr =
@@ -192,30 +192,33 @@ pub fn main_loop() -> ! {
         // run the loop of the state
 
         // need to send atleast one message on UART before transitioning to wireless
-        let prev_wireless = *ctx.is_wireless;
-
         current_state = current_state.run_state_loop(&mut ctx);
+
         let time_end = Instant::now();
 
         if time_end.duration_since(time_for_last_received_message) >= WATCHDOG_TIMER_FOR_PANICKING {
+            ctx.is_wireless ^= true;
             current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
         }
 
         let dt = time_end.duration_since(current_time);
 
+        //-----------------------------
+        // for loggign
+        ctx.curent_state = current_state.get_state();
         ctx.time_for_main_loop = time_end.duration_since(time_start).as_millis() as i32;
+        ctx.dt = dt;
+        //-----------------------------
 
         if time_end.duration_since(last_send_message) >= DRONE_STATE_TIMER {
             last_send_message = time_end;
 
-            send_drone_data(current_state.get_state(), dt, &mut ctx);
+            send_drone_data(&mut ctx);
         }
 
-        if !matches!(current_state.as_ref().get_state(), FSMState::SafeMode)
-            && time_end.duration_since(last_logged_message) >= SAVE_TO_LOG_TIMER
-        {
+        if ctx.is_wireless && time_end.duration_since(last_logged_message) >= SAVE_TO_LOG_TIMER {
             last_logged_message = time_end;
-            put_telemetry_data_on_flash(&mut ctx, dt, current_state.get_state());
+            put_telemetry_data_on_flash(&mut ctx);
         }
 
         // -------------------------------------------------------------------------
@@ -228,30 +231,67 @@ pub fn main_loop() -> ! {
 /*
 * Sends data to the drone
 */
-fn send_drone_data(curent_state: FSMState, dt: Duration, ctx: &mut StateContext) {
+fn send_drone_data(ctx: &mut StateContext) {
     Green.on();
 
-    let mut msg =
-        <TelemetryData as TelemetryRead>::read_general_data(ctx, dt, curent_state, false, true);
-    send_bytes(&msg.0[0..msg.1]);
+    let readers: [fn(&mut StateContext, bool, bool) -> ReturnType; 7] = [
+        <TelemetryData as TelemetryRead>::read_general_data,
+        <TelemetryData as TelemetryRead>::read_motor_data,
+        <TelemetryData as TelemetryRead>::read_position_data,
+        <TelemetryData as TelemetryRead>::read_pressure_data,
+        <TelemetryData as TelemetryRead>::read_raw_data,
+        <TelemetryData as TelemetryRead>::read_pid_info,
+        <TelemetryData as TelemetryRead>::read_calibration_info,
+    ];
 
-    msg = <TelemetryData as TelemetryRead>::read_motor_data(ctx, false, true);
-    send_bytes(&msg.0[0..msg.1]);
+    let mut msg = ([0u8; STUFFED_MESSAGE_SIZE], 0usize);
 
-    msg = <TelemetryData as TelemetryRead>::read_position_data(ctx, false, true);
-    send_bytes(&msg.0[0..msg.1]);
+    let should_send_wireless = ctx.is_wireless ^ ctx.wireless_log.forced_message;
 
-    msg = <TelemetryData as TelemetryRead>::read_pressure_data(ctx, false, true);
-    send_bytes(&msg.0[0..msg.1]);
+    if should_send_wireless {
+        // we can send only one packet of size 20 bytes
+        let mut msg_to_read = ctx.wireless_log.message_ind;
+        let mut part_to_read = ctx.wireless_log.message_part;
 
-    msg = <TelemetryData as TelemetryRead>::read_raw_data(ctx, false, true);
-    send_bytes(&msg.0[0..msg.1]);
+        if part_to_read == 0 {
+            msg = readers[msg_to_read](ctx, false, true);
 
-    msg = <TelemetryData as TelemetryRead>::read_pid_info(ctx, false, true);
-    send_bytes(&msg.0[0..msg.1]);
+            ctx.wireless_log.stored_msg = msg.0;
+            ctx.wireless_log.message_len = msg.1;
+        } else {
+            msg.0 = ctx.wireless_log.stored_msg;
+            msg.1 = ctx.wireless_log.message_len;
+        }
 
-    msg = <TelemetryData as TelemetryRead>::read_calibration_info(ctx, false, true);
-    send_bytes(&msg.0[0..msg.1]);
+        let end_of_message = (part_to_read + BLE_BUFFER_SIZE).min(msg.1);
+        let message_len = end_of_message - part_to_read;
+
+        unsafe {
+            let mut to_send = [0u8; BLE_BUFFER_SIZE];
+            for i in 0..message_len {
+                to_send[i] = msg.0[i + part_to_read];
+            }
+
+            ble_send(to_send.as_ptr(), message_len as u16);
+        }
+
+        if (end_of_message == msg.1) {
+            if ctx.wireless_log.message_ind == 0 {
+                ctx.wireless_log.forced_message = false;
+            }
+
+            ctx.wireless_log.message_ind = (ctx.wireless_log.message_ind + 1) % 7;
+            ctx.wireless_log.message_part = 0;
+        } else {
+            ctx.wireless_log.message_part = end_of_message;
+        }
+    } else {
+        ctx.wireless_log.forced_message = false;
+        for reader in readers {
+            msg = reader(ctx, false, true);
+            send_bytes(&msg.0[0..msg.1]);
+        }
+    }
 
     Green.off();
 }
@@ -265,41 +305,30 @@ fn send_ack(transceiver: &mut HdlcTransceiver) {
     send_bytes(&msg.0[0..msg.1]);
 }
 
-fn put_telemetry_data_on_flash(ctx: &mut StateContext, dt: Duration, curent_state: FSMState) {
-    if *ctx.flash_tail + (STUFFED_MESSAGE_SIZE * 7) > 0x01FFFF {
+fn put_telemetry_data_on_flash(ctx: &mut StateContext) {
+    if ctx.flash_tail + (STUFFED_MESSAGE_SIZE * 7) > 0x01FFFF {
         return;
     }
 
     Yellow.on();
 
-    let mut msg =
-        <TelemetryData as TelemetryRead>::read_general_data(ctx, dt, curent_state, true, false);
-    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
-    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+    let readers: [fn(&mut StateContext, bool, bool) -> ReturnType; 7] = [
+        <TelemetryData as TelemetryRead>::read_general_data,
+        <TelemetryData as TelemetryRead>::read_motor_data,
+        <TelemetryData as TelemetryRead>::read_position_data,
+        <TelemetryData as TelemetryRead>::read_pressure_data,
+        <TelemetryData as TelemetryRead>::read_raw_data,
+        <TelemetryData as TelemetryRead>::read_pid_info,
+        <TelemetryData as TelemetryRead>::read_calibration_info,
+    ];
 
-    msg = <TelemetryData as TelemetryRead>::read_motor_data(ctx, true, false);
-    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
-    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+    let mut msg = ([0u8; STUFFED_MESSAGE_SIZE], 0usize);
 
-    msg = <TelemetryData as TelemetryRead>::read_position_data(ctx, true, false);
-    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
-    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
-
-    msg = <TelemetryData as TelemetryRead>::read_pressure_data(ctx, true, false);
-    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
-    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
-
-    msg = <TelemetryData as TelemetryRead>::read_raw_data(ctx, true, false);
-    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
-    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
-
-    msg = <TelemetryData as TelemetryRead>::read_pid_info(ctx, true, false);
-    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
-    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
-
-    msg = <TelemetryData as TelemetryRead>::read_calibration_info(ctx, true, false);
-    _ = flash_write_bytes(*ctx.flash_tail as u32, &msg.0[0..msg.1]);
-    *ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+    for reader in readers {
+        msg = reader(ctx, true, false);
+        _ = flash_write_bytes(ctx.flash_tail as u32, &msg.0[0..msg.1]);
+        ctx.flash_tail += STUFFED_MESSAGE_SIZE;
+    }
 
     Yellow.off();
 }

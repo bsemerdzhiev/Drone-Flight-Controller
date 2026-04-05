@@ -24,7 +24,7 @@ def serial_reader():
     sock.connect(SOCKET_PATH)
     sock_file = sock.makefile("r")
 
-    start_time = time.time()
+    start_time = None
 
     while True:
         try:
@@ -67,7 +67,9 @@ def serial_reader():
                             stored_data.fsm_state = fsm_state
 
                         # Time
-                        to_add_to.time_data.append(time.time() - start_time)
+                        if start_time is None:
+                            start_time = t["dt"]
+                        to_add_to.time_data.append(t["dt"] - start_time)
 
                         to_add_to.general_data["time_for_main_loop"].append(
                             t["time_for_main_loop"] / 1000
