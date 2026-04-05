@@ -39,7 +39,7 @@ impl FSMControl for FSMHeightControl {
 
         input.pressure = ctx.pressure_sensor_filter.get_reading();
 
-        let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller);
+        let (k_p, k_i, k_d) = add_trims(&ctx.trim_input);
 
         let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
         target.pressure = self.initial_pressure;

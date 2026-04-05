@@ -3,7 +3,7 @@ use fixed::{
     traits::{Fixed, FixedSigned},
     types::{I16F16, I32F0},
 };
-use my_hdlc::pc_command::ManualInputDrone;
+use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrims};
 use tudelft_quadrupel::time::Instant;
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
@@ -30,7 +30,7 @@ pub const K_D: [ControllerValues; 4] = [
 ];
 
 pub fn add_trims(
-    manual_input: &ManualInputDrone,
+    trim_input: &ManualDroneTrims,
 ) -> (
     [ControllerValues; 4],
     [ControllerValues; 4],
@@ -40,13 +40,13 @@ pub fn add_trims(
     let mut k_i: [ControllerValues; 4] = K_I;
     let mut k_d: [ControllerValues; 4] = K_D;
 
-    k_p[0] += ControllerValues::from_num(manual_input.yaw_p_trim);
+    k_p[0] += ControllerValues::from_num(trim_input.yaw_p_trim);
 
-    k_p[1] += ControllerValues::from_num(manual_input.roll_pitch_p_trim);
-    k_p[2] += ControllerValues::from_num(manual_input.roll_pitch_p_trim);
+    k_p[1] += ControllerValues::from_num(trim_input.roll_pitch_p_trim);
+    k_p[2] += ControllerValues::from_num(trim_input.roll_pitch_p_trim);
 
-    k_d[1] += ControllerValues::from_num(manual_input.roll_pitch_d_trim);
-    k_d[2] += ControllerValues::from_num(manual_input.roll_pitch_d_trim);
+    k_d[1] += ControllerValues::from_num(trim_input.roll_pitch_d_trim);
+    k_d[2] += ControllerValues::from_num(trim_input.roll_pitch_d_trim);
 
     return (k_p, k_i, k_d);
 }

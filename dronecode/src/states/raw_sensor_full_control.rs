@@ -33,7 +33,7 @@ impl FSMControl for FSMRawFullControl {
 
         let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
 
-        let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller);
+        let (k_p, k_i, k_d) = add_trims(&ctx.trim_input);
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
             input,

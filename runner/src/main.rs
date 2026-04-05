@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     // open the serial port we got back from `upload_file_or_stop`. This is the same port
     // as the upload occurred on, so we know that we can communicate with the drone over
     // this port.
-    let mut serial_mut = Arc::new(Mutex::new(SerialPort::open(port, 115200).unwrap()));
+    let mut serial_mut = Mutex::new(SerialPort::open(port, 115200).unwrap());
 
     {
         let mut serial = serial_mut.lock().unwrap();
@@ -75,25 +75,30 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut rcv_mut = Mutex::new(HdlcTransceiver::new());
     let mut device_mut = Mutex::new(None);
 
-    let mut manual_input = Mutex::new(ManualInput::default());
+    let mut keyboard_trim_mut = Mutex::new(ManualInput::default());
+    let mut joystick_input_mut = Mutex::new(ManualInput::default());
+    let mut joystick_disconnected_mut = Mutex::new(true);
 
-    let ctx = RunnerContext {
+    let mut ctx = Arc::new(RunnerContext {
         rcv_mut: rcv_mut,
         serial_mut: serial_mut,
-        python_stream_mut: python_stream,
-        manual_input_mut: manual_input,
+        python_stream_mut: python_stream_mut,
         device_mut: device_mut,
-    };
 
-    let ctx_clone = Arc::clone(ctx);
-
-    let h1 = thread::spawn(move || {
-        downlink_main_loop(ctx_clone);
+        keyboard_trim_mut: keyboard_trim_mut,
+        joystick_input_mut: joystick_input_mut,
+        joystick_disconnected_mut: joystick_disconnected_mut,
     });
 
-    let ctx_clone = Arc::clone(ctx);
+    let ctx_clone = Arc::clone(&ctx);
+
+    let h1 = thread::spawn(move || {
+        downlink_main_loop(&ctx_clone);
+    });
+
+    let ctx_clone = Arc::clone(&ctx);
     let h2 = thread::spawn(move || {
-        uplink_main_loop(ctx_clone);
+        uplink_main_loop(&ctx_clone);
     });
 
     ble_connect().await?;

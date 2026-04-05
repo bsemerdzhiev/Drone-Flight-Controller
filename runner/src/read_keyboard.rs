@@ -17,18 +17,14 @@ use tudelft_serial_upload::serial2::SerialPort;
 
 use crate::runner_context::{ManualInput, RunnerContext};
 
-pub fn send_transition(
-    state: my_hdlc::command::FSMState,
-    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
-    serial_mut: &Arc<Mutex<SerialPort>>,
-) {
+pub fn send_transition(state: my_hdlc::command::FSMState, ctx: &Arc<RunnerContext>) {
     const WAIT_TIME: Duration = Duration::from_millis(1000);
 
     let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
 
     {
-        let mut rcv = rcv_mut.lock().unwrap();
-        let mut serial = serial_mut.lock().unwrap();
+        let mut rcv = ctx.rcv_mut.lock().unwrap();
+        let mut serial = ctx.serial_mut.lock().unwrap();
         // loop {
         let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
 
@@ -71,46 +67,36 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
     while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             println!("Keyboard event: {:?}", key.code);
+            let mut joystick_is_zeroed = false;
+
+            let mut keyboard_trim = ctx.keyboard_trim_mut.lock().unwrap();
+
+            ctx.with_joystick_input(|s| joystick_is_zeroed = s.is_zeroed());
+
             match key.code {
                 KeyCode::Char('0') => {
-                    send_transition(my_hdlc::command::FSMState::SafeMode, rcv_mut, serial_mut);
+                    send_transition(my_hdlc::command::FSMState::SafeMode, ctx);
                 }
                 KeyCode::Char('2') => {
-                    if joystick_info.is_zeroed() {
-                        send_transition(
-                            my_hdlc::command::FSMState::ManualMode,
-                            rcv_mut,
-                            serial_mut,
-                        );
+                    if joystick_is_zeroed {
+                        send_transition(my_hdlc::command::FSMState::ManualMode, ctx);
                     } else {
                         println!("Ignored ManualMode request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('3') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::CalibrationMode,
-                        rcv_mut,
-                        serial_mut,
-                    );
+                    send_transition(my_hdlc::command::FSMState::CalibrationMode, ctx);
                 }
                 KeyCode::Char('4') => {
-                    if joystick_info.is_zeroed() {
-                        send_transition(
-                            my_hdlc::command::FSMState::YawControl,
-                            rcv_mut,
-                            serial_mut,
-                        );
+                    if joystick_is_zeroed {
+                        send_transition(my_hdlc::command::FSMState::YawControl, ctx);
                     } else {
                         println!("Ignored YawControl request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('5') => {
-                    if joystick_info.is_zeroed() {
-                        send_transition(
-                            my_hdlc::command::FSMState::FullControlMode,
-                            rcv_mut,
-                            serial_mut,
-                        );
+                    if joystick_is_zeroed {
+                        send_transition(my_hdlc::command::FSMState::FullControlMode, ctx);
                     } else {
                         println!(
                             "Ignored FullControlMode request because joystick input is not zeroed"
@@ -118,30 +104,18 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
                     }
                 }
                 KeyCode::Char('6') => {
-                    if joystick_info.is_zeroed() {
-                        send_transition(
-                            my_hdlc::command::FSMState::RawSensorsFullControlMode,
-                            rcv_mut,
-                            serial_mut,
-                        );
+                    if joystick_is_zeroed {
+                        send_transition(my_hdlc::command::FSMState::RawSensorsFullControlMode, ctx);
                     } else {
                         println!("Ignored RawSensorsFullControlMode request because joystick input is not zeroed");
                     }
                 }
                 KeyCode::Char('7') => {
-                    send_transition(
-                        my_hdlc::command::FSMState::HeightControlMode,
-                        rcv_mut,
-                        serial_mut,
-                    );
+                    send_transition(my_hdlc::command::FSMState::HeightControlMode, ctx);
                 }
                 KeyCode::Char('8') => {
-                    if joystick_info.is_zeroed() {
-                        send_transition(
-                            my_hdlc::command::FSMState::WirelessMode,
-                            rcv_mut,
-                            serial_mut,
-                        );
+                    if joystick_is_zeroed {
+                        send_transition(my_hdlc::command::FSMState::WirelessMode, ctx);
                     } else {
                         println!(
                             "Ignored WirelessMode request because joystick input is not zeroed"

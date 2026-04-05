@@ -15,16 +15,15 @@ pub fn uplink_main_loop(ctx: &Arc<RunnerContext>) {
     let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
     loop {
         {
-            ctx.rcv_mut.lock().unwrap();
             let mut rcv = ctx.rcv_mut.lock().unwrap();
-            let mut serial = serial_mut.lock().unwrap();
+            let mut serial = ctx.serial_mut.lock().unwrap();
 
             if let Ok(num) = serial.read(&mut buf[0..rcv.bytes_to_read()]) {
                 rcv.add_bytes(&buf[0..num]);
             }
         }
         {
-            let mut rcv = rcv_mut.lock().unwrap();
+            let mut rcv = ctx.rcv_mut.lock().unwrap();
             while let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
                 // ----------------
                 match &msg {
@@ -35,7 +34,7 @@ pub fn uplink_main_loop(ctx: &Arc<RunnerContext>) {
                         );
 
                         {
-                            let mut python_stream = python_stream_mut.lock().unwrap();
+                            let mut python_stream = ctx.python_stream_mut.lock().unwrap();
 
                             let _ = python_stream.write_all(json.as_bytes());
                             let _ = python_stream.write_all(b"\n");

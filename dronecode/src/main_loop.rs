@@ -21,7 +21,7 @@ use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::{PIDInfo, StateContext};
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
-use my_hdlc::pc_command::ManualInputDrone;
+use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrims};
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
@@ -76,7 +76,7 @@ pub fn main_loop() -> ! {
     // fields for the context
     let mut transceiver: Box<HdlcTransceiver> = Box::new(HdlcTransceiver::new());
 
-    let mut received_manual_input: ManualInputDrone = ManualInputDrone::zero();
+    let mut manual_trim: ManualDroneTrims = ManualDroneTrims::default();
     let mut input_as_ypr: YawPitchRoll<I16F16, I16F16> = YawPitchRoll::<I16F16, I16F16>::new();
 
     let mut calibration_state: CalibrationState<I8F24, I8F24> =
@@ -104,7 +104,7 @@ pub fn main_loop() -> ! {
 
         trv: &mut transceiver,
 
-        input_from_controller: &mut received_manual_input,
+        trim_input: &mut manual_trim,
         input_as_ypr: &mut input_as_ypr,
 
         flash_head: &mut flash_head,
@@ -153,10 +153,11 @@ pub fn main_loop() -> ! {
                         send_ack(&mut ctx.trv);
                     }
                     DeviceCommand::ManualInput(manual_input) => {
-                        *ctx.input_from_controller = manual_input;
-                        *ctx.input_as_ypr = YawPitchRoll::<I16F16, I16F16>::from_manual_input(
-                            ctx.input_from_controller,
-                        );
+                        *ctx.input_as_ypr =
+                            YawPitchRoll::<I16F16, I16F16>::from_manual_input(&manual_input);
+                    }
+                    DeviceCommand::ManualDroneTrims(manual_trims) => {
+                        *ctx.trim_input = manual_trims;
                     }
                     _ => {}
                 }
