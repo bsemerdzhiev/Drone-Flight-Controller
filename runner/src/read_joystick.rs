@@ -1,7 +1,8 @@
 use evdev::*;
+use my_hdlc::pc_command::ManualInput;
 use std::sync::Arc;
 
-use crate::runner_context::{ManualInput, RunnerContext};
+use crate::runner_context::RunnerContext;
 
 //------------------------------------------------------
 

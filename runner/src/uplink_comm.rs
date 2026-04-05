@@ -14,17 +14,18 @@ use crate::runner_context::RunnerContext;
 pub fn uplink_main_loop(ctx: &Arc<RunnerContext>) {
     let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
     loop {
-        {
+        let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
+
+        if !wireless_mode {
             let mut rcv = ctx.rcv_mut.lock().unwrap();
             let mut serial = ctx.serial_mut.lock().unwrap();
-
             if let Ok(num) = serial.read(&mut buf[0..rcv.bytes_to_read()]) {
                 rcv.add_bytes(&buf[0..num]);
             }
         }
         {
             let mut rcv = ctx.rcv_mut.lock().unwrap();
-            while let Some(msg) = rcv.read_structure::<my_hdlc::command::DeviceCommand>() {
+            while let Some(msg) = rcv.read_structure::<DeviceCommand>() {
                 // ----------------
                 match &msg {
                     DeviceCommand::Telemetry(telemetry) => {

@@ -1,12 +1,12 @@
 use crate::bluetooth::ble_connect;
 use crate::downlink_comm::downlink_main_loop;
-use crate::runner_context::ManualInput;
 use crate::runner_context::RunnerContext;
 use crate::uplink_comm::uplink_main_loop;
 
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::command::FSMState;
 pub use my_hdlc::pc_command;
+use my_hdlc::pc_command::ManualInput;
 pub use my_hdlc::HdlcTransceiver;
 use my_hdlc::STUFFED_MESSAGE_SIZE;
 use tokio;
@@ -71,6 +71,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .expect("Failed to accept Python connection");
     println!("Python GUI connected!");
 
+    //-------------------------------------------------------------------------------------------
     let mut python_stream_mut = Mutex::new(python_stream);
     let mut rcv_mut = Mutex::new(HdlcTransceiver::new());
     let mut device_mut = Mutex::new(None);
@@ -78,6 +79,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut keyboard_trim_mut = Mutex::new(ManualInput::default());
     let mut joystick_input_mut = Mutex::new(ManualInput::default());
     let mut joystick_disconnected_mut = Mutex::new(true);
+
+    let mut is_wireless_mut = Mutex::new(false);
+    let mut wireless_package_mut = Mutex::new(Vec::<u8>::new());
+
+    //-------------------------------------------------------------------------------------------
 
     let mut ctx = Arc::new(RunnerContext {
         rcv_mut: rcv_mut,
@@ -88,6 +94,9 @@ async fn main() -> Result<(), Box<dyn Error>> {
         keyboard_trim_mut: keyboard_trim_mut,
         joystick_input_mut: joystick_input_mut,
         joystick_disconnected_mut: joystick_disconnected_mut,
+
+        is_wireless_mut: is_wireless_mut,
+        wireless_package_mut: wireless_package_mut,
     });
 
     let ctx_clone = Arc::clone(&ctx);
@@ -101,7 +110,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
         uplink_main_loop(&ctx_clone);
     });
 
-    ble_connect().await?;
+    let ctx_clone = Arc::clone(&ctx);
+    ble_connect(&ctx_clone).await?;
     h1.join().unwrap();
     h2.join().unwrap();
 

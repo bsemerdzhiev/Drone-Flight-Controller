@@ -40,13 +40,18 @@ pub fn add_trims(
     let mut k_i: [ControllerValues; 4] = K_I;
     let mut k_d: [ControllerValues; 4] = K_D;
 
-    k_p[0] += ControllerValues::from_num(trim_input.yaw_p_trim);
+    k_p[0] +=
+        ControllerValues::from_num(trim_input.yaw_p_trim) / ControllerValues::from_num(i16::MAX);
 
-    k_p[1] += ControllerValues::from_num(trim_input.roll_pitch_p_trim);
-    k_p[2] += ControllerValues::from_num(trim_input.roll_pitch_p_trim);
+    k_p[1] += ControllerValues::from_num(trim_input.roll_pitch_p_trim)
+        / ControllerValues::from_num(i16::MAX);
+    k_p[2] += ControllerValues::from_num(trim_input.roll_pitch_p_trim)
+        / ControllerValues::from_num(i16::MAX);
 
-    k_d[1] += ControllerValues::from_num(trim_input.roll_pitch_d_trim);
-    k_d[2] += ControllerValues::from_num(trim_input.roll_pitch_d_trim);
+    k_d[1] += ControllerValues::from_num(trim_input.roll_pitch_d_trim)
+        / ControllerValues::from_num(i16::MAX);
+    k_d[2] += ControllerValues::from_num(trim_input.roll_pitch_d_trim)
+        / ControllerValues::from_num(i16::MAX);
 
     return (k_p, k_i, k_d);
 }

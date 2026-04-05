@@ -15,7 +15,7 @@ use my_hdlc::{
 use std::sync::Arc;
 use tudelft_serial_upload::serial2::SerialPort;
 
-use crate::runner_context::{ManualInput, RunnerContext};
+use crate::runner_context::RunnerContext;
 
 pub fn send_transition(state: my_hdlc::command::FSMState, ctx: &Arc<RunnerContext>) {
     const WAIT_TIME: Duration = Duration::from_millis(1000);
@@ -115,6 +115,7 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
                 }
                 KeyCode::Char('8') => {
                     if joystick_is_zeroed {
+                        ctx.with_is_wireless(|s| *s ^= true);
                         send_transition(my_hdlc::command::FSMState::WirelessMode, ctx);
                     } else {
                         println!(

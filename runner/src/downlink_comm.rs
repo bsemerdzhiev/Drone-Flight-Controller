@@ -6,6 +6,8 @@ use std::os::unix::net::UnixStream;
 
 use crossterm::terminal::enable_raw_mode;
 use evdev::{enumerate, AbsoluteAxisCode, Device};
+use my_hdlc::command::DeviceCommand;
+use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrims};
 use my_hdlc::STUFFED_MESSAGE_SIZE;
 use my_hdlc::{command::FSMState, HdlcTransceiver};
 use tudelft_serial_upload::serial2::SerialPort;
@@ -28,6 +30,8 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
         ctx.with_device(|s| *s = Some(find_flight_stick().expect("Cannot find flight stick")))
     }
     enable_raw_mode().unwrap();
+
+    let joystick_turn = true;
 
     loop {
         let dev_stat = find_flight_stick();
@@ -58,12 +62,25 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
         {
             let mut rcv = ctx.rcv_mut.lock().unwrap();
             let mut serial = ctx.serial_mut.lock().unwrap();
+            let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
 
-            let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
-                &my_hdlc::command::DeviceCommand::ManualInput(cmd),
-            );
+            let send_buffer = {
+                if (joystick_turn) {
+                    rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualInput(
+                        ManualDroneInput::from(cmd),
+                    ))
+                } else {
+                    rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualDroneTrims(
+                        ManualDroneTrims::from(cmd),
+                    ))
+                }
+            };
 
-            serial.write(&send_buffer.0[0..send_buffer.1]);
+            if (wireless_mode) {
+                ctx.with_wireless_package(|s| *s = send_buffer.0[0..send_buffer.1].to_vec());
+            } else {
+                serial.write(&send_buffer.0[0..send_buffer.1]);
+            }
         }
 
         let json = serde_json::to_string(&serde_json::json!({

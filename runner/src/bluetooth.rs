@@ -1,4 +1,6 @@
 use std::error::Error;
+use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 
 use btleplug::api::bleuuid::uuid_from_u32;
@@ -8,10 +10,12 @@ use futures::StreamExt;
 use tokio::{self, time};
 use uuid::{uuid, Uuid};
 
+use crate::runner_context::RunnerContext;
+
 const RX_CHAR_UUID: Uuid = uuid!("6E400002-B5A3-F393-E0A9-E50E24DCCA9E");
 const TX_CHAR_UUID: Uuid = uuid!("6E400003-B5A3-F393-E0A9-E50E24DCCA9E");
 
-pub async fn ble_connect() -> Result<(), Box<dyn Error>> {
+pub async fn ble_connect(ctx: &Arc<RunnerContext>) -> Result<(), Box<dyn Error>> {
     // println!("Start");
     let manager = Manager::new().await.unwrap();
 
@@ -37,18 +41,40 @@ pub async fn ble_connect() -> Result<(), Box<dyn Error>> {
 
     drone.subscribe(tx_char).await?;
     let mut notif_stream = drone.notifications().await?;
+
     let drone_clone = drone.clone();
     let rx_char_clone = rx_char.clone();
 
-    tokio::spawn(async move { while let Some(data) = notif_stream.next().await {} });
+    let ctx_clone = Arc::clone(ctx);
+    tokio::spawn(async move {
+        while let Some(data) = notif_stream.next().await {
+            let wireless_mode: bool = ctx_clone.with_is_wireless(|s| *s);
 
-    loop {
-        let packet: Vec<u8> = vec!['1' as u8];
-        drone
-            .write(&rx_char, &packet, WriteType::WithoutResponse)
-            .await?;
-        time::sleep(Duration::from_secs(5)).await;
-    }
+            if wireless_mode {
+                let mut rcv = ctx_clone.rcv_mut.lock().unwrap();
+
+                for cur_byte in data.value {
+                    rcv.add_byte(cur_byte);
+                }
+            }
+        }
+    });
+
+    let ctx_clone = Arc::clone(ctx);
+    tokio::spawn(async move {
+        loop {
+            let packet: Vec<u8> = ctx_clone.with_wireless_package(|s| s.clone());
+            if packet.len() > 0 {
+                drone
+                    .write(&rx_char_clone, &packet, WriteType::WithoutResponse)
+                    .await
+                    .unwrap();
+            }
+
+            ctx_clone.with_wireless_package(|s| *s = vec![]);
+            tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    });
 
     Ok(())
 }
