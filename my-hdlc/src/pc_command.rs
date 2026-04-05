@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 const THRESHOLD: f32 = 0.03;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
-pub struct ManualInput {
+pub struct ManualInputDrone {
     lift: f32,
     roll: f32,
     pitch: f32,
@@ -19,7 +19,7 @@ pub struct ManualInput {
     enter_panic: bool,
 }
 
-impl ManualInput {
+impl ManualInputDrone {
     pub fn zero() -> Self {
         Self {
             lift: 0.0,
@@ -130,7 +130,7 @@ impl ManualInput {
     }
 }
 
-impl fmt::Display for ManualInput {
+impl fmt::Display for ManualInputDrone {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // write!(
         //     f,

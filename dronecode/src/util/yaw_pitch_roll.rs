@@ -2,7 +2,7 @@ use core::ops::{Add, Div, Mul, Sub};
 
 use cordic::{atan2, CordicNumber};
 use fixed::traits::{Fixed, FixedSigned};
-use my_hdlc::pc_command::ManualInput;
+use my_hdlc::pc_command::ManualInputDrone;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
 use crate::util::{approx_funcs::approx_sqrt, MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE};
@@ -152,7 +152,7 @@ where
             pressure: Y::from_num(0),
         }
     }
-    pub fn from_manual_input(input: &ManualInput) -> Self {
+    pub fn from_manual_input(input: &ManualInputDrone) -> Self {
         Self {
             lift: T::from_num(MAX_LIFT) * T::from_num(input.get_lift()),
             yaw: T::from_num(YAW_RATE) * T::from_num(input.get_yaw()),

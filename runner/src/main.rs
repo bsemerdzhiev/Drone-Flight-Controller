@@ -1,11 +1,12 @@
 use crate::bluetooth::ble_connect;
 use crate::downlink_comm::downlink_main_loop;
+use crate::runner_context::ManualInput;
+use crate::runner_context::RunnerContext;
 use crate::uplink_comm::uplink_main_loop;
 
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::command::FSMState;
 pub use my_hdlc::pc_command;
-use my_hdlc::pc_command::ManualInput;
 pub use my_hdlc::HdlcTransceiver;
 use my_hdlc::STUFFED_MESSAGE_SIZE;
 use tokio;
@@ -34,6 +35,7 @@ mod bluetooth;
 mod downlink_comm;
 mod read_joystick;
 mod read_keyboard;
+mod runner_context;
 mod uplink_comm;
 
 #[tokio::main]
@@ -69,24 +71,32 @@ async fn main() -> Result<(), Box<dyn Error>> {
         .expect("Failed to accept Python connection");
     println!("Python GUI connected!");
 
-    let mut python_stream_mut = Arc::new(Mutex::new(python_stream));
-    let mut rcv_mut = Arc::new(Mutex::new(HdlcTransceiver::new()));
+    let mut python_stream_mut = Mutex::new(python_stream);
+    let mut rcv_mut = Mutex::new(HdlcTransceiver::new());
+    let mut device_mut = Mutex::new(None);
 
-    let rcv_clone = Arc::clone(&rcv_mut);
-    let serial_clone = Arc::clone(&serial_mut);
-    let python_clone = Arc::clone(&python_stream_mut);
+    let mut manual_input = Mutex::new(ManualInput::default());
+
+    let ctx = RunnerContext {
+        rcv_mut: rcv_mut,
+        serial_mut: serial_mut,
+        python_stream_mut: python_stream,
+        manual_input_mut: manual_input,
+        device_mut: device_mut,
+    };
+
+    let ctx_clone = Arc::clone(ctx);
+
     let h1 = thread::spawn(move || {
-        downlink_main_loop(&rcv_clone, &serial_clone, &python_clone);
+        downlink_main_loop(ctx_clone);
     });
 
-    let rcv_clone = Arc::clone(&rcv_mut);
-    let serial_clone = Arc::clone(&serial_mut);
-    let python_clone = Arc::clone(&python_stream_mut);
+    let ctx_clone = Arc::clone(ctx);
     let h2 = thread::spawn(move || {
-        uplink_main_loop(&rcv_clone, &serial_clone, &python_clone);
+        uplink_main_loop(ctx_clone);
     });
 
-    // ble_connect().await?;
+    ble_connect().await?;
     h1.join().unwrap();
     h2.join().unwrap();
 

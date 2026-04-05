@@ -11,7 +11,6 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
 use my_hdlc::command::{DebugCalibration, DeviceCommand};
-use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;

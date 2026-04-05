@@ -286,7 +286,7 @@ impl HdlcTransceiver {
 
 #[cfg(test)]
 mod tests {
-    use crate::{command::FSMState, pc_command::ManualInput};
+    use crate::{command::FSMState, pc_command::ManualInputDrone};
 
     use super::*;
 
@@ -296,7 +296,7 @@ mod tests {
     fn test_correctly_received() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let first_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -305,7 +305,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let second_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -327,7 +327,7 @@ mod tests {
     fn test_corrupted_data_byte_in_first_message() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let first_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -339,7 +339,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let second_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -362,7 +362,7 @@ mod tests {
     fn test_corrupted_message_no_first_frame_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let first_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -374,7 +374,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let second_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -398,7 +398,7 @@ mod tests {
     fn test_corrupted_message_no_last_frame_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let first_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -410,7 +410,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let second_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);
@@ -419,7 +419,7 @@ mod tests {
             transceiver.add_byte(arr2[k]);
         }
 
-        let third_command: Command = Command::ManualInput(ManualInput::new(13, 12, 15, 20));
+        let third_command: Command = Command::ManualInput(ManualInputDrone::new(13, 12, 15, 20));
 
         let (arr3, arr3_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&third_command);
@@ -450,7 +450,7 @@ mod tests {
     fn test_corrupted_message_inserted_boundary() {
         let mut transceiver = HdlcTransceiver::new();
 
-        let first_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let first_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (mut arr, arr_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&first_command);
@@ -462,7 +462,7 @@ mod tests {
             transceiver.add_byte(arr[k]);
         }
 
-        let second_command: Command = Command::ManualInput(ManualInput::new(12, 14, 15, 20));
+        let second_command: Command = Command::ManualInput(ManualInputDrone::new(12, 14, 15, 20));
 
         let (arr2, arr2_size): ([u8; STUFFED_MESSAGE_SIZE], usize) =
             transceiver.write_structure::<Command>(&second_command);

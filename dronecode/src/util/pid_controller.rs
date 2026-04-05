@@ -3,7 +3,7 @@ use fixed::{
     traits::{Fixed, FixedSigned},
     types::{I16F16, I32F0},
 };
-use my_hdlc::pc_command::ManualInput;
+use my_hdlc::pc_command::ManualInputDrone;
 use tudelft_quadrupel::time::Instant;
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
@@ -30,7 +30,7 @@ pub const K_D: [ControllerValues; 4] = [
 ];
 
 pub fn add_trims(
-    manual_input: &ManualInput,
+    manual_input: &ManualInputDrone,
 ) -> (
     [ControllerValues; 4],
     [ControllerValues; 4],

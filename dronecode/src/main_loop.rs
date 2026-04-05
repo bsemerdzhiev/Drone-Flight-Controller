@@ -21,7 +21,7 @@ use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::{PIDInfo, StateContext};
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
-use my_hdlc::pc_command::ManualInput;
+use my_hdlc::pc_command::ManualInputDrone;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
@@ -76,7 +76,7 @@ pub fn main_loop() -> ! {
     // fields for the context
     let mut transceiver: Box<HdlcTransceiver> = Box::new(HdlcTransceiver::new());
 
-    let mut received_manual_input: ManualInput = ManualInput::zero();
+    let mut received_manual_input: ManualInputDrone = ManualInputDrone::zero();
     let mut input_as_ypr: YawPitchRoll<I16F16, I16F16> = YawPitchRoll::<I16F16, I16F16>::new();
 
     let mut calibration_state: CalibrationState<I8F24, I8F24> =

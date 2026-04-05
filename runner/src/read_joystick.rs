@@ -1,16 +1,13 @@
-use my_hdlc::pc_command::ManualInput;
-
 use evdev::*;
 
-// defines the max rate values for each aerial maneuver
-// defined in degree per seconds
+use crate::runner_context::{ManualInput, RunnerContext};
 
 //------------------------------------------------------
 
 const THRESHOLD: f32 = 60f32;
 //------------------------------------------------------
 
-pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInput) {
+pub fn read_joystick(ctx: &Arc<RunnerContext>) {
     if device.is_some() {
         if let Ok(events) = device.as_mut().unwrap().fetch_events() {
             for event in events {

@@ -7,13 +7,14 @@ use std::os::unix::net::UnixStream;
 use crossterm::terminal::enable_raw_mode;
 use evdev::{enumerate, AbsoluteAxisCode, Device};
 use my_hdlc::STUFFED_MESSAGE_SIZE;
-use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, HdlcTransceiver};
 use tudelft_serial_upload::serial2::SerialPort;
 
 use std::sync::Arc;
 use std::sync::Mutex;
 
 use crate::read_keyboard::send_transition;
+use crate::runner_context::RunnerContext;
 use crate::{
     read_joystick::{combine_inputs, read_joystick},
     read_keyboard::read_keyboard,
@@ -22,33 +23,35 @@ use my_hdlc::telemetry_data::TELEMETERY_DATA_SIZE;
 
 const DEBUG_BOARD_MODE: bool = true;
 
-pub fn downlink_main_loop(
-    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
-    serial_mut: &Arc<Mutex<SerialPort>>,
-    python_stream_mut: &Arc<Mutex<UnixStream>>,
-) {
-    let mut device: Option<Device> = None;
-
+pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
     let mut keyboard_trim = ManualInput::zero();
     let mut joystick_input = ManualInput::zero();
 
     let mut joystick_disconnected = false;
 
     if !DEBUG_BOARD_MODE {
-        device = Some(find_flight_stick().expect("Cannot find flight stick"));
+        {
+            let mut device = ctx.device_mut.lock().unwrap();
+
+            *device = Some(find_flight_stick().expect("Cannot find flight stick"));
+        }
     }
     enable_raw_mode().unwrap();
+
     loop {
         let dev_stat = find_flight_stick();
 
         if dev_stat.is_some() || DEBUG_BOARD_MODE {
             if joystick_disconnected {
-                device = dev_stat;
+                {
+                    let mut device = ctx.device_mut.lock().unwrap();
+                    *device = dev_stat;
+                }
                 joystick_disconnected = false;
             }
-            read_joystick(&mut device, &mut joystick_input);
+            read_joystick(&ctx);
 
-            read_keyboard(&mut keyboard_trim, &mut joystick_input, rcv_mut, serial_mut);
+            read_keyboard(&ctx);
         } else {
             println!("Joystick disconnected!\r");
             joystick_disconnected = true;
@@ -68,9 +71,9 @@ pub fn downlink_main_loop(
             let mut rcv = rcv_mut.lock().unwrap();
             let mut serial = serial_mut.lock().unwrap();
 
-            let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
-                &my_hdlc::command::DeviceCommand::ManualInput(cmd),
-            );
+            // let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
+            // &my_hdlc::command::DeviceCommand::ManualInput(cmd),
+            // );
 
             serial.write(&send_buffer.0[0..send_buffer.1]);
         }

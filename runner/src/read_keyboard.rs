@@ -10,11 +10,12 @@ use crossterm::{
 };
 use my_hdlc::{
     command::{DeviceCommand, FSMState},
-    pc_command::ManualInput,
     HdlcTransceiver,
 };
 use std::sync::Arc;
 use tudelft_serial_upload::serial2::SerialPort;
+
+use crate::runner_context::{ManualInput, RunnerContext};
 
 pub fn send_transition(
     state: my_hdlc::command::FSMState,
@@ -66,12 +67,7 @@ pub fn send_transition(
     // }
 }
 
-pub fn read_keyboard(
-    keyboard_trim: &mut ManualInput,
-    joystick_info: &mut ManualInput,
-    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
-    serial_mut: &Arc<Mutex<SerialPort>>,
-) {
+pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
     while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
             println!("Keyboard event: {:?}", key.code);

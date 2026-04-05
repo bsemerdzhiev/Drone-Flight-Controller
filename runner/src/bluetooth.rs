@@ -2,8 +2,9 @@ use std::error::Error;
 use std::time::Duration;
 
 use btleplug::api::bleuuid::uuid_from_u32;
-use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter};
+use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter, WriteType};
 use btleplug::platform::{Adapter, Manager, Peripheral};
+use futures::StreamExt;
 use tokio::{self, time};
 use uuid::{uuid, Uuid};
 
@@ -26,8 +27,6 @@ pub async fn ble_connect() -> Result<(), Box<dyn Error>> {
 
     drone.connect().await?;
 
-    time::sleep(Duration::from_secs(15)).await;
-
     println!("Connected to drone");
 
     drone.discover_services().await?;
@@ -35,6 +34,21 @@ pub async fn ble_connect() -> Result<(), Box<dyn Error>> {
     let chars = drone.characteristics();
     let rx_char = chars.iter().find(|c| c.uuid == RX_CHAR_UUID).unwrap();
     let tx_char = chars.iter().find(|c| c.uuid == TX_CHAR_UUID).unwrap();
+
+    drone.subscribe(tx_char).await?;
+    let mut notif_stream = drone.notifications().await?;
+    let drone_clone = drone.clone();
+    let rx_char_clone = rx_char.clone();
+
+    tokio::spawn(async move { while let Some(data) = notif_stream.next().await {} });
+
+    loop {
+        let packet: Vec<u8> = vec!['1' as u8];
+        drone
+            .write(&rx_char, &packet, WriteType::WithoutResponse)
+            .await?;
+        time::sleep(Duration::from_secs(5)).await;
+    }
 
     Ok(())
 }

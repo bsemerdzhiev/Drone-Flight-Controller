@@ -2,7 +2,7 @@ use fixed::types::{I16F16, I26F6, I28F4, I29F3, I32F0, I32F32, I3F29, I40F24, I4
 use micromath::F32Ext;
 use my_hdlc::{
     command::{DebugRpms, DeviceCommand},
-    pc_command::ManualInput,
+    pc_command::ManualInputDrone,
 };
 use tudelft_quadrupel::{motor, uart::send_bytes};
 

@@ -8,7 +8,6 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
 use fixed::types::{I16F16, I26F6, I4F28};
 use my_hdlc::command::{DebugRpms, DebugYawPitchRoll, DeviceCommand, DroneInfo, FSMState};
-use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::battery::read_battery;
 use tudelft_quadrupel::mpu::is_dmp_enabled;

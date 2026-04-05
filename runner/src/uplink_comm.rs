@@ -9,15 +9,14 @@ use std::fmt;
 use std::io::Write;
 use std::os::unix::net::UnixStream;
 
-pub fn uplink_main_loop(
-    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
-    serial_mut: &Arc<Mutex<SerialPort>>,
-    python_stream_mut: &Arc<Mutex<UnixStream>>,
-) {
+use crate::runner_context::RunnerContext;
+
+pub fn uplink_main_loop(ctx: &Arc<RunnerContext>) {
     let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
     loop {
         {
-            let mut rcv = rcv_mut.lock().unwrap();
+            ctx.rcv_mut.lock().unwrap();
+            let mut rcv = ctx.rcv_mut.lock().unwrap();
             let mut serial = serial_mut.lock().unwrap();
 
             if let Ok(num) = serial.read(&mut buf[0..rcv.bytes_to_read()]) {
@@ -34,7 +33,6 @@ pub fn uplink_main_loop(
                             "{{\"Telemetry\": {}}}",
                             serde_json::to_string(telemetry).unwrap(),
                         );
-                        // println!("{:?}", telemetry);
 
                         {
                             let mut python_stream = python_stream_mut.lock().unwrap();

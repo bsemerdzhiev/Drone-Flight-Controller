@@ -8,7 +8,6 @@ use crate::{
 use alloc::boxed::Box;
 use my_hdlc::{
     command::{self, DebugRpms, DeviceCommand, FSMState},
-    pc_command::ManualInput,
     HdlcTransceiver,
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};

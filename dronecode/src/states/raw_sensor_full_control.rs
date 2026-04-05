@@ -1,6 +1,6 @@
 use fixed::types::{I16F16, I26F6, I4F28};
 use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand};
-use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, HdlcTransceiver};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::uart::send_bytes;
 

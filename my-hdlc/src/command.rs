@@ -1,4 +1,4 @@
-use crate::pc_command;
+use crate::pc_command::{self, ManualInputDrone};
 use crate::telemetry_data::TelemetryData;
 use serde::{Deserialize, Serialize};
 
@@ -63,7 +63,7 @@ impl DroneInfo {
 pub enum DeviceCommand {
     DroneInfo(DroneInfo),
     ChangeMode(FSMState),
-    ManualInput(pc_command::ManualInput),
+    ManualInput(ManualInputDrone),
     Telemetry(TelemetryData),
     Ack,
     DebugRpms(DebugRpms),

@@ -11,7 +11,7 @@ use crate::util::pid_controller::PIDController;
 use alloc::boxed::Box;
 use fixed::types::{I16F16, I26F6, I4F28};
 use my_hdlc::command::DeviceCommand;
-use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, HdlcTransceiver};
 use my_hdlc::{telemetry_data::*, MESSAGE_SIZE, STUFFED_MESSAGE_SIZE};
 use postcard::from_bytes;
 use tudelft_quadrupel::flash::{flash_chip_erase, flash_read_bytes};

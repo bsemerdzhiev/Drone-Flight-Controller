@@ -1538,6 +1538,7 @@ dependencies = [
  "btleplug",
  "crossterm 0.29.0",
  "evdev",
+ "futures",
  "my-hdlc",
  "rand",
  "serde_json",
