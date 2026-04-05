@@ -6,7 +6,7 @@ import threading
 import numpy as np
 
 MAX_SIZE_LIVE = 200
-MAX_SIZE_LOG = 100_000
+MAX_SIZE_LOG = 10_000
 MAX_LOG_QUEUE_SIZE = 500
 
 

@@ -8,7 +8,8 @@ use tudelft_quadrupel::{
 use crate::{
     filters::sensors_handler::ImuHandler,
     states::{
-        fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe,
+        fsm_base_class::FSMControl, full_control::FSMFullControl, panic_mode::FSMPanic,
+        raw_sensor_full_control::FSMRawFullControl, safe_mode::FSMSafe,
         state_structures::state_context::StateContext,
     },
     util::{
@@ -29,8 +30,10 @@ pub struct FSMHeightControl {
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // read sensor data
-        let mut input: YawPitchRoll<I16F16, I16F16> =
-            ctx.kalman_position.get_reading::<I16F16, I16F16>();
+        let mut input: YawPitchRoll<I16F16, I16F16> = match self.prev_state.get_state() {
+            FSMState::FullControlMode => ctx.dmp_filter.get_reading::<I16F16, I16F16>(),
+            _ => ctx.kalman_position.get_reading::<I16F16, I16F16>(),
+        };
 
         // if lift is changed, return to previous state
         if (ctx.input_as_ypr.lift != self.initial_lift) {
