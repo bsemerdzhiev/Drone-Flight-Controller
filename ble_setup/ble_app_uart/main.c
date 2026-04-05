@@ -149,7 +149,7 @@ static void gap_params_init(void) {
   APP_ERROR_CHECK(err_code);
 }
 
-// extern void rust_ble_receive(uint8_t *data, uint16_t length);
+void rust_ble_receive(uint8_t *data, uint16_t length);
 
 /**@brief Function for handling the data from the Nordic UART Service.
  *
@@ -161,6 +161,7 @@ static void gap_params_init(void) {
  * @param[in] length   Length of the data.
  */
 /**@snippet [Handling the data received over BLE] */
+
 static void nus_data_handler(ble_nus_t *p_nus, uint8_t *p_data,
                              uint16_t length) {
   rust_ble_receive(p_data, length);
