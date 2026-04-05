@@ -20,6 +20,16 @@ use crate::runner_context::RunnerContext;
 pub fn send_transition(state: my_hdlc::command::FSMState, ctx: &Arc<RunnerContext>) {
     const WAIT_TIME: Duration = Duration::from_millis(1000);
 
+    let can_transition = (ctx.with_current_state(|x| match state {
+        FSMState::WirelessMode => match x {
+            FSMState::SafeMode => true,
+            _ => false,
+        },
+        _ => true,
+    }));
+
+    // ctx.with_is_wireless(|s| *s ^= true);
+
     let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
 
     {
@@ -28,7 +38,13 @@ pub fn send_transition(state: my_hdlc::command::FSMState, ctx: &Arc<RunnerContex
         // loop {
         let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
 
-        serial.write(&send_buffer.0[0..send_buffer.1]);
+        let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
+
+        if (wireless_mode) {
+            ctx.with_wireless_package(|s| *s = send_buffer.0[0..send_buffer.1].to_vec());
+        } else {
+            serial.write(&send_buffer.0[0..send_buffer.1]);
+        }
 
         //NOTE: The section below makes sure that the drone transitions states
         //comment it out if there are issues with the transitions
@@ -115,7 +131,6 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
                 }
                 KeyCode::Char('8') => {
                     if joystick_is_zeroed {
-                        ctx.with_is_wireless(|s| *s ^= true);
                         send_transition(my_hdlc::command::FSMState::WirelessMode, ctx);
                     } else {
                         println!(

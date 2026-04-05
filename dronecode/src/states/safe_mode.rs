@@ -6,6 +6,7 @@ use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::raw_sensor_full_control::FSMRawFullControl;
 use crate::states::state_structures::state_context::StateContext;
+use crate::states::wireless_mode::FSMWireless;
 use crate::states::yaw_control::FSMYaw;
 use crate::util::pid_controller::PIDController;
 use alloc::boxed::Box;
@@ -66,6 +67,8 @@ impl FSMControl for FSMSafe {
                     pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
                 })
             }
+            FSMState::WirelessMode => return Box::new(FSMWireless {}),
+
             FSMState::PanicMode => return Box::new(FSMPanic {}),
             _ => self,
         }

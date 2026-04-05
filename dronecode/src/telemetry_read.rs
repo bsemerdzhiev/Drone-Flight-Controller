@@ -77,6 +77,7 @@ impl TelemetryRead for TelemetryData {
 
             bat: bat,
             cur_state: cur_state,
+            is_wireless: *ctx.is_wireless,
         }));
 
         if encoded {

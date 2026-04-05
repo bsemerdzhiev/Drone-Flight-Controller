@@ -9,6 +9,7 @@ pub const TELEMETERY_DATA_SIZE: usize = core::mem::size_of::<TelemetryData>();
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
 pub struct GeneralData {
     pub logged_in_flash: bool,
+    pub is_wireless: bool,
     pub dt: u32,
     pub time_for_main_loop: i32,
 

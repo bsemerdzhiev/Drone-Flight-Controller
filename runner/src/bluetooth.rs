@@ -25,7 +25,7 @@ pub async fn ble_connect(ctx: &Arc<RunnerContext>) -> Result<(), Box<dyn Error>>
     // println!("Searching for devices");
     central.start_scan(ScanFilter::default()).await?;
 
-    time::sleep(Duration::from_secs(4)).await;
+    time::sleep(Duration::from_secs(2)).await;
 
     let drone = find_drone(&central).await.unwrap();
 

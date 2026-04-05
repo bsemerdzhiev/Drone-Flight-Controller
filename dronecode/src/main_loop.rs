@@ -6,6 +6,7 @@ use crate::filters::pressure_filter::PressureSensor;
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::telemetry_read::TelemetryRead;
+use crate::util::ble_communication::BLE_BUFFER;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
@@ -13,6 +14,7 @@ use alloc::format;
 use fixed::types::{I16F16, I26F6, I2F30, I4F28, I8F24};
 use my_hdlc::telemetry_data::*;
 
+use template_project::util::ble_communication::rust_ble_receive;
 use tudelft_quadrupel::flash::flash_write_bytes;
 
 use crate::states::fsm_base_class::FSMControl;
@@ -60,7 +62,7 @@ pub fn main_loop() -> ! {
     // -------------------------------------------------------------------------
 
     // buffer for receiving bytes from PC
-    let mut uart_buf = Box::new([0u8; UART_BUF_SIZE]);
+    let mut receive_buffer = Box::new([0u8; UART_BUF_SIZE]);
 
     // -------------------------------------------------------------------------
 
@@ -96,6 +98,8 @@ pub fn main_loop() -> ! {
         selected_height: 0f32,
     });
 
+    let mut is_wireless: bool = false;
+
     let mut ctx = StateContext {
         kalman_position: position_kalman,
         calibration_state: &mut calibration_state,
@@ -113,6 +117,8 @@ pub fn main_loop() -> ! {
         time_for_main_loop: 0i32,
 
         pid_info: &mut pid_info,
+
+        is_wireless: &mut is_wireless,
     };
 
     // -------------------------------------------------------------------------
@@ -135,11 +141,23 @@ pub fn main_loop() -> ! {
         // -------------------------------------------------------------------------
 
         // Read Uart Buff
-        let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.bytes_to_read()]);
+        let num_received = {
+            if *ctx.is_wireless {
+                BLE_BUFFER.modify(|x| {
+                    for i in 0..x.1 {
+                        receive_buffer[i] = x.0[i];
+                    }
+                    let size_to_return: usize = x.1;
+                    x.1 = 0;
+                    size_to_return
+                })
+            } else {
+                receive_bytes(&mut receive_buffer[0..ctx.trv.bytes_to_read()])
+            }
+        };
 
         if num_received != 0usize {
-            //read the sent bytes
-            ctx.trv.add_bytes(&uart_buf[..num_received]);
+            ctx.trv.add_bytes(&receive_buffer[..num_received]);
 
             //try to deserialize the command
             let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
@@ -172,6 +190,10 @@ pub fn main_loop() -> ! {
             .update_readings(&mut ctx.kalman_position);
 
         // run the loop of the state
+
+        // need to send atleast one message on UART before transitioning to wireless
+        let prev_wireless = *ctx.is_wireless;
+
         current_state = current_state.run_state_loop(&mut ctx);
         let time_end = Instant::now();
 

@@ -83,6 +83,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut is_wireless_mut = Mutex::new(false);
     let mut wireless_package_mut = Mutex::new(Vec::<u8>::new());
 
+    let mut current_state = Mutex::new(FSMState::SafeMode);
     //-------------------------------------------------------------------------------------------
 
     let mut ctx = Arc::new(RunnerContext {
@@ -97,6 +98,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
 
         is_wireless_mut: is_wireless_mut,
         wireless_package_mut: wireless_package_mut,
+        current_state: current_state,
     });
 
     let ctx_clone = Arc::clone(&ctx);

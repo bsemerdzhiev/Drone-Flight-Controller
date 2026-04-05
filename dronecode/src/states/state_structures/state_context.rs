@@ -31,6 +31,8 @@ pub struct StateContext<'a> {
     pub time_for_main_loop: i32,
 
     pub pid_info: &'a mut Box<PIDInfo>,
+
+    pub is_wireless: &'a mut bool,
 }
 
 pub struct PIDInfo {

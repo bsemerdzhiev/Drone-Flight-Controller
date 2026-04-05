@@ -31,7 +31,7 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
     }
     enable_raw_mode().unwrap();
 
-    let joystick_turn = true;
+    let mut joystick_turn = true;
 
     loop {
         let dev_stat = find_flight_stick();
@@ -75,9 +75,15 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
                     ))
                 }
             };
+            joystick_turn ^= true;
 
+            println!("Currend mode {}\n\r", wireless_mode);
             if (wireless_mode) {
-                ctx.with_wireless_package(|s| *s = send_buffer.0[0..send_buffer.1].to_vec());
+                ctx.with_wireless_package(|s| {
+                    if s.len() == 0 {
+                        *s = send_buffer.0[0..send_buffer.1].to_vec();
+                    }
+                });
             } else {
                 serial.write(&send_buffer.0[0..send_buffer.1]);
             }

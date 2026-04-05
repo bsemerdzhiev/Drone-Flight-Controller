@@ -1,5 +1,5 @@
 use evdev::Device;
-use my_hdlc::{pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
 use std::{os::unix::net::UnixStream, sync::Mutex};
 use tudelft_serial_upload::serial2::SerialPort;
 
@@ -15,6 +15,8 @@ pub struct RunnerContext {
 
     pub is_wireless_mut: Mutex<bool>,
     pub wireless_package_mut: Mutex<Vec<u8>>,
+
+    pub current_state: Mutex<FSMState>,
 }
 
 impl RunnerContext {
@@ -79,5 +81,12 @@ impl RunnerContext {
         F: FnOnce(&mut Vec<u8>) -> R,
     {
         f(&mut self.wireless_package_mut.lock().unwrap())
+    }
+
+    pub fn with_current_state<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut FSMState) -> R,
+    {
+        f(&mut self.current_state.lock().unwrap())
     }
 }
