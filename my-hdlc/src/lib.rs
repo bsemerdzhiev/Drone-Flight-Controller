@@ -3,8 +3,14 @@
 #[cfg(test)]
 extern crate std;
 
+extern crate alloc;
+
+use alloc::boxed::Box;
+
 use crc::{CRC_32_ISCSI, Crc};
 use serde::{Deserialize, Serialize};
+
+use crate::{command::DeviceCommand, telemetry_data::TELEMETERY_DATA_SIZE};
 
 /*
 * A serialized Command struct consists of 2 bytes + 1 byte for the CRC. Therefore, the MESSAGE_SIZE used for
@@ -12,8 +18,20 @@ use serde::{Deserialize, Serialize};
 * payload, and adding the two framing bytes, we can end up with at most (2*3 + 2)8 bytes. In total,
 * we can fit 128/8 ~ 16 messages in the buffer.
 */
+
+#[cfg(feature = "pc")]
+pub static MAX_BYTES_PER_TICK: usize = STUFFED_MESSAGE_SIZE;
+
+#[cfg(not(feature = "pc"))]
+pub static MAX_BYTES_PER_TICK: usize = STUFFED_MESSAGE_SIZE;
+
+#[cfg(feature = "pc")]
+pub static BUFFER_SIZE: usize = 1 << 15;
+
+#[cfg(not(feature = "pc"))]
 pub static BUFFER_SIZE: usize = 1 << 8;
-pub static MESSAGE_SIZE: usize = 1 << 6;
+
+pub static MESSAGE_SIZE: usize = core::mem::size_of::<DeviceCommand>();
 // used as return size when serializing a structure
 pub static STUFFED_MESSAGE_SIZE: usize = MESSAGE_SIZE * 2 + 2;
 
@@ -34,7 +52,7 @@ pub struct HdlcTransceiver {
      *
      * when either pointers reach BUFFER_SIZE, they are looped back to 0.
      */
-    pub buff: [u8; BUFFER_SIZE],
+    pub buff: Box<[u8; BUFFER_SIZE]>,
     pub left_pointer: usize,
     pub right_pointer: usize,
     pub crc: Crc<u32>,
@@ -45,23 +63,23 @@ pub struct HdlcTransceiver {
      * helper_arr helps us look at it always starting from 0, thus
      * making the code easier to follow.
      */
-    helper_arr: [u8; BUFFER_SIZE],
+    helper_arr: Box<[u8; BUFFER_SIZE]>,
 
     /*
      * Is used to hold the bytes for the serialized structure along with the CRC computed for the
      * data.
      */
-    removed_ctrl: [u8; MESSAGE_SIZE],
+    removed_ctrl: Box<[u8; MESSAGE_SIZE]>,
 }
 
 impl HdlcTransceiver {
     pub fn new() -> Self {
         Self {
-            buff: [0; BUFFER_SIZE],
+            buff: Box::new([0; BUFFER_SIZE]),
             left_pointer: 0,
             right_pointer: 0,
-            helper_arr: [0; BUFFER_SIZE],
-            removed_ctrl: [0; MESSAGE_SIZE],
+            helper_arr: Box::new([0; BUFFER_SIZE]),
+            removed_ctrl: Box::new([0; MESSAGE_SIZE]),
             crc: Crc::<u32>::new(&CRC_32_ISCSI),
             remaining_bytes: BUFFER_SIZE,
         }
@@ -259,6 +277,10 @@ impl HdlcTransceiver {
 
     pub fn fifo_is_empty(&mut self) -> bool {
         return self.remaining_bytes == BUFFER_SIZE;
+    }
+
+    pub fn bytes_to_read(&mut self) -> usize {
+        return self.remaining_bytes.min(MAX_BYTES_PER_TICK);
     }
 }
 

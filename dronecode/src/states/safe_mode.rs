@@ -4,13 +4,15 @@ use crate::states::fsm_base_class::FSMControl;
 use crate::states::full_control::FSMFullControl;
 use crate::states::manual_mode::FSMManual;
 use crate::states::panic_mode::FSMPanic;
+use crate::states::raw_sensor_full_control::FSMRawFullControl;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::yaw_control::FSMYaw;
 use crate::util::pid_controller::PIDController;
 use alloc::boxed::Box;
+use fixed::types::{I16F16, I26F6, I4F28};
 use my_hdlc::command::DeviceCommand;
-use my_hdlc::telemetry_data::*;
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{telemetry_data::*, MESSAGE_SIZE, STUFFED_MESSAGE_SIZE};
 use postcard::from_bytes;
 use tudelft_quadrupel::flash::{flash_chip_erase, flash_read_bytes};
 use tudelft_quadrupel::led::Red;
@@ -23,12 +25,12 @@ impl FSMControl for FSMSafe {
     fn run_state_loop(self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         set_motors([0, 0, 0, 0]);
         if *ctx.flash_head != *ctx.flash_tail {
-            send_flash_data(ctx.flash_tail, ctx.trv);
-            *ctx.flash_tail += TELEMETERY_DATA_SIZE;
-        } else if *ctx.flash_tail != 0 {
+            send_flash_data(ctx.flash_head, ctx.trv);
+        } else if *ctx.flash_head != 0 {
             Yellow.on();
             _ = flash_chip_erase();
             Yellow.off();
+
             *ctx.flash_head = 0;
             *ctx.flash_tail = 0;
         }
@@ -51,14 +53,17 @@ impl FSMControl for FSMSafe {
             FSMState::ManualMode => return Box::new(FSMManual {}),
             FSMState::YawControl => {
                 return Box::new(FSMYaw {
-                    imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
-                    pid_controller: Box::new(PIDController::new()),
+                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
                 })
             }
             FSMState::FullControlMode => {
                 return Box::new(FSMFullControl {
-                    imu_sampler: Box::new(DmpReadings::new(ctx.calibration_state.ypr_offset)),
-                    pid_controller: Box::new(PIDController::new()),
+                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
+                })
+            }
+            FSMState::RawSensorsFullControlMode => {
+                return Box::new(FSMRawFullControl {
+                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
                 })
             }
             FSMState::PanicMode => return Box::new(FSMPanic {}),
@@ -74,16 +79,23 @@ fn is_throttle_zero() -> bool {
     let speed = get_motors();
     return speed[0] == 0 && speed[1] == 0 && speed[2] == 0 && speed[3] == 0;
 }
-fn send_flash_data(flash_tail: &mut u32, my_hdlc: &mut HdlcTransceiver) {
-    let mut buffer = [0u8; (TELEMETERY_DATA_SIZE + 50) as usize];
-    Yellow.on();
-    _ = flash_read_bytes(*flash_tail, &mut buffer);
-    Yellow.off();
+
+fn send_flash_data(flash_head: &mut usize, my_hdlc: &mut HdlcTransceiver) {
     Green.on();
-    let data: TelemetryData = from_bytes(&buffer).unwrap();
-    let cmd = DeviceCommand::Telemetry(data);
-    // send_bytes(&buffer);/
-    let msg = my_hdlc.write_structure(&cmd);
-    send_bytes(&msg.0[0..msg.1]);
+
+    let mut buffer = [0u8; (STUFFED_MESSAGE_SIZE) as usize];
+    let mut msg = ([0u8; STUFFED_MESSAGE_SIZE], 0usize);
+
+    for _i in 0..7 {
+        _ = flash_read_bytes(*flash_head as u32, &mut buffer).unwrap();
+        *flash_head += STUFFED_MESSAGE_SIZE;
+
+        let data: DeviceCommand = from_bytes(&buffer).unwrap();
+        let cmd = data;
+        msg = my_hdlc.write_structure(&cmd);
+
+        send_bytes(&msg.0[0..msg.1]);
+    }
+
     Green.off();
 }

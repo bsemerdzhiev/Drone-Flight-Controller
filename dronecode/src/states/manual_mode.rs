@@ -1,6 +1,9 @@
 use crate::{
     states::state_structures::state_context::StateContext,
-    util::rpm_calculator::actuate_motors_with_rates,
+    util::{
+        rpm_calculator::{actuate_motors_with_direct_joystick_input, actuate_motors_with_rates},
+        yaw_pitch_roll::YawPitchRoll,
+    },
 };
 use alloc::boxed::Box;
 use my_hdlc::{
@@ -17,19 +20,13 @@ pub struct FSMManual {}
 impl FSMControl for FSMManual {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // check if there is a new command from the controller to run
-        if ctx.input_from_controller.is_none() {
-            return self;
-        }
-        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
+        actuate_motors_with_direct_joystick_input(&ctx.input_as_ypr, ctx.input_as_ypr.lift);
 
-        // consume the command and set it to None
-        *ctx.input_from_controller = None;
         self
     }
 
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
-            FSMState::SafeMode => return Box::new(FSMSafe {}),
             FSMState::PanicMode => return Box::new(FSMPanic {}),
             _ => return self,
         }

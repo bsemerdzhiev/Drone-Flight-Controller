@@ -1,3 +1,5 @@
 /target
 .idea
 .direnv/
+.venv/
+ui/__pycache__/

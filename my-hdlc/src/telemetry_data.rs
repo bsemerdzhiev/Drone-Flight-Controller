@@ -3,58 +3,90 @@ use serde::{Deserialize, Serialize};
 
 use crate::command::FSMState;
 // pub const TELEMETERY_DATA_SIZE: u32 = 2 * (32 + (4 * 16) + (3 * 32) + 16 + 32 + 4) + 2;
-pub const TELEMETERY_DATA_SIZE: u32 = core::mem::size_of::<TelemetryData>() as u32;
+pub const TELEMETERY_DATA_SIZE: usize = core::mem::size_of::<TelemetryData>();
+
 #[repr(C)]
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
-pub struct TelemetryData {
+pub struct GeneralData {
+    pub logged_in_flash: bool,
     pub dt: u32,
-    pub motors: [u16; 4],
-    pub yaw: f32,
-    pub pitch: f32,
-    pub roll: f32,
-    pub accel_x: i16,
-    pub accel_y: i16,
-    pub accel_z: i16,
-    pub gyro_x: i16,
-    pub gyro_y: i16,
-    pub gyro_z: i16,
+    pub time_for_main_loop: i32,
+
     pub bat: u16,
-    pub pres: u32,
     pub cur_state: FSMState,
 }
 
-// impl fmt::Display for TelemetryData {
-//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-//         write!(
-//             f,
-//             "DTT: {:?}ms\n
-//             MTR: {} {} {} {}\n
-//             YPR {} {} {}\n
-//             ACC {} {} {}\n
-//             BAT {}\n
-//             BAR {}\n",
-//             // "DTT: {:?}ms\n
-//             // MTR: {} {} {} {}\n
-//             // YPR {} {} {}\n
-//             // BAT {}\n
-//             // BAR {}\n",
-//             // "
-//             // DTT: {:?}ms\n
-//             // BAT {}\n
-//             // BAR {}\n",
-//             self.dt,
-//             self.motors[0],
-//             self.motors[1],
-//             self.motors[2],
-//             self.motors[3],
-//             // self.yaw,
-//             // self.pitch,
-//             // self.roll,
-//             self.accel_x,
-//             self.accel_y,
-//             self.accel_z,
-//             self.bat,
-//             self.pres
-//         )
-//     }
-// }
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct MotorData {
+    pub logged_in_flash: bool,
+    pub motors: [u16; 4],
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct PositionData {
+    pub logged_in_flash: bool,
+
+    pub yaw: f32,
+    pub pitch: f32,
+    pub roll: f32,
+
+    pub yaw_kalman: f32,
+    pub pitch_kalman: f32,
+    pub roll_kalman: f32,
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct RawData {
+    pub logged_in_flash: bool,
+
+    pub accel_x: i16,
+    pub accel_y: i16,
+    pub accel_z: i16,
+
+    pub gyro_x: i16,
+    pub gyro_y: i16,
+    pub gyro_z: i16,
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct PressureData {
+    pub logged_in_flash: bool,
+
+    pub pres: f32,
+    pub pressure_filtered: f32,
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct PIDInfo {
+    pub logged_in_flash: bool,
+
+    pub selected_height: f32,
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub struct CalibrationInfo {
+    pub logged_in_flash: bool,
+
+    pub averaged_accel: [i32; 3],
+    pub averaged_gyro: [i32; 3],
+
+    pub averaged_ypr: [f32; 3],
+}
+
+#[repr(C)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Clone, Copy)]
+pub enum TelemetryData {
+    GeneralData(GeneralData),
+    MotorData(MotorData),
+    PositionData(PositionData),
+    RawData(RawData),
+    PressureData(PressureData),
+    CalibrationInfo(CalibrationInfo),
+    PIDInfo(PIDInfo),
+}

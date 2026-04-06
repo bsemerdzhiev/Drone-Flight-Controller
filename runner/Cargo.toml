@@ -11,4 +11,5 @@ tudelft-serial-upload = "2"
 crossterm = "0.29.0"
 evdev = "0.13.2"
 rand = "0.10.0"
-my-hdlc = {path = "../my-hdlc/"}
+serde_json = "1.0.149"
+my-hdlc = {path = "../my-hdlc/", features = ["pc"]}

@@ -1,104 +1,127 @@
 use core::{ops::Add, time::Duration};
 
+use cordic::CordicNumber;
+use fixed::{
+    traits::{Fixed, FixedSigned},
+    types::{I16F16, I20F12, I26F6, I2F30, I32F32, I4F28},
+};
 use tudelft_quadrupel::{
-    mpu::structs::{Accel, Gyro},
+    barometer::read_pressure,
+    block,
+    fixed::types::{I32F0, I64F0},
+    mpu::{
+        read_dmp_bytes, read_raw,
+        structs::{Accel, Gyro},
+    },
     time::Instant,
 };
 
-use crate::util::yaw_pitch_roll::YawPitchRoll;
+use crate::util::{axis::Axis, yaw_pitch_roll::YawPitchRoll};
 
-#[derive(Copy, Clone, Debug, PartialEq, Default)]
-pub struct Axis<T> {
-    pub x: T,
-    pub y: T,
-    pub z: T,
-}
-
-impl Add<Accel> for Axis<i32> {
-    type Output = Axis<i32>;
-
-    fn add(self, input: Accel) -> Self::Output {
-        Axis::<i32> {
-            x: self.x + input.x as i32,
-            y: self.y + input.y as i32,
-            z: self.z + input.z as i32,
-        }
-    }
-}
-
-impl Add<Gyro> for Axis<i32> {
-    type Output = Axis<i32>;
-
-    fn add(self, input: Gyro) -> Self::Output {
-        Axis::<i32> {
-            x: self.x + input.x as i32,
-            y: self.y + input.y as i32,
-            z: self.z + input.z as i32,
-        }
-    }
-}
+// since the accelerometer uses +-2G(16'384 LSB/g),
+// this number needs to be subtracted from the calibrated
+// Z axis
+// https://www.alldatasheet.com/datasheet-pdf/download/1132807/TDK/MPU-6050.html
+pub const LSB_FOR_ACCEL: i32 = 16384;
 
 const CALIBRATION_TIME: Duration = Duration::from_secs(5);
 
-pub struct CalibrationState {
-    accelerometer_sum: Axis<i32>,
-    gyro_sum: Axis<i32>,
-    ypr_sum: YawPitchRoll,
-    sample_cnt: i32,
+const SAMPLE_COOL_DOWN: Duration = Duration::from_millis(2);
+
+#[derive(Copy, Clone, Debug)]
+pub struct CalibrationState<T, Y>
+where
+    T: FixedSigned + CordicNumber,
+    Y: FixedSigned,
+{
+    accelerometer_sum: Axis<I32F0>,
+    gyro_sum: Axis<I32F0>,
+
+    sample_cnt: I16F16,
+
     pub start_time: Instant,
-    pub accelerometer_offset: Accel,
-    // pub gyro_offset: Gyro,
-    pub ypr_offset: YawPitchRoll,
+
+    pub accelerometer_offset: Axis<I16F16>,
+    pub gyro_offset: Axis<I16F16>,
+
+    ypr_sum: Axis<I16F16>,
+    pub ypr_offset: YawPitchRoll<T, Y>,
+
+    last_read: Instant,
 }
 
-impl CalibrationState {
+impl<T, Y> CalibrationState<T, Y>
+where
+    T: FixedSigned + CordicNumber,
+    Y: FixedSigned,
+{
     pub fn new() -> Self {
         Self {
-            accelerometer_sum: Axis::<i32>::default(),
-            gyro_sum: Axis::<i32>::default(),
-            ypr_sum: YawPitchRoll::new(),
-            sample_cnt: 0,
+            accelerometer_sum: Axis::<I32F0>::default(),
+            gyro_sum: Axis::<I32F0>::default(),
+
+            ypr_sum: Axis::<I16F16>::default(),
+            sample_cnt: I16F16::from_num(0),
+
             start_time: Instant::now(),
-            accelerometer_offset: Accel { x: 0, y: 0, z: 0 },
-            // gyro_offset: Gyro { x: 0, y: 0, z: 0 },
-            ypr_offset: YawPitchRoll {
-                yaw: 0.0,
-                pitch: 0.0,
-                roll: 0.0,
-                lift: 0.0,
-                pressure: 0.0,
-            },
+
+            accelerometer_offset: Axis::<I16F16>::default(),
+            gyro_offset: Axis::<I16F16>::default(),
+
+            ypr_offset: YawPitchRoll::<T, Y>::new(),
+            last_read: Instant::now(),
         }
     }
     pub fn reset(&mut self) {
         *self = CalibrationState::new();
     }
 
-    pub fn read_new_sample(
-        &mut self,
-        accel_sample: Accel,
-        gyro_sample: Gyro,
-        ypr_sample: YawPitchRoll,
-    ) {
-        self.accelerometer_sum = self.accelerometer_sum + accel_sample;
-        self.gyro_sum = self.gyro_sum + gyro_sample;
-        self.ypr_sum = self.ypr_sum + ypr_sample;
-        self.sample_cnt += 1;
+    pub fn read_new_sample(&mut self) {
+        let cur_time = Instant::now();
+        if (cur_time.duration_since(self.last_read) < SAMPLE_COOL_DOWN) {
+            return;
+        }
+        self.last_read = cur_time;
+
+        let ypr_sample = YawPitchRoll::<T, Y>::from(block!(read_dmp_bytes()).unwrap());
+
+        let raw_read = read_raw().unwrap();
+
+        self.accelerometer_sum = self.accelerometer_sum + raw_read.0;
+        self.gyro_sum = self.gyro_sum + raw_read.1;
+
+        // self.ypr_sum = self.ypr_sum + ypr_sample;
+        self.ypr_sum = Axis::<I16F16> {
+            x: self.ypr_sum.x + I16F16::from_num(ypr_sample.yaw),
+            y: self.ypr_sum.y + I16F16::from_num(ypr_sample.pitch),
+            z: self.ypr_sum.z + I16F16::from_num(ypr_sample.roll),
+        };
+
+        self.sample_cnt += I16F16::from_num(1);
     }
 
     pub fn finalize_calibration(&mut self) {
-        self.accelerometer_offset = Accel {
-            x: (self.accelerometer_sum.x / self.sample_cnt) as i16,
-            y: (self.accelerometer_sum.y / self.sample_cnt) as i16,
-            z: (self.accelerometer_sum.z / self.sample_cnt) as i16,
+        self.accelerometer_offset = Axis {
+            x: I16F16::from_num(self.accelerometer_sum.x / I32F0::from_num(self.sample_cnt)),
+            y: I16F16::from_num(self.accelerometer_sum.y / I32F0::from_num(self.sample_cnt)),
+            z: I16F16::from_num(self.accelerometer_sum.z / I32F0::from_num(self.sample_cnt)),
+        };
+        self.accelerometer_offset.z -= I16F16::from_num(LSB_FOR_ACCEL);
+
+        self.gyro_offset = Axis {
+            x: I16F16::from_num(self.gyro_sum.x / I32F0::from_num(self.sample_cnt)),
+            y: I16F16::from_num(self.gyro_sum.y / I32F0::from_num(self.sample_cnt)),
+            z: I16F16::from_num(self.gyro_sum.z / I32F0::from_num(self.sample_cnt)),
         };
 
-        self.ypr_offset = YawPitchRoll {
-            lift: 0.0,
-            yaw: self.ypr_sum.yaw / self.sample_cnt as f32,
-            pitch: self.ypr_sum.pitch / self.sample_cnt as f32,
-            roll: self.ypr_sum.roll / self.sample_cnt as f32,
-            pressure: 0.0,
+        self.ypr_offset = YawPitchRoll::<T, Y> {
+            lift: T::from_num(0),
+
+            yaw: T::from_num(self.ypr_sum.x / self.sample_cnt),
+            pitch: T::from_num(self.ypr_sum.y / self.sample_cnt),
+            roll: T::from_num(self.ypr_sum.z / self.sample_cnt),
+
+            pressure: Y::from_num(0),
         };
     }
     pub fn should_finish(&mut self) -> bool {

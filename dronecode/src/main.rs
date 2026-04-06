@@ -15,8 +15,8 @@ use core::ptr::addr_of_mut;
 use tudelft_quadrupel::flash::flash_chip_erase;
 
 use tudelft_quadrupel::initialize::initialize;
-use tudelft_quadrupel::led::Led::{Green, Red, Yellow};
-use tudelft_quadrupel::motor::set_motors;
+use tudelft_quadrupel::led::Led::{Blue, Green, Red, Yellow};
+use tudelft_quadrupel::motor::{set_motor_max, set_motors};
 use tudelft_quadrupel::time::assembly_delay;
 use tudelft_quadrupel::uart::send_bytes;
 use tudelft_quadrupel::{entry, uart};
@@ -34,7 +34,7 @@ pub mod util;
 
 /// The heap size of your drone code in bytes.
 /// Note: there are 8192 bytes of RAM available.
-const HEAP_SIZE: usize = 4096;
+const HEAP_SIZE: usize = 2048;
 
 #[entry]
 fn main() -> ! {
@@ -55,6 +55,7 @@ fn main() -> ! {
         }
     }
 
+    set_motor_max(800);
     // send_and_receive();
     // Ereasing Flash memory on boot
     Yellow.on();

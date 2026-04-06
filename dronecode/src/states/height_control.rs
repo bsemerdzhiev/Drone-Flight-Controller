@@ -1,6 +1,9 @@
 use alloc::boxed::Box;
+use fixed::types::{I16F16, I26F6, I4F28};
 use my_hdlc::command::{DebugYawPitchRoll, DeviceCommand, FSMState};
-use tudelft_quadrupel::{barometer::read_pressure, once_cell, time::Instant, uart::send_bytes};
+use tudelft_quadrupel::{
+    barometer::read_pressure, mpu::read_raw, once_cell, time::Instant, uart::send_bytes,
+};
 
 use crate::{
     filters::sensors_handler::ImuHandler,
@@ -9,68 +12,39 @@ use crate::{
         state_structures::state_context::StateContext,
     },
     util::{
-        pid_controller::{ControllerFlags, PIDController},
-        rpm_calculator::actuate_motors_with_rates,
+        pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P},
+        rpm_calculator::{actuate_motors_with_rates, ThresholdLift},
         yaw_pitch_roll::YawPitchRoll,
     },
 };
 
-const K_P: [f32; 4] = [20f32, 1000f32, 1000f32, 0f32];
-const K_I: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-const K_D: [f32; 4] = [0f32, 0f32, 0f32, 0f32];
-
 pub struct FSMHeightControl {
-    pub imu_sampler: Box<dyn ImuHandler>,
-    pub pid_controller: Box<PIDController>,
+    pub pid_controller: Box<PIDController<I16F16, I16F16>>,
     pub prev_state: Box<dyn FSMControl>,
 
-    pub initial_pressure: f32,
+    pub initial_lift: I16F16,
+    pub initial_pressure: I16F16,
 }
 
 impl FSMControl for FSMHeightControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
-        //TODO: Implement going back to the state from which we came
-
         // read sensor data
-        let input_opt: Option<YawPitchRoll> = self.imu_sampler.get_reading();
+        let mut input: YawPitchRoll<I16F16, I16F16> =
+            ctx.kalman_position.get_reading::<I16F16, I16F16>();
 
-        if (input_opt.is_none() || ctx.input_from_controller.is_none()) {
-            return self;
+        // if lift is changed, return to previous state
+        if (ctx.input_as_ypr.lift != self.initial_lift) {
+            return self.prev_state;
         }
 
-        let input = input_opt.unwrap();
+        input.pressure = ctx.pressure_sensor_filter.get_reading();
 
-        let mut k_p: [f32; 4] = K_P;
-        let mut k_i: [f32; 4] = K_I;
-        let mut k_d: [f32; 4] = K_D;
+        let (k_p, k_i, k_d) = add_trims(&ctx.input_from_controller);
 
-        k_p[0] += ctx.input_from_controller.as_ref().unwrap().yaw_p_trim;
-        k_p[1] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_p_trim;
-        k_p[2] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_p_trim;
-
-        k_d[1] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_p_trim;
-        k_d[2] += ctx
-            .input_from_controller
-            .as_ref()
-            .unwrap()
-            .roll_pitch_p_trim;
-
-        // the target
-        let mut target: YawPitchRoll =
-            YawPitchRoll::from_manual_input(ctx.input_from_controller.as_ref().unwrap());
+        let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
         target.pressure = self.initial_pressure;
+
+        target.lift = I16F16::from_num(0);
 
         // calculate the error correction
         let correction = self.pid_controller.compute_pid_correction(
@@ -79,41 +53,17 @@ impl FSMControl for FSMHeightControl {
             k_p,
             k_i,
             k_d,
-            ControllerFlags::AddP as u8,
+            ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8 | ControllerFlags::AddI as u8,
         );
 
-        let to_write =
-            ctx.trv
-                .write_structure(&DeviceCommand::DebugYawPitchRoll(DebugYawPitchRoll {
-                    info: [
-                        correction.lift,
-                        correction.yaw,
-                        correction.pitch,
-                        correction.roll,
-                        correction.pressure,
-                    ],
-                }));
-
-        send_bytes(&to_write.0[0..to_write.1]);
-
-        // add to current input
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_yaw(correction.yaw as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_pitch(correction.pitch as i32);
-        ctx.input_from_controller
-            .as_mut()
-            .unwrap()
-            .increment_roll(correction.roll as i32);
+        target.lift += correction.lift;
+        target.yaw -= correction.yaw;
+        target.roll += correction.roll;
+        target.pitch += correction.pitch;
 
         // output to motors
-        actuate_motors_with_rates(&ctx.input_from_controller.as_ref().unwrap(), ctx.trv);
-
-        *ctx.input_from_controller = None;
+        // raw_lift is set to threshold lift, as we want to hover at the same position
+        actuate_motors_with_rates(&target, ThresholdLift);
 
         return self;
     }
@@ -121,7 +71,6 @@ impl FSMControl for FSMHeightControl {
     fn step(self: Box<Self>, next_state: FSMState, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         match next_state {
             FSMState::PanicMode => Box::new(FSMPanic {}),
-            FSMState::SafeMode => Box::new(FSMSafe {}),
             _ => self,
         }
     }
