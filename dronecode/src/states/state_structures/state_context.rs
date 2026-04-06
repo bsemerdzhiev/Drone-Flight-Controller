@@ -26,7 +26,7 @@ pub struct StateContext<'a> {
 
     pub trim_input: &'a mut ManualDroneTrims,
 
-    pub calibration_state: &'a mut CalibrationState<I8F24, I8F24>,
+    pub calibration_state: &'a mut CalibrationState<I16F16, I16F16>,
     pub input_as_ypr: &'a mut YawPitchRoll<I16F16, I16F16>,
 
     pub flash_head: usize,

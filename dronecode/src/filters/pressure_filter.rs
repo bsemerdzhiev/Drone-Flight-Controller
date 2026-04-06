@@ -77,8 +77,8 @@ impl PressureSensor {
         }
     }
 
-    pub fn reset(&mut self) {
-        self.baseline_pressure = I32F0::from_num(read_pressure());
+    pub fn reset(&mut self, pressure_average: I26F6) {
+        self.baseline_pressure = I32F0::from_num(pressure_average);
         self.current_state =
             Matrix2x1::new(MeasurementType::from_num(0), MeasurementType::from_num(0));
         self.uncertainty_matrix = Matrix2::new(

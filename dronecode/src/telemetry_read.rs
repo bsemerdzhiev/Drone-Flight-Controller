@@ -111,14 +111,14 @@ impl TelemetryRead for TelemetryData {
 
         let kalman_pos = ctx.kalman_position.get_reading::<I16F16, I16F16>();
 
-        let mut ypr: YawPitchRoll<I8F24, I8F24> = if quaternion.is_ok() {
-            YawPitchRoll::<I8F24, I8F24>::from(quaternion.unwrap())
+        let mut ypr: YawPitchRoll<I16F16, I16F16> = if quaternion.is_ok() {
+            YawPitchRoll::<I16F16, I16F16>::from(quaternion.unwrap())
         } else {
             YawPitchRoll::new()
         };
-        ypr.pitch -= ctx.calibration_state.ypr_offset.pitch;
-        ypr.roll -= ctx.calibration_state.ypr_offset.roll;
-        ypr.yaw -= ctx.calibration_state.ypr_offset.yaw;
+        ypr.pitch -= I16F16::from_num(ctx.calibration_state.ypr_offset.pitch);
+        ypr.roll -= I16F16::from_num(ctx.calibration_state.ypr_offset.roll);
+        ypr.yaw -= I16F16::from_num(ctx.calibration_state.ypr_offset.yaw);
 
         // ypr.yaw -=
         // (ctx.calibration_state.gyro_offset.z as f32) * micromath::F32Ext::acos(-1.0) / 180.0;

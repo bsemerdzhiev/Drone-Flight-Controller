@@ -83,8 +83,8 @@ pub fn main_loop() -> ! {
     let mut manual_trim: ManualDroneTrims = ManualDroneTrims::default();
     let mut input_as_ypr: YawPitchRoll<I16F16, I16F16> = YawPitchRoll::<I16F16, I16F16>::new();
 
-    let mut calibration_state: CalibrationState<I8F24, I8F24> =
-        CalibrationState::<I8F24, I8F24>::new();
+    let mut calibration_state: CalibrationState<I16F16, I16F16> =
+        CalibrationState::<I16F16, I16F16>::new();
 
     let mut pressure_sensor_filter = PressureSensor::new();
     let mut position_kalman = KalmanFilter::new((

@@ -38,7 +38,8 @@ impl FSMControl for FSMCalibration {
             ctx.dmp_filter.calibration_offset_raw_read = ctx.calibration_state.gyro_offset;
             ctx.dmp_filter.calibration_offset = ctx.calibration_state.ypr_offset;
 
-            ctx.pressure_sensor_filter.reset();
+            ctx.pressure_sensor_filter
+                .reset(ctx.calibration_state.pressure_average);
 
             return Box::new(FSMSafe {});
         }

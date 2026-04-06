@@ -17,7 +17,7 @@ use tudelft_quadrupel::{
     time::Instant,
 };
 
-const RAD_TO_DEGREE: I8F24 = I8F24::lit("57.2957795");
+const RAD_TO_DEGREE: I16F16 = I16F16::lit("57.2957795");
 const LSB_FOR_GYRO: I16F16 = I16F16::lit("16.4");
 
 /*
@@ -30,12 +30,12 @@ const LSB_FOR_GYRO: I16F16 = I16F16::lit("16.4");
 * it was taken to compute the rate of change per a second.
 */
 pub struct DmpReadings {
-    pub calibration_offset: YawPitchRoll<I8F24, I8F24>,
+    pub calibration_offset: YawPitchRoll<I16F16, I16F16>,
     pub calibration_offset_raw_read: Axis<I16F16>,
 }
 
 impl DmpReadings {
-    pub fn new(offset: YawPitchRoll<I8F24, I8F24>, offset_raw: Axis<I16F16>) -> Self {
+    pub fn new(offset: YawPitchRoll<I16F16, I16F16>, offset_raw: Axis<I16F16>) -> Self {
         DmpReadings {
             calibration_offset: offset,
             calibration_offset_raw_read: offset_raw,
@@ -63,7 +63,7 @@ impl ImuHandler for DmpReadings {
         let sampled_quaternion = sampled_dmp_res.unwrap();
 
         let mut sampled_yaw_pitch_roll =
-            YawPitchRoll::<I8F24, I8F24>::from(sampled_quaternion) * RAD_TO_DEGREE;
+            YawPitchRoll::<I16F16, I16F16>::from(sampled_quaternion) * RAD_TO_DEGREE;
 
         sampled_yaw_pitch_roll = sampled_yaw_pitch_roll - self.calibration_offset;
 
