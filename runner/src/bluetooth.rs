@@ -3,6 +3,9 @@ use std::sync::Arc;
 use std::thread;
 use std::time::Duration;
 
+use std::io::Write;
+use std::os::unix::net::UnixStream;
+
 use btleplug::api::bleuuid::uuid_from_u32;
 use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter, WriteType};
 use btleplug::platform::{Adapter, Manager, Peripheral};
@@ -73,6 +76,27 @@ pub async fn ble_connect(ctx: &Arc<RunnerContext>) -> Result<(), Box<dyn Error>>
 
             ctx_clone.with_wireless_package(|s| *s = vec![]);
             tokio::time::sleep(Duration::from_millis(50)).await;
+        }
+    });
+
+    // sends data to the ui
+    let ctx_clone = Arc::clone(ctx);
+    tokio::spawn(async move {
+        loop {
+            if let Ok(rssi) = drone_clone.read_rssi().await {
+                let json = serde_json::to_string(&serde_json::json!({
+                    "BLEInfo": {
+                        "rssi" : rssi
+                    }
+                }))
+                .unwrap();
+
+                let mut python_stream = ctx_clone.python_stream_mut.lock().unwrap();
+
+                let _ = python_stream.write_all(json.as_bytes());
+                let _ = python_stream.write_all(b"\n");
+            }
+            tokio::time::sleep(Duration::from_millis(500)).await;
         }
     });
 

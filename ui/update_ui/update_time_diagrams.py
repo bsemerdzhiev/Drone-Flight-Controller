@@ -1,6 +1,8 @@
 import numpy as np
 import dearpygui.dearpygui as dpg
 
+import util.data as stored_data
+
 
 def fit_with_margin(y_axis_tag: str, data: list, margin: float = 0.2):
     if not data:
@@ -15,6 +17,9 @@ def fit_with_margin(y_axis_tag: str, data: list, margin: float = 0.2):
 
 
 def update_loop_timing(read_data, label_suffix):
+    if stored_data.pause_logs:
+        return
+
     t = list(read_data.time_data)
     loop_times = list(read_data.general_data["time_for_main_loop"])
 

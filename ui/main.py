@@ -2,11 +2,11 @@ import threading
 import sys
 import dearpygui.dearpygui as dpg
 from pyqtgraph.Qt import QtWidgets, QtCore
-from read_data import serial_reader
-from visualize import make_drone_view, update_drone_view
-from update_gui import update_step
-from set_up import set_up_gui
-import data as stored_data
+from read_data.read_data import serial_reader
+from drone_visualization.visualize import make_drone_view, update_drone_view
+from update_ui.update_gui import update_step
+from set_up_ui.set_up import set_up_gui
+import util.data as stored_data
 
 
 def run_dpg():

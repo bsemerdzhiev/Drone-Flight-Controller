@@ -71,6 +71,8 @@ impl TelemetryRead for TelemetryData {
             dt: ctx.dt.as_millis() as u32,
             time_for_main_loop: ctx.time_for_main_loop,
 
+            com_mode: ctx.is_wireless,
+
             bat: bat,
             cur_state: ctx.curent_state,
             is_wireless: ctx.is_wireless,

@@ -52,6 +52,9 @@ fn map_rpm_square_to_pwm(lift_raw_value: I16F16, rpms_square: &mut [OmegaType]) 
     motor::set_motors(pwm_to_set);
 }
 
+const THR_DIV: OmegaType = OmegaType::lit("1250");
+const DRG_DIV: OmegaType = OmegaType::lit("17857.286");
+
 pub fn actuate_motors_with_direct_joystick_input(
     input_from_controller: &YawPitchRoll<I16F16, I16F16>,
     raw_lift: I16F16,
@@ -74,8 +77,6 @@ pub fn actuate_motors_with_direct_joystick_input(
 
 // const THRUST_COEFFICIENT: OmegaType = OmegaType::lit("0.00000014");
 // const DRAG_COEFFICIENT: OmegaType = OmegaType::lit("0.000002");
-const THR_DIV: OmegaType = OmegaType::lit("1250");
-const DRG_DIV: OmegaType = OmegaType::lit("17857.286");
 
 pub fn actuate_motors_with_rates(input: &YawPitchRoll<I16F16, I16F16>, raw_lift: I16F16) {
     let n = OmegaType::from_num(input.yaw) * THR_DIV;

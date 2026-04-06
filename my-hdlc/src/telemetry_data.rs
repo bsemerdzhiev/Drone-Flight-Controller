@@ -13,6 +13,8 @@ pub struct GeneralData {
     pub dt: u32,
     pub time_for_main_loop: i32,
 
+    pub com_mode: bool,
+
     pub bat: u16,
     pub cur_state: FSMState,
 }

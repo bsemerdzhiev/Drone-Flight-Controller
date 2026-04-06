@@ -1,7 +1,6 @@
-from time import sleep
 import numpy as np
 import pyqtgraph.opengl as gl
-from pyqtgraph.Qt import QtWidgets, QtCore
+from pyqtgraph.Qt import QtWidgets
 from scipy.spatial.transform import Rotation
 
 
@@ -112,10 +111,6 @@ def update_drone_view(
 
     arms.setData(pos=np.array([rotated[0], rotated[2]]))
     arms2.setData(pos=np.array([rotated[1], rotated[3]]))
-
-    # tmp_val = motor_values[1]
-    # motor_values[1] = motor_values[2]
-    # motor_values[2] = tmp_val
 
     for i, dot in enumerate(prop_dots):
         dot.setData(pos=rotated[i].reshape(1, 3), color=rpm_to_color(motor_values[i]))

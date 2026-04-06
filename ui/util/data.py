@@ -45,7 +45,6 @@ class ReadData:
         }
         self.pres_data = _init_deque(size)
         self.pres_data_filtered = _init_deque(size)
-        self.is_paused = False
         self.battery_level = _init_deque(size)
 
         self.general_data = {
@@ -72,6 +71,17 @@ joystick = {
     "roll_pitch_d_trim": _init_deque(),
 }
 
+bluetooth = {
+    "rssi": 0.0,
+    "com_mode": False,
+}
+
+start_time = None
+
+pause_logs = False
+
+received_packages = _init_deque()
+
 baro_var_calc = np.array([0.0])
 accel_var_calc = np.array([0.0])
 
@@ -85,6 +95,5 @@ fsm_state = "SafeMode"
 telemetry_data_size = 0
 
 # Message log: keep only the most recent entries visible in the GUI
-pause_logs = False
 message_log = deque(maxlen=MAX_LOG_QUEUE_SIZE)
 message_log_lock = threading.Lock()

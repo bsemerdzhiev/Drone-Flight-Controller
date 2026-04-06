@@ -155,8 +155,8 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
                 KeyCode::Char('z') => keyboard_trim.increment_lift(-0.1), //throttle down
                 //
                 // // Roll trim
-                KeyCode::Right => keyboard_trim.increment_roll(-0.1), //roll down  right arrow key
-                KeyCode::Left => keyboard_trim.increment_roll(0.1),   //roll up     left arrow key
+                KeyCode::Right => keyboard_trim.increment_roll(0.1), //roll down  right arrow key
+                KeyCode::Left => keyboard_trim.increment_roll(-0.1), //roll up     left arrow key
                 //
                 // // Pitch trim
                 KeyCode::Up => keyboard_trim.increment_pitch(0.1), // pitch up  down arrow key

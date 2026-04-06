@@ -13,8 +13,8 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
-const C1: I16F16 = I16F16::lit("5");
-const C2: I16F16 = I16F16::lit("1e-4");
+const C1: I16F16 = I16F16::lit("2.5");
+const C2: I16F16 = I16F16::lit("1e-5");
 
 const ACCEL_SAMPLE_RATE: Duration = Duration::from_millis(1);
 
@@ -91,7 +91,7 @@ impl KalmanFilter {
 }
 
 const ALPHA: I16F16 = I16F16::lit("0.1");
-const ONE_MIS_ALPHA: I16F16 = I16F16::lit("0.9");
+const ONE_MINUS_ALPHA: I16F16 = I16F16::lit("0.9");
 
 impl ImuHandler for KalmanFilter {
     fn append_new_reading(&mut self) {
@@ -111,9 +111,9 @@ impl ImuHandler for KalmanFilter {
         parsed_raw_read.0.y = (parsed_raw_read.0.y - self.calibration_offset.0.y) / LSB_ACCEL_TO_GS;
         parsed_raw_read.0.z = (parsed_raw_read.0.z - self.calibration_offset.0.z) / LSB_ACCEL_TO_GS;
 
-        self.reading.0.x = (ALPHA * parsed_raw_read.0.x - ONE_MIS_ALPHA * self.reading.0.x);
-        self.reading.0.y = (ALPHA * parsed_raw_read.0.y - ONE_MIS_ALPHA * self.reading.0.y);
-        self.reading.0.z = (ALPHA * parsed_raw_read.0.z - ONE_MIS_ALPHA * self.reading.0.z);
+        self.reading.0.x = (ALPHA * parsed_raw_read.0.x + ONE_MINUS_ALPHA * self.reading.0.x);
+        self.reading.0.y = (ALPHA * parsed_raw_read.0.y + ONE_MINUS_ALPHA * self.reading.0.y);
+        self.reading.0.z = (ALPHA * parsed_raw_read.0.z + ONE_MINUS_ALPHA * self.reading.0.z);
 
         self.reading.1.x = parsed_raw_read.1.x - self.calibration_offset.1.x;
         self.reading.1.y = parsed_raw_read.1.y - self.calibration_offset.1.y;

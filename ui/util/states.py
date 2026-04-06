@@ -18,4 +18,11 @@ FSM_COLORS = {
     "RawMode": [200, 200, 200],
 }
 
+COM_MODES = {
+    False: [100, 100, 255],
+    True: [255, 60, 60],
+}
+
+COM_MODES_NAMES = {False: "UART", True: "BlueTooth"}
+
 SENSOR_NAMES = {"DMP": [220, 180, 50], "Kalman(Simplified)": [100, 100, 255]}
