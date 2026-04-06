@@ -164,27 +164,6 @@ where
             pressure: Y::from_num(0),
         }
     }
-    pub fn calculate_rate_per_sec<W_T, W_Y>(
-        &self,
-        prev_sample: YawPitchRoll<T, Y>,
-        duration_in_sec: T,
-        rad_to_degree: W_T,
-    ) -> YawPitchRoll<W_T, W_Y>
-    where
-        T: FixedSigned,
-        Y: FixedSigned,
-        W_T: FixedSigned,
-        W_Y: FixedSigned,
-    {
-        YawPitchRoll::<W_T, W_Y> {
-            lift: W_T::from_num(0),
-            yaw: (rad_to_degree * W_T::from_num((self.yaw - prev_sample.yaw) / duration_in_sec)),
-            pitch: (rad_to_degree * W_T::from_num(self.pitch)),
-            roll: (rad_to_degree * W_T::from_num(self.roll)),
-            pressure: W_Y::from_num(0),
-        }
-    }
-
     pub fn mul_pid_values<Z>(&self, scalar: [Z; 4]) -> Self
     where
         Z: FixedSigned,

@@ -29,10 +29,14 @@ impl FSMControl for FSMCalibration {
 
         if ctx.calibration_state.should_finish() {
             ctx.calibration_state.finalize_calibration();
+
             ctx.kalman_position.calibration_offset = (
                 ctx.calibration_state.accelerometer_offset,
                 ctx.calibration_state.gyro_offset,
             );
+
+            ctx.dmp_filter.calibration_offset_raw_read = ctx.calibration_state.gyro_offset;
+            ctx.dmp_filter.calibration_offset = ctx.calibration_state.ypr_offset;
 
             ctx.pressure_sensor_filter.reset();
 

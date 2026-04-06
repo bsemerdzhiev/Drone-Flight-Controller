@@ -42,9 +42,9 @@ impl FSMControl for FSMFullControl {
         );
 
         // add to current input
-        target.yaw -= correction.yaw;
-        target.roll += correction.roll;
-        target.pitch += correction.pitch;
+        target.yaw = correction.yaw;
+        target.roll = correction.roll;
+        target.pitch = correction.pitch;
 
         // output to motors
         actuate_motors_with_rates(&target, ctx.input_as_ypr.lift);

@@ -59,10 +59,10 @@ impl FSMControl for FSMHeightControl {
             ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8 | ControllerFlags::AddI as u8,
         );
 
-        target.lift += correction.lift;
-        target.yaw -= correction.yaw;
-        target.roll += correction.roll;
-        target.pitch += correction.pitch;
+        target.lift = correction.lift;
+        target.yaw = correction.yaw;
+        target.roll = correction.roll;
+        target.pitch = correction.pitch;
 
         // output to motors
         // raw_lift is set to threshold lift, as we want to hover at the same position

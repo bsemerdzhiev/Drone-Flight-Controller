@@ -40,7 +40,10 @@ impl FSMControl for FSMYaw {
             ControllerFlags::AddP as u8,
         );
 
-        target.yaw -= correction.yaw;
+        target.yaw = correction.yaw;
+        target.roll = I16F16::from_num(0);
+        target.pitch = I16F16::from_num(0);
+
         actuate_motors_with_rates(&target, ctx.input_as_ypr.lift);
 
         return self;

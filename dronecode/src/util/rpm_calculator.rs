@@ -52,8 +52,8 @@ fn map_rpm_square_to_pwm(lift_raw_value: I16F16, rpms_square: &mut [OmegaType]) 
     motor::set_motors(pwm_to_set);
 }
 
-const THR_DIV: OmegaType = OmegaType::lit("1250");
-const DRG_DIV: OmegaType = OmegaType::lit("17857.286");
+const THR_DIV: OmegaType = OmegaType::lit("3750");
+const DRG_DIV: OmegaType = OmegaType::lit("40000.286");
 
 pub fn actuate_motors_with_direct_joystick_input(
     input_from_controller: &YawPitchRoll<I16F16, I16F16>,

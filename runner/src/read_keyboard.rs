@@ -159,15 +159,15 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
                 KeyCode::Left => keyboard_trim.increment_roll(-0.1), //roll up     left arrow key
                 //
                 // // Pitch trim
-                KeyCode::Up => keyboard_trim.increment_pitch(0.1), // pitch up  down arrow key
-                KeyCode::Down => keyboard_trim.increment_pitch(-0.1), // pitch down up arrow key
+                KeyCode::Up => keyboard_trim.increment_pitch(-0.1), // pitch up  down arrow key
+                KeyCode::Down => keyboard_trim.increment_pitch(0.1), // pitch down up arrow key
                 //
                 // // Yaw trim
                 KeyCode::Char('q') => keyboard_trim.increment_yaw(-0.1), //yaw down
                 KeyCode::Char('w') => keyboard_trim.increment_yaw(0.1),  //yaw up
                 //
-                KeyCode::Char('u') => keyboard_trim.increment_yaw_p_trim(0.01f32), //yaw up
-                KeyCode::Char('j') => keyboard_trim.increment_yaw_p_trim(-0.01f32), //yaw up
+                KeyCode::Char('u') => keyboard_trim.increment_yaw_p_trim(0.005f32), //yaw up
+                KeyCode::Char('j') => keyboard_trim.increment_yaw_p_trim(-0.005f32), //yaw up
                 KeyCode::Char('i') => keyboard_trim.increment_roll_pitch_p_trim(0.005f32), //yaw up
                 KeyCode::Char('k') => keyboard_trim.increment_roll_pitch_p_trim(-0.005f32), //yaw up
                 KeyCode::Char('o') => keyboard_trim.increment_roll_pitch_d_trim(0.0001f32), //yaw up

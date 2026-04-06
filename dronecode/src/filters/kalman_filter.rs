@@ -19,6 +19,8 @@ const C2: I16F16 = I16F16::lit("1e-5");
 const ACCEL_SAMPLE_RATE: Duration = Duration::from_millis(1);
 
 const LSB_ACCEL_TO_GS: I16F16 = I16F16::lit("16384");
+const LSB_FOR_GYRO: I16F16 = I16F16::lit("16.4");
+
 const RAD_TO_DEGREE: I16F16 = I16F16::lit("57.2957");
 const DEGREE_TO_RAD: I16F16 = I16F16::lit("0.0174");
 
@@ -86,7 +88,7 @@ impl KalmanFilter {
         // self.yaw += self.reading.1.z * dt;
 
         // get the rate instead
-        self.yaw = self.reading.1.z * dt;
+        self.yaw = self.reading.1.z;
     }
 }
 
@@ -115,9 +117,9 @@ impl ImuHandler for KalmanFilter {
         self.reading.0.y = (ALPHA * parsed_raw_read.0.y + ONE_MINUS_ALPHA * self.reading.0.y);
         self.reading.0.z = (ALPHA * parsed_raw_read.0.z + ONE_MINUS_ALPHA * self.reading.0.z);
 
-        self.reading.1.x = parsed_raw_read.1.x - self.calibration_offset.1.x;
-        self.reading.1.y = parsed_raw_read.1.y - self.calibration_offset.1.y;
-        self.reading.1.z = parsed_raw_read.1.z - self.calibration_offset.1.z;
+        self.reading.1.x = (parsed_raw_read.1.x - self.calibration_offset.1.x) / LSB_FOR_GYRO;
+        self.reading.1.y = (parsed_raw_read.1.y - self.calibration_offset.1.y) / LSB_FOR_GYRO;
+        self.reading.1.z = (parsed_raw_read.1.z - self.calibration_offset.1.z) / LSB_FOR_GYRO;
 
         let dt: I16F16 =
             (I16F16::from_num(cur_time.duration_since(self.last_read_time).as_micros() as u32)

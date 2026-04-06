@@ -91,7 +91,10 @@ pub fn main_loop() -> ! {
         calibration_state.accelerometer_offset,
         calibration_state.gyro_offset,
     ));
-    let mut dmp_sampler = DmpReadings::new(calibration_state.ypr_offset);
+    let mut dmp_sampler = DmpReadings::new(
+        calibration_state.ypr_offset,
+        calibration_state.accelerometer_offset,
+    );
 
     let mut pid_info: Box<PIDInfo> = Box::new(PIDInfo {
         selected_height: 0f32,
