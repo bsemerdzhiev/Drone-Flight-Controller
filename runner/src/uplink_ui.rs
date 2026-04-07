@@ -85,6 +85,6 @@ pub fn rx_ui(ctx: &Arc<RunnerContext>) {
             // println!("{}\n", line);
         }
 
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_secs(2));
     }
 }

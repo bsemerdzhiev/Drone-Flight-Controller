@@ -93,7 +93,7 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
             let _ = python_stream.write_all(b"\n");
         }
 
-        sleep(Duration::from_millis(200));
+        sleep(Duration::from_millis(100));
     }
 }
 

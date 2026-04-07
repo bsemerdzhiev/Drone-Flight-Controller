@@ -1,8 +1,7 @@
 use crate::{
     states::state_structures::state_context::StateContext,
     util::{
-        rpm_calculator::{actuate_motors_with_direct_joystick_input, actuate_motors_with_rates},
-        yaw_pitch_roll::YawPitchRoll,
+        rpm_calculator::actuate_motors_with_direct_joystick_input, yaw_pitch_roll::YawPitchRoll,
     },
 };
 use alloc::boxed::Box;
@@ -19,7 +18,7 @@ pub struct FSMManual {}
 impl FSMControl for FSMManual {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
         // check if there is a new command from the controller to run
-        actuate_motors_with_rates(&ctx.input_as_ypr, ctx.input_as_ypr.lift);
+        actuate_motors_with_direct_joystick_input(&ctx.input_as_ypr, ctx.input_as_ypr.lift);
 
         self
     }

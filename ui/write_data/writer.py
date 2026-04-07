@@ -17,4 +17,4 @@ def send_data(sock_file):
         sock_file.flush()
         # pid_trims["yaw"]["p"], pid_trims["roll"]["d"], etc.
 
-        time.sleep(1)
+        time.sleep(3)

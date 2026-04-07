@@ -75,59 +75,63 @@ pub fn send_transition(state: my_hdlc::command::FSMState, ctx: &Arc<RunnerContex
 pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
     while event::poll(Duration::from_millis(5)).unwrap() {
         if let Event::Key(key) = event::read().unwrap() {
-            println!("Keyboard event: {:?}", key.code);
-            let mut joystick_is_zeroed = false;
+            let mut joystick_is_zeroed = ctx.with_joystick_input(|s| s.is_zeroed());
+            let mut keyboard_is_zeroed = ctx.with_keyboard_trim(|s| s.is_zeroed());
+
+            let mut combined_zeroed = joystick_is_zeroed & keyboard_is_zeroed;
 
             let mut keyboard_trim = ctx.keyboard_trim_mut.lock().unwrap();
-
-            ctx.with_joystick_input(|s| joystick_is_zeroed = s.is_zeroed());
 
             match key.code {
                 KeyCode::Char('0') => {
                     send_transition(my_hdlc::command::FSMState::SafeMode, ctx);
                 }
                 KeyCode::Char('2') => {
-                    if joystick_is_zeroed {
+                    if combined_zeroed {
                         send_transition(my_hdlc::command::FSMState::ManualMode, ctx);
                     } else {
-                        println!("Ignored ManualMode request because joystick input is not zeroed");
+                        println!(
+                            "Ignored ManualMode request because joystick input is not zeroed\r"
+                        );
                     }
                 }
                 KeyCode::Char('3') => {
                     send_transition(my_hdlc::command::FSMState::CalibrationMode, ctx);
                 }
                 KeyCode::Char('4') => {
-                    if joystick_is_zeroed {
+                    if combined_zeroed {
                         send_transition(my_hdlc::command::FSMState::YawControl, ctx);
                     } else {
-                        println!("Ignored YawControl request because joystick input is not zeroed");
+                        println!(
+                            "Ignored YawControl request because joystick input is not zeroed\r"
+                        );
                     }
                 }
                 KeyCode::Char('5') => {
-                    if joystick_is_zeroed {
+                    if combined_zeroed {
                         send_transition(my_hdlc::command::FSMState::FullControlMode, ctx);
                     } else {
                         println!(
-                            "Ignored FullControlMode request because joystick input is not zeroed"
+                            "Ignored FullControlMode request because joystick input is not zeroed\r"
                         );
                     }
                 }
                 KeyCode::Char('6') => {
-                    if joystick_is_zeroed {
+                    if combined_zeroed {
                         send_transition(my_hdlc::command::FSMState::RawSensorsFullControlMode, ctx);
                     } else {
-                        println!("Ignored RawSensorsFullControlMode request because joystick input is not zeroed");
+                        println!("Ignored RawSensorsFullControlMode request because joystick input is not zeroed\r");
                     }
                 }
                 KeyCode::Char('7') => {
                     send_transition(my_hdlc::command::FSMState::HeightControlMode, ctx);
                 }
                 KeyCode::Char('8') => {
-                    if joystick_is_zeroed {
+                    if combined_zeroed {
                         send_transition(my_hdlc::command::FSMState::WirelessMode, ctx);
                     } else {
                         println!(
-                            "Ignored WirelessMode request because joystick input is not zeroed"
+                            "Ignored WirelessMode request because joystick input is not zeroed\r"
                         );
                     }
                 }
@@ -159,14 +163,15 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
                 KeyCode::Char('q') => keyboard_trim.increment_yaw(-0.1), //yaw down
                 KeyCode::Char('w') => keyboard_trim.increment_yaw(0.1),  //yaw up
                 //
+                //NOTE:
+                //The values below are not used anymore
+                //since more full version is sent from the UI
                 KeyCode::Char('u') => keyboard_trim.increment_yaw_p_trim(0.005f32), //yaw up
                 KeyCode::Char('j') => keyboard_trim.increment_yaw_p_trim(-0.005f32), //yaw up
                 KeyCode::Char('i') => keyboard_trim.increment_roll_pitch_p_trim(0.005f32), //yaw up
                 KeyCode::Char('k') => keyboard_trim.increment_roll_pitch_p_trim(-0.005f32), //yaw up
                 KeyCode::Char('o') => keyboard_trim.increment_roll_pitch_d_trim(0.0001f32), //yaw up
                 KeyCode::Char('l') => keyboard_trim.increment_roll_pitch_d_trim(-0.0001f32), //yaw up
-                //TODO: missing the reset of the maps of page
-                // https://cese.ewi.tudelft.nl/embedded-systems-lab/resources/interface-requirements.html
                 _ => {}
             }
         }
