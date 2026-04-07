@@ -8,7 +8,7 @@ use crossterm::{
     terminal::disable_raw_mode,
 };
 use my_hdlc::{
-    command::{DeviceCommand, FSMState, WirelessOptions},
+    command::{DeviceCommand, FSMState},
     pc_command::ManualInput,
 };
 use tudelft_serial_upload::serial2::SerialPort;
