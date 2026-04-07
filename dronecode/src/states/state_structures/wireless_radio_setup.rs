@@ -1,3 +1,11 @@
+// ---------------------
+// UNUSED
+// ---------------------
+// Earlier version of wireless mode attempted using radio. Switched to using bluetooth.
+// Setup file kept for documentation purposes. 
+
+
+
 use nrf51_pac::{NVIC, Peripherals, RADIO};
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;

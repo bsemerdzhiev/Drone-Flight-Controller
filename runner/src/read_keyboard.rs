@@ -141,17 +141,7 @@ pub fn read_keyboard(
                 KeyCode::Char('8') => {
                     if joystick_info.is_zeroed() {
                         send_transition(
-                            my_hdlc::command::FSMState::WirelessMode(WirelessOptions::PCSide),
-                            rcv,
-                            cur_mode,
-                            serial,
-                        );
-                    }
-                }
-                KeyCode::Char('9') => {
-                    if joystick_info.is_zeroed() {
-                        send_transition(
-                            my_hdlc::command::FSMState::WirelessMode(WirelessOptions::DroneSide),
+                            my_hdlc::command::FSMState::WirelessMode,
                             rcv,
                             cur_mode,
                             serial,

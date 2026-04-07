@@ -1,4 +1,4 @@
-use my_hdlc::{command::WirelessOptions, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{pc_command::ManualInput, HdlcTransceiver};
 
 use crate::states::state_structures::calibration_state::CalibrationState;
 
@@ -8,6 +8,4 @@ pub struct StateContext<'a> {
     pub input_from_controller: &'a mut Option<ManualInput>,
     pub flash_head: &'a mut u32,
     pub flash_tail: &'a mut u32,
-    pub wireless_toggle: &'a mut bool,
-    pub wireless_option: &'a mut WirelessOptions,
 }

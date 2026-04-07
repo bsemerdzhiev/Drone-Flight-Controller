@@ -4,7 +4,6 @@ use crate::telemetry_read::TelemetryRead;
 use alloc::boxed::Box;
 use alloc::format;
 use my_hdlc::telemetry_data::*;
-use nrf51_pac::RADIO;
 use tudelft_quadrupel::flash::flash_write_bytes;
 
 use crate::states::fsm_base_class::FSMControl;
@@ -12,9 +11,8 @@ use crate::states::manual_mode::FSMManual;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::states::state_structures::state_context::StateContext;
-use crate::wireless_setup::{self, *};
 
-use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState, WirelessOptions};
+use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
 use my_hdlc::pc_command::ManualInput;
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
@@ -64,8 +62,6 @@ pub fn main_loop() -> ! {
     let mut calibration_state: CalibrationState = CalibrationState::new();
     let mut flash_head = 0u32;
     let mut flash_tail = 0u32;
-    let mut wireless_toggle = false;
-    let mut wireless_option = WirelessOptions::PCSide;
 
     let mut ctx = StateContext {
         calibration_state: &mut calibration_state,
@@ -73,8 +69,6 @@ pub fn main_loop() -> ! {
         input_from_controller: &mut received_manual_input,
         flash_head: &mut flash_head,
         flash_tail: &mut flash_tail,
-        wireless_toggle: &mut wireless_toggle,
-        wireless_option: &mut wireless_option,
     };
 
     // -------------------------------------------------------------------------
@@ -84,9 +78,6 @@ pub fn main_loop() -> ! {
 
     // used to determine whether battery voltage is too low
     let mut battery_panic = false;
-
-    // radio object
-    let mut radio: Option<RADIO> = None;
 
     // -------------------------------------------------------------------------
     for i in 0.. {
@@ -104,79 +95,35 @@ pub fn main_loop() -> ! {
         }
         // -------------------------------------------------------------------------
 
-        if *ctx.wireless_toggle {
-            if radio.is_none() {
-                radio = Some(wireless_setup::radio_init());
-                radio_start_rx(radio.as_ref());
-            }
-            match *ctx.wireless_option {
-                WirelessOptions::PCSide => {
-                    // Read Uart Buff
-                    let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
+        // Read Uart Buff
+        let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
 
-                    if num_received != 0usize {
-                        wireless_setup::radio_send(radio.as_ref(), &uart_buf[..num_received]);
-                        time_for_last_received_message = Instant::now();
+        if num_received != 0usize {
+            //read the sent bytes
+            ctx.trv.add_bytes(&uart_buf[..num_received]);
+
+            //try to deserialize the command
+            let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
+
+            // if there is a command
+            if let Some(command) = deserialized_command {
+                match command {
+                    DeviceCommand::ChangeMode(new_mode) => {
+                        current_state = current_state.step(new_mode, &mut ctx);
+                        send_ack(&mut ctx.trv);
                     }
-
-                    if let Some(telemetry) = radio_poll_rx(radio.as_ref(), &mut ctx.trv) {
-                        let (buf, len) = ctx.trv.write_structure(&telemetry);
-                        send_bytes(&buf[..len]);
+                    DeviceCommand::ManualInput(manual_input) => {
+                        *ctx.input_from_controller = Some(manual_input);
                     }
-
-                    radio_start_rx(radio.as_ref());
+                    _ => continue,
                 }
-
-                WirelessOptions::DroneSide => {
-                    if let Some(command) = radio_poll_rx(radio.as_ref(), &mut ctx.trv) {
-                        match command {
-                            DeviceCommand::ChangeMode(new_mode) => {
-                                current_state = current_state.step(new_mode, &mut ctx);
-                                send_ack(&mut ctx.trv, ctx.wireless_option, radio.as_ref());
-                            }
-                            DeviceCommand::ManualInput(manual_input) => {
-                                *ctx.input_from_controller = Some(manual_input);
-                            }
-                            _ => continue,
-                        }
-                        time_for_last_received_message = Instant::now();
-                    }
-                    radio_start_rx(radio.as_ref());
-                }
-            }
-        } else {
-            // Read Uart Buff
-            let num_received = receive_bytes(&mut uart_buf[0..ctx.trv.remaining_bytes]);
-
-            if num_received != 0usize {
-                //read the sent bytes
-                ctx.trv.add_bytes(&uart_buf[..num_received]);
-
-                //try to deserialize the command
-                let deserialized_command = ctx.trv.read_structure::<DeviceCommand>();
-
-                // if there is a command
-                if let Some(command) = deserialized_command {
-                    match command {
-                        DeviceCommand::ChangeMode(new_mode) => {
-                            current_state = current_state.step(new_mode, &mut ctx);
-                            send_ack(&mut ctx.trv, ctx.wireless_option, radio.as_ref());
-                        }
-                        DeviceCommand::ManualInput(manual_input) => {
-                            *ctx.input_from_controller = Some(manual_input);
-                        }
-                        _ => continue,
-                    }
-                    time_for_last_received_message = Instant::now();
-                }
+                time_for_last_received_message = Instant::now();
             }
         }
         if Instant::now().duration_since(time_for_last_received_message)
             >= WATCHDOG_TIMER_FOR_PANICKING
         {
-            if *ctx.wireless_option == WirelessOptions::PCSide {
-                current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
-            }
+            current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
         }
 
         // run the loop of the state
@@ -185,8 +132,6 @@ pub fn main_loop() -> ! {
             send_drone_data(
                 &mut ctx.trv,
                 current_state.get_state(),
-                ctx.wireless_option,
-                radio.as_ref(),
             );
             Green.off();
         }
@@ -208,8 +153,6 @@ pub fn main_loop() -> ! {
 fn send_drone_data(
     transceiver: &mut HdlcTransceiver,
     current_state: FSMState,
-    wireless_mode: &WirelessOptions,
-    radio: Option<&RADIO>,
 ) {
     let msg = transceiver.write_structure(&DeviceCommand::DroneInfo(DroneInfo::new(
         current_state,
@@ -217,27 +160,16 @@ fn send_drone_data(
     )));
     Green.on();
 
-    match *wireless_mode {
-        WirelessOptions::PCSide => {
-            let _ = send_bytes(&msg.0[0..msg.1]);
-        }
-        WirelessOptions::DroneSide => wireless_setup::radio_send(radio, &msg.0[0..msg.1]),
-    }
+    send_bytes(&msg.0[0..msg.1]);
 }
 
 /*
 * Sends ACKs to the drone after a state change
 */
-fn send_ack(transceiver: &mut HdlcTransceiver, wireless_mode: &WirelessOptions, radio: Option<&RADIO>) {
+fn send_ack(transceiver: &mut HdlcTransceiver) {
     let ack_cmd = DeviceCommand::Ack;
     let msg: ([u8; STUFFED_MESSAGE_SIZE], usize) = transceiver.write_structure(&ack_cmd);
-
-    match *wireless_mode {
-        WirelessOptions::PCSide => {
-            let _ = send_bytes(&msg.0[0..msg.1]);
-        }
-        WirelessOptions::DroneSide => wireless_setup::radio_send(radio, &msg.0[0..msg.1]),
-    }
+    send_bytes(&msg.0[0..msg.1]);
 }
 
 fn put_telemetry_data_on_flash(flash_head: &mut u32, dt: Duration, curent_state: FSMState) {
