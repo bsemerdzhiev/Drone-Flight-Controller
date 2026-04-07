@@ -41,7 +41,7 @@ pub fn send_transition(state: my_hdlc::command::FSMState, ctx: &Arc<RunnerContex
         let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
 
         if (wireless_mode) {
-            ctx.with_wireless_package(|s| *s = send_buffer.0[0..send_buffer.1].to_vec());
+            ctx.with_wireless_package(|s| s.push_back(send_buffer.0[0..send_buffer.1].to_vec()));
         } else {
             serial.write(&send_buffer.0[0..send_buffer.1]);
         }

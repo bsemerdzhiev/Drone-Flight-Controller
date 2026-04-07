@@ -1541,6 +1541,7 @@ dependencies = [
  "futures",
  "my-hdlc",
  "rand",
+ "serde",
  "serde_json",
  "tokio",
  "tudelft-serial-upload",

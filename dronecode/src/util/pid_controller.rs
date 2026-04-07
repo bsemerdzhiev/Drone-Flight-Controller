@@ -3,60 +3,14 @@ use fixed::{
     traits::{Fixed, FixedSigned},
     types::{I16F16, I32F0},
 };
-use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrims};
+use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrimsEnums};
 use tudelft_quadrupel::{led::Led::Yellow, time::Instant};
 
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
-type ControllerValues = I16F16;
+pub type ControllerValues = I16F16;
 
 const DEGREE_TO_RAD: ControllerValues = ControllerValues::lit("0.0174");
-
-pub const K_P: [ControllerValues; 4] = [
-    ControllerValues::lit("0.01"),
-    ControllerValues::lit("0.005"),
-    ControllerValues::lit("0.005"),
-    ControllerValues::lit("12"),
-];
-pub const K_I: [ControllerValues; 4] = [
-    ControllerValues::lit("0"),
-    ControllerValues::lit("0.0002"),
-    ControllerValues::lit("0.0002"),
-    ControllerValues::lit("0"),
-];
-pub const K_D: [ControllerValues; 4] = [
-    ControllerValues::lit("0"),
-    ControllerValues::lit("0.001"),
-    ControllerValues::lit("0.001"),
-    ControllerValues::lit("0"),
-];
-
-pub fn add_trims(
-    trim_input: &ManualDroneTrims,
-) -> (
-    [ControllerValues; 4],
-    [ControllerValues; 4],
-    [ControllerValues; 4],
-) {
-    let mut k_p: [ControllerValues; 4] = K_P;
-    let mut k_i: [ControllerValues; 4] = K_I;
-    let mut k_d: [ControllerValues; 4] = K_D;
-
-    k_p[0] +=
-        ControllerValues::from_num(trim_input.yaw_p_trim) / ControllerValues::from_num(i16::MAX);
-
-    k_p[1] += ControllerValues::from_num(trim_input.roll_pitch_p_trim)
-        / ControllerValues::from_num(i16::MAX);
-    k_p[2] += ControllerValues::from_num(trim_input.roll_pitch_p_trim)
-        / ControllerValues::from_num(i16::MAX);
-
-    k_d[1] += ControllerValues::from_num(trim_input.roll_pitch_d_trim)
-        / ControllerValues::from_num(i16::MAX);
-    k_d[2] += ControllerValues::from_num(trim_input.roll_pitch_d_trim)
-        / ControllerValues::from_num(i16::MAX);
-
-    return (k_p, k_i, k_d);
-}
 
 /*
 * Selects the type of error correction
@@ -80,6 +34,10 @@ where
     T: FixedSigned + CordicNumber,
     Y: FixedSigned,
 {
+    pub k_p: [ControllerValues; 4],
+    pub k_i: [ControllerValues; 4],
+    pub k_d: [ControllerValues; 4],
+
     prev_error: YawPitchRoll<T, Y>,
     integration_build_up: YawPitchRoll<T, Y>,
 
@@ -93,6 +51,26 @@ where
 {
     pub fn new() -> Self {
         PIDController {
+            k_p: [
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+            ],
+            k_i: [
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+            ],
+
+            k_d: [
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+                ControllerValues::ZERO,
+            ],
+
             prev_error: YawPitchRoll::<T, Y>::new(),
             integration_build_up: YawPitchRoll::<T, Y>::new(),
 
@@ -104,9 +82,6 @@ where
         &mut self,
         input: YawPitchRoll<T, Y>,
         target: YawPitchRoll<T, Y>,
-        k_p: [ControllerValues; 4],
-        k_i: [ControllerValues; 4],
-        k_d: [ControllerValues; 4],
         controller_flags: u8,
     ) -> YawPitchRoll<T, Y>
     where
@@ -131,14 +106,14 @@ where
 
         // compute P part
         if ((controller_flags & (ControllerFlags::AddP as u8)) != 0) {
-            result = result + (calculated_error.mul_pid_values::<ControllerValues>(k_p));
+            result = result + (calculated_error.mul_pid_values::<ControllerValues>(self.k_p));
         }
 
         // compute D part
         if ((controller_flags & (ControllerFlags::AddD as u8)) != 0) {
             result = result
                 + (((calculated_error - self.prev_error) / delta_t)
-                    .mul_pid_values::<ControllerValues>(k_d));
+                    .mul_pid_values::<ControllerValues>(self.k_d));
             self.prev_error = calculated_error;
         }
 
@@ -148,7 +123,7 @@ where
             result = result
                 + (self
                     .integration_build_up
-                    .mul_pid_values::<ControllerValues>(k_i));
+                    .mul_pid_values::<ControllerValues>(self.k_i));
         }
         // update the timestamp
         self.last_timestamp = current_time;

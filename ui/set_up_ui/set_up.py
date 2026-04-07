@@ -6,6 +6,8 @@ from set_up_ui.set_up_message_log import set_up_message_log
 from set_up_ui.set_up_loop_timing import set_up_loop_timing
 from set_up_ui.general_info import set_up_general_info
 
+from set_up_ui.set_up_pid import set_up_pid
+from set_up_ui.set_up_pid import load_pid_trims, save_pid_trims
 from util.states import SENSOR_NAMES
 import util.data as stored_data
 import numpy
@@ -47,6 +49,28 @@ def set_up_gui():
     dpg.create_context()
 
     global blue_theme, red_theme
+
+    with dpg.file_dialog(
+        label="Save PID Trims",
+        default_filename="pid_values",
+        default_path=".",
+        callback=save_pid_trims,
+        show=False,
+        tag="save_pid_dialog",
+        width=600,
+        height=400,
+    ):
+        dpg.add_file_extension(".json")
+
+    with dpg.file_dialog(
+        label="Load PID Trims",
+        callback=load_pid_trims,
+        show=False,
+        tag="load_pid_dialog",
+        width=600,
+        height=400,
+    ):
+        dpg.add_file_extension(".json")
 
     with dpg.theme() as red_theme:
         with dpg.theme_component(dpg.mvTabButton):

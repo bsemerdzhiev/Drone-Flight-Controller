@@ -5,7 +5,7 @@ use crate::states::height_control::FSMHeightControl;
 use crate::states::panic_mode::FSMPanic;
 use crate::states::safe_mode::FSMSafe;
 use crate::states::state_structures::state_context::StateContext;
-use crate::util::pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P};
+use crate::util::pid_controller::{ControllerFlags, PIDController};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
@@ -18,9 +18,7 @@ use tudelft_quadrupel::mpu::{self, read_raw};
 // TODO: Tune the parameters
 // Order of parameters: Yaw - Pitch - Roll
 
-pub struct FSMFullControl {
-    pub pid_controller: Box<PIDController<I16F16, I16F16>>,
-}
+pub struct FSMFullControl {}
 
 impl FSMControl for FSMFullControl {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
@@ -29,15 +27,10 @@ impl FSMControl for FSMFullControl {
 
         let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
 
-        let (k_p, k_i, k_d) = add_trims(&ctx.trim_input);
-
         // calculate the error correction
-        let correction = self.pid_controller.compute_pid_correction(
+        let correction = ctx.pid_controller.compute_pid_correction(
             input,
             target,
-            k_p,
-            k_i,
-            k_d,
             ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8 | ControllerFlags::AddI as u8,
         );
 
@@ -57,8 +50,6 @@ impl FSMControl for FSMFullControl {
             FSMState::PanicMode => Box::new(FSMPanic {}),
             FSMState::HeightControlMode => {
                 let z = Box::new(FSMHeightControl {
-                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
-
                     prev_state: self,
                     initial_pressure: ctx.pressure_sensor_filter.get_reading(),
                     initial_lift: I16F16::from_num(ctx.input_as_ypr.lift),

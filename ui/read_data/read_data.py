@@ -11,14 +11,8 @@ from read_data.readers.ble_info import read_ble_info
 import util.data as stored_data
 
 
-def serial_reader():
+def serial_reader(sock_file):
     global battery_level, fsm_state, joystick, p_values, accel, gyro
-
-    SOCKET_PATH = "/tmp/drone_telemetry.sock"
-
-    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-    sock.connect(SOCKET_PATH)
-    sock_file = sock.makefile("r")
 
     while True:
         try:

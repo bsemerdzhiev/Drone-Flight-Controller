@@ -1,6 +1,7 @@
 import dearpygui.dearpygui as dpg
 import numpy
 
+from set_up_ui.set_up_pid import set_up_pid
 from util.states import FSM_COLORS, SENSOR_NAMES
 import util.data as stored_data
 from set_up_ui.set_up_sensors import set_up_sensors
@@ -98,26 +99,6 @@ def show_joystick():
                 )
 
     dpg.add_separator()
-    with dpg.group(horizontal=True):
-        # P/D trim columns
-        with dpg.group():
-            dpg.add_text("Trim Values", color=[255, 255, 100])
-            with dpg.table(
-                header_row=True,
-                borders_innerV=True,
-                borders_outerV=True,
-                borders_innerH=True,
-                borders_outerH=True,
-            ):
-                dpg.add_table_column(label="Yaw P")
-                dpg.add_table_column(label="Roll/Pitch P")
-                dpg.add_table_column(label="Roll/Pitch D")
-                with dpg.table_row():
-                    dpg.add_text("0.000", tag="yaw_p_trim")
-                    dpg.add_text("0.000", tag="roll_pitch_p_trim")
-                    dpg.add_text("0.000", tag="roll_pitch_d_trim")
-
-    dpg.add_separator()
 
 
 def show_ble_info():
@@ -144,3 +125,4 @@ def set_up_general_info():
             show_packet_size()
             show_joystick()
             show_ble_info()
+            set_up_pid()

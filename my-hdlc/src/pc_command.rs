@@ -15,10 +15,24 @@ pub struct ManualDroneInput {
 }
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
-pub struct ManualDroneTrims {
-    pub yaw_p_trim: i16,
-    pub roll_pitch_p_trim: i16,
-    pub roll_pitch_d_trim: i16,
+pub struct PIDValues {
+    pub p_value: f32,
+    pub i_value: f32,
+    pub d_value: f32,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum ManualDroneTrimsEnums {
+    Lift(PIDValues),
+    Yaw(PIDValues),
+    Pitch(PIDValues),
+    Roll(PIDValues),
+}
+
+impl Default for ManualDroneTrimsEnums {
+    fn default() -> Self {
+        ManualDroneTrimsEnums::Lift(PIDValues::default())
+    }
 }
 
 impl From<ManualInput> for ManualDroneInput {
@@ -32,15 +46,15 @@ impl From<ManualInput> for ManualDroneInput {
     }
 }
 
-impl From<ManualInput> for ManualDroneTrims {
-    fn from(input: ManualInput) -> Self {
-        Self {
-            yaw_p_trim: (input.yaw_p_trim * i16::MAX as f32) as i16,
-            roll_pitch_p_trim: (input.roll_pitch_p_trim * i16::MAX as f32) as i16,
-            roll_pitch_d_trim: (input.roll_pitch_d_trim * i16::MAX as f32) as i16,
-        }
-    }
-}
+// impl From<ManualInput> for ManualDroneTrims {
+//     fn from(input: ManualInput) -> Self {
+//         Self {
+//             yaw_p_trim: (input.yaw_p_trim * i16::MAX as f32) as i16,
+//             roll_pitch_p_trim: (input.roll_pitch_p_trim * i16::MAX as f32) as i16,
+//             roll_pitch_d_trim: (input.roll_pitch_d_trim * i16::MAX as f32) as i16,
+//         }
+//     }
+// }
 
 #[derive(Debug, PartialEq, Clone, Default)]
 pub struct ManualInput {

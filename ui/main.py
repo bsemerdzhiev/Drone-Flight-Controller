@@ -1,9 +1,11 @@
+import socket
 import threading
 import sys
 import dearpygui.dearpygui as dpg
 from pyqtgraph.Qt import QtWidgets, QtCore
 from read_data.read_data import serial_reader
 from drone_visualization.visualize import make_drone_view, update_drone_view
+from write_data.writer import send_data
 from update_ui.update_gui import update_step
 from set_up_ui.set_up import set_up_gui
 import util.data as stored_data
@@ -65,8 +67,16 @@ if __name__ == "__main__":
     qt_app = QtWidgets.QApplication(sys.argv)
     view, arms, arms2, prop_dots, arm_verts, motor_labels = make_drone_view()
 
-    threading.Thread(target=serial_reader, daemon=True).start()
+    SOCKET_PATH = "/tmp/drone_telemetry.sock"
+
+    sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    sock.connect(SOCKET_PATH)
+    sock_file_r = sock.makefile("r")
+    sock_file_w = sock.makefile("w")
+
+    threading.Thread(target=serial_reader, args=(sock_file_r,), daemon=True).start()
     threading.Thread(target=run_dpg, daemon=True).start()
+    threading.Thread(target=send_data, args=(sock_file_w,), daemon=True).start()
 
     timer = QtCore.QTimer()
     timer.timeout.connect(

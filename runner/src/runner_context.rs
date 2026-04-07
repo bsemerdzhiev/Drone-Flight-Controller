@@ -1,6 +1,6 @@
 use evdev::Device;
 use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
-use std::{os::unix::net::UnixStream, sync::Mutex};
+use std::{collections::VecDeque, os::unix::net::UnixStream, sync::Mutex};
 use tudelft_serial_upload::serial2::SerialPort;
 
 pub struct RunnerContext {
@@ -14,7 +14,7 @@ pub struct RunnerContext {
     pub joystick_disconnected_mut: Mutex<bool>,
 
     pub is_wireless_mut: Mutex<bool>,
-    pub wireless_package_mut: Mutex<Vec<u8>>,
+    pub wireless_package_mut: Mutex<VecDeque<Vec<u8>>>,
 
     pub current_state: Mutex<FSMState>,
 }
@@ -78,7 +78,7 @@ impl RunnerContext {
 
     pub fn with_wireless_package<F, R>(&self, f: F) -> R
     where
-        F: FnOnce(&mut Vec<u8>) -> R,
+        F: FnOnce(&mut VecDeque<Vec<u8>>) -> R,
     {
         f(&mut self.wireless_package_mut.lock().unwrap())
     }

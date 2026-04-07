@@ -7,6 +7,7 @@ use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::calibration_state::CalibrationState;
 use crate::telemetry_read::{ReturnType, TelemetryRead};
 use crate::util::ble_communication::{BLE_BUFFER, BLE_BUFFER_SIZE};
+use crate::util::pid_controller::{ControllerValues, PIDController};
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
 use alloc::boxed::Box;
@@ -25,7 +26,7 @@ use crate::states::state_structures::state_context::{
 };
 
 use my_hdlc::command::{self, DeviceCommand, DroneInfo, FSMState};
-use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrims};
+use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrimsEnums};
 use my_hdlc::{HdlcTransceiver, STUFFED_MESSAGE_SIZE};
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::battery::read_battery;
@@ -80,7 +81,7 @@ pub fn main_loop() -> ! {
     // fields for the context
     let mut transceiver: Box<HdlcTransceiver> = Box::new(HdlcTransceiver::new());
 
-    let mut manual_trim: ManualDroneTrims = ManualDroneTrims::default();
+    let mut manual_trim: ManualDroneTrimsEnums = ManualDroneTrimsEnums::default();
     let mut input_as_ypr: YawPitchRoll<I16F16, I16F16> = YawPitchRoll::<I16F16, I16F16>::new();
 
     let mut calibration_state: CalibrationState<I16F16, I16F16> =
@@ -106,9 +107,10 @@ pub fn main_loop() -> ! {
         pressure_sensor_filter: &mut pressure_sensor_filter,
         dmp_filter: dmp_sampler,
 
+        pid_controller: PIDController::<I16F16, I16F16>::new(),
+
         trv: &mut transceiver,
 
-        trim_input: &mut manual_trim,
         input_as_ypr: &mut input_as_ypr,
 
         flash_head: 0usize,
@@ -178,7 +180,20 @@ pub fn main_loop() -> ! {
                             YawPitchRoll::<I16F16, I16F16>::from_manual_input(&manual_input);
                     }
                     DeviceCommand::ManualDroneTrims(manual_trims) => {
-                        *ctx.trim_input = manual_trims;
+                        let (ind, values) = match manual_trims {
+                            ManualDroneTrimsEnums::Lift(values) => (3, values),
+
+                            ManualDroneTrimsEnums::Yaw(values) => (0, values),
+
+                            ManualDroneTrimsEnums::Pitch(values) => (1, values),
+
+                            ManualDroneTrimsEnums::Roll(values) => (2, values),
+                        };
+                        ctx.pid_controller.k_p[ind] = ControllerValues::from_num(values.p_value);
+
+                        ctx.pid_controller.k_i[ind] = ControllerValues::from_num(values.i_value);
+
+                        ctx.pid_controller.k_d[ind] = ControllerValues::from_num(values.d_value);
                     }
                     _ => {}
                 }

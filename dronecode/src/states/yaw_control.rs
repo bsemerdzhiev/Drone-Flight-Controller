@@ -1,7 +1,7 @@
 use crate::filters::sensors_handler::ImuHandler;
 use crate::states::state_structures::state_context::StateContext;
 use crate::states::{fsm_base_class::FSMControl, panic_mode::FSMPanic, safe_mode::FSMSafe};
-use crate::util::pid_controller::{add_trims, ControllerFlags, PIDController, K_D, K_I, K_P};
+use crate::util::pid_controller::{ControllerFlags, PIDController};
 use crate::util::rpm_calculator::actuate_motors_with_rates;
 use crate::util::yaw_pitch_roll::YawPitchRoll;
 
@@ -13,9 +13,7 @@ use tudelft_quadrupel::battery::read_battery;
 use tudelft_quadrupel::mpu::is_dmp_enabled;
 use tudelft_quadrupel::uart::send_bytes;
 
-pub struct FSMYaw {
-    pub pid_controller: Box<PIDController<I16F16, I16F16>>,
-}
+pub struct FSMYaw {}
 
 impl FSMControl for FSMYaw {
     fn run_state_loop(mut self: Box<Self>, ctx: &mut StateContext) -> Box<dyn FSMControl> {
@@ -28,17 +26,10 @@ impl FSMControl for FSMYaw {
 
         let mut target: YawPitchRoll<I16F16, I16F16> = *ctx.input_as_ypr;
 
-        let (k_p, k_i, k_d) = add_trims(&ctx.trim_input);
-
         // calculate the error correction
-        let correction = self.pid_controller.compute_pid_correction(
-            input,
-            target,
-            k_p,
-            k_i,
-            k_d,
-            ControllerFlags::AddP as u8,
-        );
+        let correction =
+            ctx.pid_controller
+                .compute_pid_correction(input, target, ControllerFlags::AddP as u8);
 
         target.yaw = correction.yaw;
         target.roll = I16F16::from_num(0);

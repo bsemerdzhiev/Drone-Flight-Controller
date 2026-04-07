@@ -4,7 +4,7 @@ use alloc::boxed::Box;
 use fixed::types::{I16F16, I26F6, I2F30, I4F28, I8F24};
 use my_hdlc::{
     command::FSMState,
-    pc_command::{ManualDroneInput, ManualDroneTrims},
+    pc_command::{ManualDroneInput, ManualDroneTrimsEnums},
     HdlcTransceiver, STUFFED_MESSAGE_SIZE,
 };
 use tudelft_quadrupel::time::Instant;
@@ -14,7 +14,7 @@ use crate::{
         dmp_readings::DmpReadings, kalman_filter::KalmanFilter, pressure_filter::PressureSensor,
     },
     states::state_structures::calibration_state::CalibrationState,
-    util::yaw_pitch_roll::YawPitchRoll,
+    util::{pid_controller::PIDController, yaw_pitch_roll::YawPitchRoll},
 };
 
 pub struct StateContext<'a> {
@@ -22,9 +22,9 @@ pub struct StateContext<'a> {
     pub pressure_sensor_filter: &'a mut PressureSensor,
     pub dmp_filter: DmpReadings,
 
-    pub trv: &'a mut Box<HdlcTransceiver>,
+    pub pid_controller: PIDController<I16F16, I16F16>,
 
-    pub trim_input: &'a mut ManualDroneTrims,
+    pub trv: &'a mut Box<HdlcTransceiver>,
 
     pub calibration_state: &'a mut CalibrationState<I16F16, I16F16>,
     pub input_as_ypr: &'a mut YawPitchRoll<I16F16, I16F16>,

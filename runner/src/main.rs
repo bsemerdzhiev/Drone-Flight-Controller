@@ -2,6 +2,7 @@ use crate::bluetooth::ble_connect;
 use crate::downlink_comm::downlink_main_loop;
 use crate::runner_context::RunnerContext;
 use crate::uplink_comm::uplink_main_loop;
+use crate::uplink_ui::rx_ui;
 
 use my_hdlc::command::DeviceCommand;
 use my_hdlc::command::FSMState;
@@ -14,6 +15,7 @@ use tokio;
 use tudelft_serial_upload::serial2::SerialPort;
 use tudelft_serial_upload::{upload_file_or_stop, PortSelector};
 
+use std::collections::VecDeque;
 use std::env::args;
 use std::error::Error;
 use std::fs;
@@ -37,6 +39,7 @@ mod read_joystick;
 mod read_keyboard;
 mod runner_context;
 mod uplink_comm;
+mod uplink_ui;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error>> {
@@ -81,7 +84,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let mut joystick_disconnected_mut = Mutex::new(true);
 
     let mut is_wireless_mut = Mutex::new(false);
-    let mut wireless_package_mut = Mutex::new(Vec::<u8>::new());
+    let mut wireless_package_mut = Mutex::new(VecDeque::new());
 
     let mut current_state = Mutex::new(FSMState::SafeMode);
     //-------------------------------------------------------------------------------------------
@@ -110,6 +113,11 @@ async fn main() -> Result<(), Box<dyn Error>> {
     let ctx_clone = Arc::clone(&ctx);
     let h2 = thread::spawn(move || {
         uplink_main_loop(&ctx_clone);
+    });
+
+    let ctx_clone = Arc::clone(&ctx);
+    let h2 = thread::spawn(move || {
+        rx_ui(&ctx_clone);
     });
 
     let ctx_clone = Arc::clone(&ctx);

@@ -102,7 +102,7 @@ def update_ble():
 
 def update_step():
     update_joystick()
-    update_pid_values()
+    # update_pid_values()
 
     update_sensor_plots(stored_data.live_data, "_live")
     update_sensor_plots(stored_data.logged_data, "_logged")

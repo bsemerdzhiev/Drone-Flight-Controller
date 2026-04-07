@@ -66,16 +66,20 @@ pub async fn ble_connect(ctx: &Arc<RunnerContext>) -> Result<(), Box<dyn Error>>
     let ctx_clone = Arc::clone(ctx);
     tokio::spawn(async move {
         loop {
-            let packet: Vec<u8> = ctx_clone.with_wireless_package(|s| s.clone());
-            if packet.len() > 0 {
-                drone
-                    .write(&rx_char_clone, &packet, WriteType::WithoutResponse)
-                    .await
-                    .unwrap();
+            let packet_opt: Option<Vec<u8>> = ctx_clone.with_wireless_package(|s| s.pop_front());
+            if let Some(packet) = packet_opt {
+                if packet.len() <= 20 {
+                    drone
+                        .write(&rx_char_clone, &packet, WriteType::WithoutResponse)
+                        .await
+                        .unwrap();
+                } else {
+                    println!("Packet size too large over bluetooth\r");
+                }
             }
 
-            ctx_clone.with_wireless_package(|s| *s = vec![]);
-            tokio::time::sleep(Duration::from_millis(50)).await;
+            // ctx_clone.with_wireless_package(|s| *s = vec![]);
+            tokio::time::sleep(Duration::from_millis(20)).await;
         }
     });
 

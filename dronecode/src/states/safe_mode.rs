@@ -61,21 +61,9 @@ impl FSMControl for FSMSafe {
                 return self;
             }
             FSMState::ManualMode => return Box::new(FSMManual {}),
-            FSMState::YawControl => {
-                return Box::new(FSMYaw {
-                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
-                })
-            }
-            FSMState::FullControlMode => {
-                return Box::new(FSMFullControl {
-                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
-                })
-            }
-            FSMState::RawSensorsFullControlMode => {
-                return Box::new(FSMRawFullControl {
-                    pid_controller: Box::new(PIDController::<I16F16, I16F16>::new()),
-                })
-            }
+            FSMState::YawControl => return Box::new(FSMYaw {}),
+            FSMState::FullControlMode => return Box::new(FSMFullControl {}),
+            FSMState::RawSensorsFullControlMode => return Box::new(FSMRawFullControl {}),
             FSMState::WirelessMode => return Box::new(FSMWireless {}),
 
             FSMState::PanicMode => return Box::new(FSMPanic {}),
