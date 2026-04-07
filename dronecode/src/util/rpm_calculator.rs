@@ -82,7 +82,7 @@ pub fn actuate_motors_with_direct_joystick_input(
     input_from_controller: &YawPitchRoll<I16F16, I16F16>,
     raw_lift: I16F16,
 ) {
-    let N = OmegaType::from_num(input_from_controller.yaw) * 5;
+    let N = OmegaType::from_num(input_from_controller.yaw) * 1;
     let M = OmegaType::from_num(input_from_controller.pitch) * 4;
     let Z = OmegaType::from_num(-input_from_controller.lift) * 40;
     let L = OmegaType::from_num(input_from_controller.roll) * 4;
