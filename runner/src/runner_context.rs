@@ -14,7 +14,7 @@ pub struct RunnerContext {
     pub joystick_disconnected_mut: Mutex<bool>,
 
     pub is_wireless_mut: Mutex<bool>,
-    pub wireless_package_mut: Mutex<VecDeque<Vec<u8>>>,
+    pub package_sender_mut: Mutex<VecDeque<Vec<u8>>>,
 
     pub current_state: Mutex<FSMState>,
 }
@@ -76,11 +76,11 @@ impl RunnerContext {
         f(&mut self.is_wireless_mut.lock().unwrap())
     }
 
-    pub fn with_wireless_package<F, R>(&self, f: F) -> R
+    pub fn with_package_sender<F, R>(&self, f: F) -> R
     where
         F: FnOnce(&mut VecDeque<Vec<u8>>) -> R,
     {
-        f(&mut self.wireless_package_mut.lock().unwrap())
+        f(&mut self.package_sender_mut.lock().unwrap())
     }
 
     pub fn with_current_state<F, R>(&self, f: F) -> R

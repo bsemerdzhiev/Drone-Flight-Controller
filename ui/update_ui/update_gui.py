@@ -1,4 +1,5 @@
 import math
+import numpy
 import dearpygui.dearpygui as dpg
 
 import util.data as stored_data
@@ -97,6 +98,10 @@ def update_ble():
         dpg.set_value(
             "delta_packages",
             f"{(1000.0 * ((stored_data.received_packages[-1] - stored_data.received_packages[0]) / len(stored_data.received_packages))):.3f}ms",
+        )
+    if stored_data.time_between_main_loop_runs[0] != 0:
+        dpg.set_value(
+            "delta_main", f"{numpy.mean(stored_data.time_between_main_loop_runs):.3f}ms"
         )
 
 

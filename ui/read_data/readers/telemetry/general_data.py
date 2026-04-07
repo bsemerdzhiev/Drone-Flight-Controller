@@ -14,6 +14,8 @@ def read_general_data(t):
 
         stored_data.bluetooth["com_mode"] = t["com_mode"]
 
+        stored_data.time_between_main_loop_runs.append(t["time_for_main_loop"])
+
     # Time
     if stored_data.start_time is None:
         stored_data.start_time = t["dt"]

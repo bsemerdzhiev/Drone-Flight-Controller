@@ -43,9 +43,9 @@ const UART_BUF_SIZE: usize = my_hdlc::BUFFER_SIZE;
 // -------------------------------------------------------------------------
 
 // in ms
-const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(500);
-const DRONE_STATE_TIMER: Duration = Duration::from_millis(5);
-const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(10);
+const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(1000);
+const DRONE_STATE_TIMER: [Duration; 2] = [Duration::from_millis(20), Duration::from_millis(5)];
+const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(100);
 
 const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
 const MIN_BAT_LEVEL: u16 = 1050;
@@ -133,9 +133,10 @@ pub fn main_loop() -> ! {
     let mut last_send_message: Instant = Instant::now();
     let mut last_logged_message: Instant = Instant::now();
 
+    let mut time_previous_loop = Instant::now();
+
     // -------------------------------------------------------------------------
     for i in 0.. {
-        let time_start = Instant::now();
         let _ = Blue.toggle();
         // -------------------------------------------------------------------------
         // Check battery level and switch to panic
@@ -224,11 +225,14 @@ pub fn main_loop() -> ! {
         //-----------------------------
         // for loggign
         ctx.curent_state = current_state.get_state();
-        ctx.time_for_main_loop = time_end.duration_since(time_start).as_millis() as i32;
+        ctx.time_for_main_loop = time_end.duration_since(time_previous_loop).as_millis() as i32;
         ctx.dt = dt;
         //-----------------------------
 
-        if time_end.duration_since(last_send_message) >= DRONE_STATE_TIMER {
+        time_previous_loop = time_end;
+
+        if time_end.duration_since(last_send_message) >= DRONE_STATE_TIMER[ctx.is_wireless as usize]
+        {
             last_send_message = time_end;
 
             send_drone_data(&mut ctx);

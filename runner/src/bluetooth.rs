@@ -10,6 +10,7 @@ use btleplug::api::bleuuid::uuid_from_u32;
 use btleplug::api::{Central, Manager as _, Peripheral as _, ScanFilter, WriteType};
 use btleplug::platform::{Adapter, Manager, Peripheral};
 use futures::StreamExt;
+use my_hdlc::STUFFED_MESSAGE_SIZE;
 use tokio::{self, time};
 use uuid::{uuid, Uuid};
 
@@ -65,21 +66,39 @@ pub async fn ble_connect(ctx: &Arc<RunnerContext>) -> Result<(), Box<dyn Error>>
 
     let ctx_clone = Arc::clone(ctx);
     tokio::spawn(async move {
+        let mut send_buffer: [u8; STUFFED_MESSAGE_SIZE] = [0u8; STUFFED_MESSAGE_SIZE];
+
         loop {
-            let packet_opt: Option<Vec<u8>> = ctx_clone.with_wireless_package(|s| s.pop_front());
+            let packet_opt: Option<Vec<u8>> = ctx_clone.with_package_sender(|s| s.pop_front());
+
+            let wireless_mode: bool = ctx_clone.with_is_wireless(|s| *s);
+
             if let Some(packet) = packet_opt {
-                if packet.len() <= 20 {
-                    drone
-                        .write(&rx_char_clone, &packet, WriteType::WithoutResponse)
-                        .await
-                        .unwrap();
+                if wireless_mode {
+                    if packet.len() <= 20 {
+                        drone
+                            .write(&rx_char_clone, &packet, WriteType::WithoutResponse)
+                            .await
+                            .unwrap();
+                    } else {
+                        println!("Packet size too large over bluetooth\r");
+                    }
+
+                    tokio::time::sleep(Duration::from_millis(100)).await;
                 } else {
-                    println!("Packet size too large over bluetooth\r");
+                    let packet_len = packet.len();
+
+                    for i in 0..packet_len {
+                        send_buffer[i] = packet[i];
+                    }
+
+                    ctx_clone.with_serial(|x| x.write(&send_buffer[0..packet_len]));
+
+                    tokio::time::sleep(Duration::from_millis(50)).await;
                 }
             }
 
             // ctx_clone.with_wireless_package(|s| *s = vec![]);
-            tokio::time::sleep(Duration::from_millis(20)).await;
         }
     });
 

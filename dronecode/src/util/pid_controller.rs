@@ -138,4 +138,9 @@ where
 
         return result;
     }
+
+    pub fn reset_error(&mut self) {
+        self.integration_build_up = YawPitchRoll::<T, Y>::new();
+        self.prev_error = YawPitchRoll::<T, Y>::new();
+    }
 }

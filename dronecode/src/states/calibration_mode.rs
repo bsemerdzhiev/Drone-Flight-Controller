@@ -41,6 +41,8 @@ impl FSMControl for FSMCalibration {
             ctx.pressure_sensor_filter
                 .reset(ctx.calibration_state.pressure_average);
 
+            ctx.pid_controller.reset_error();
+
             return Box::new(FSMSafe {});
         }
         return self;

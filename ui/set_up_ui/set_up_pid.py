@@ -15,6 +15,13 @@ def make_range_callback(slider_tag, min_tag, max_tag):
     return cb
 
 
+def make_zero_callback(slider_tag):
+    def cb(sender, app_data):
+        dpg.set_value(slider_tag, 0.0)
+
+    return cb
+
+
 def save_pid_trims(sender, app_data):
     path = app_data["file_path_name"]
     data = {
@@ -80,31 +87,38 @@ def set_up_pid():
                         dpg.add_text(axis)
                         for term in ["p", "i", "d"]:
                             with dpg.group(horizontal=True):
+                                cb = make_range_callback(
+                                    f"{tag}_{term}_trim",
+                                    f"{tag}_{term}_min",
+                                    f"{tag}_{term}_max",
+                                )
                                 dpg.add_input_float(
                                     tag=f"{tag}_{term}_min",
-                                    default_value=-1.0,
+                                    default_value=0.0,
                                     width=55,
-                                    format="%.2f",
+                                    format="%.5f",
                                     step=0,
+                                    callback=cb,
                                 )
                                 dpg.add_slider_float(
                                     tag=f"{tag}_{term}_trim",
                                     default_value=0.0,
-                                    min_value=-1.0,
+                                    min_value=0.0,
                                     max_value=1.0,
                                     width=120,
-                                    format="%.3f",
-                                    callback=make_range_callback(
-                                        f"{tag}_{term}_trim",
-                                        f"{tag}_{term}_min",
-                                        f"{tag}_{term}_max",
-                                    ),
+                                    format="%.5f",
                                 )
                                 dpg.add_input_float(
                                     tag=f"{tag}_{term}_max",
                                     default_value=1.0,
                                     width=55,
-                                    format="%.2f",
+                                    format="%.5f",
                                     step=0,
+                                    callback=cb,
                                 )
-    dpg.add_separator()
+                                dpg.add_button(
+                                    label="0",
+                                    width=20,
+                                    callback=make_zero_callback(f"{tag}_{term}_trim"),
+                                )
+        dpg.add_separator()

@@ -24,10 +24,11 @@ def serial_reader(sock_file):
             # print(t)
             # print("\n\r")
 
-            stored_data.received_packages.append(time.time())
             with stored_data.message_log_lock:
                 if "Telemetry" in t:
                     t = t["Telemetry"]
+
+                    stored_data.received_packages.append(time.time())
 
                     read_telemetry(t)
 

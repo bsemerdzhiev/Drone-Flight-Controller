@@ -81,6 +81,8 @@ start_time = None
 pause_logs = False
 
 received_packages = _init_deque()
+time_between_main_loop_runs = _init_deque()
+
 
 baro_var_calc = np.array([0.0])
 accel_var_calc = np.array([0.0])

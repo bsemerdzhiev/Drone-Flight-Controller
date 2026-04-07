@@ -33,18 +33,11 @@ pub fn send_transition(state: my_hdlc::command::FSMState, ctx: &Arc<RunnerContex
     let mut buf = Box::new([0u8; my_hdlc::BUFFER_SIZE]);
 
     {
-        let mut rcv = ctx.rcv_mut.lock().unwrap();
-        let mut serial = ctx.serial_mut.lock().unwrap();
-        // loop {
-        let send_buffer = rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state));
+        let mut send_buffer = ctx.with_rcv(|rcv| {
+            rcv.write_structure::<DeviceCommand>(&DeviceCommand::ChangeMode(state))
+        });
 
-        let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
-
-        if (wireless_mode) {
-            ctx.with_wireless_package(|s| s.push_back(send_buffer.0[0..send_buffer.1].to_vec()));
-        } else {
-            serial.write(&send_buffer.0[0..send_buffer.1]);
-        }
+        ctx.with_package_sender(|s| s.push_back(send_buffer.0[0..send_buffer.1].to_vec()));
 
         //NOTE: The section below makes sure that the drone transitions states
         //comment it out if there are issues with the transitions

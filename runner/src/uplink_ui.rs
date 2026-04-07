@@ -53,10 +53,9 @@ pub fn rx_ui(ctx: &Arc<RunnerContext>) {
 
             let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
 
-            if (wireless_mode) {
-                ctx.with_wireless_package(|s| {
-                    let mut rcv = ctx.rcv_mut.lock().unwrap();
-
+            if (!wireless_mode) {
+                let mut rcv = ctx.rcv_mut.lock().unwrap();
+                ctx.with_package_sender(|s| {
                     let send_buffer =
                         rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualDroneTrims(
                             ManualDroneTrimsEnums::Lift(PIDValues::from(trims.lift)),
@@ -81,33 +80,6 @@ pub fn rx_ui(ctx: &Arc<RunnerContext>) {
                         ));
                     s.push_back(send_buffer.0[0..send_buffer.1].to_vec());
                 });
-            } else {
-                let mut rcv = ctx.rcv_mut.lock().unwrap();
-                let mut serial = ctx.serial_mut.lock().unwrap();
-
-                let send_buffer =
-                    rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualDroneTrims(
-                        ManualDroneTrimsEnums::Lift(PIDValues::from(trims.lift)),
-                    ));
-                serial.write(&send_buffer.0[0..send_buffer.1]);
-
-                let send_buffer =
-                    rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualDroneTrims(
-                        ManualDroneTrimsEnums::Yaw(PIDValues::from(trims.yaw)),
-                    ));
-                serial.write(&send_buffer.0[0..send_buffer.1]);
-
-                let send_buffer =
-                    rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualDroneTrims(
-                        ManualDroneTrimsEnums::Pitch(PIDValues::from(trims.pitch)),
-                    ));
-                serial.write(&send_buffer.0[0..send_buffer.1]);
-
-                let send_buffer =
-                    rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualDroneTrims(
-                        ManualDroneTrimsEnums::Roll(PIDValues::from(trims.roll)),
-                    ));
-                serial.write(&send_buffer.0[0..send_buffer.1]);
             }
 
             // println!("{}\n", line);

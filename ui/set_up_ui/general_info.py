@@ -114,6 +114,10 @@ def show_ble_info():
         dpg.add_text("Time Between Packages:", color=[180, 180, 180])
         dpg.add_text("0", tag="delta_packages", color=[180, 100, 255])
 
+    with dpg.group(horizontal=True):
+        dpg.add_text("Time Between Main Loop Runs:", color=[180, 180, 180])
+        dpg.add_text("0", tag="delta_main", color=[180, 100, 255])
+
     dpg.add_separator()
 
 

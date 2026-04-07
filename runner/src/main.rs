@@ -100,7 +100,7 @@ async fn main() -> Result<(), Box<dyn Error>> {
         joystick_disconnected_mut: joystick_disconnected_mut,
 
         is_wireless_mut: is_wireless_mut,
-        wireless_package_mut: wireless_package_mut,
+        package_sender_mut: wireless_package_mut,
         current_state: current_state,
     });
 

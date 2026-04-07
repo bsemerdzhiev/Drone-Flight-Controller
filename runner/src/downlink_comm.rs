@@ -59,8 +59,6 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
 
         {
             let mut rcv = ctx.rcv_mut.lock().unwrap();
-            let mut serial = ctx.serial_mut.lock().unwrap();
-            let wireless_mode: bool = ctx.with_is_wireless(|s| *s);
 
             let send_buffer = {
                 rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualInput(
@@ -68,13 +66,9 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
                 ))
             };
 
-            if (wireless_mode) {
-                ctx.with_wireless_package(|s| {
-                    s.push_back(send_buffer.0[0..send_buffer.1].to_vec());
-                });
-            } else {
-                serial.write(&send_buffer.0[0..send_buffer.1]);
-            }
+            ctx.with_package_sender(|s| {
+                s.push_back(send_buffer.0[0..send_buffer.1].to_vec());
+            });
         }
 
         let json = serde_json::to_string(&serde_json::json!({
@@ -99,7 +93,7 @@ pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
             let _ = python_stream.write_all(b"\n");
         }
 
-        sleep(Duration::from_millis(50));
+        sleep(Duration::from_millis(200));
     }
 }
 

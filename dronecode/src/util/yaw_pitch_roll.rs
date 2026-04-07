@@ -1,7 +1,4 @@
-use core::{
-    i16,
-    ops::{Add, Div, Mul, Sub},
-};
+use core::ops::{Add, Div, Mul, Sub};
 
 use cordic::{atan2, CordicNumber};
 use fixed::traits::{Fixed, FixedSigned};
