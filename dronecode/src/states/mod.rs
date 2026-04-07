@@ -27,3 +27,6 @@ pub mod height_control;
 
 #[cfg(target_arch = "arm")]
 pub mod state_structures;
+
+#[cfg(target_arch = "arm")]
+pub mod wireless_mode;

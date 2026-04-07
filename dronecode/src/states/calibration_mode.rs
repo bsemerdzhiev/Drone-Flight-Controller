@@ -11,7 +11,6 @@ use crate::util::yaw_pitch_roll::YawPitchRoll;
 use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
 use my_hdlc::command::{DebugCalibration, DeviceCommand};
-use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::block;
@@ -30,12 +29,19 @@ impl FSMControl for FSMCalibration {
 
         if ctx.calibration_state.should_finish() {
             ctx.calibration_state.finalize_calibration();
+
             ctx.kalman_position.calibration_offset = (
                 ctx.calibration_state.accelerometer_offset,
                 ctx.calibration_state.gyro_offset,
             );
 
-            ctx.pressure_sensor_filter.reset();
+            ctx.dmp_filter.calibration_offset_raw_read = ctx.calibration_state.gyro_offset;
+            ctx.dmp_filter.calibration_offset = ctx.calibration_state.ypr_offset;
+
+            ctx.pressure_sensor_filter
+                .reset(ctx.calibration_state.pressure_average);
+
+            ctx.pid_controller.reset_error();
 
             return Box::new(FSMSafe {});
         }

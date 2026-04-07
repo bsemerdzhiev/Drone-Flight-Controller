@@ -2,7 +2,7 @@ use core::ops::{Add, Div, Mul, Sub};
 
 use cordic::{atan2, CordicNumber};
 use fixed::traits::{Fixed, FixedSigned};
-use my_hdlc::pc_command::ManualInput;
+use my_hdlc::pc_command::ManualDroneInput;
 use tudelft_quadrupel::mpu::structs::Quaternion;
 
 use crate::util::{approx_funcs::approx_sqrt, MAX_LIFT, PITCH_DEGREE, ROLL_DEGREE, YAW_RATE};
@@ -152,36 +152,15 @@ where
             pressure: Y::from_num(0),
         }
     }
-    pub fn from_manual_input(input: &ManualInput) -> Self {
+    pub fn from_manual_input(input: &ManualDroneInput) -> Self {
         Self {
-            lift: T::from_num(MAX_LIFT) * T::from_num(input.get_lift()),
-            yaw: T::from_num(YAW_RATE) * T::from_num(input.get_yaw()),
-            pitch: T::from_num(PITCH_DEGREE) * T::from_num(input.get_pitch()),
-            roll: T::from_num(ROLL_DEGREE) * T::from_num(input.get_roll()),
+            lift: T::from_num(MAX_LIFT) * (T::from_num(input.lift) / T::from_num(i16::MAX)),
+            yaw: T::from_num(YAW_RATE) * (T::from_num(input.yaw) / T::from_num(i16::MAX)),
+            pitch: T::from_num(PITCH_DEGREE) * (T::from_num(input.pitch) / T::from_num(i16::MAX)),
+            roll: T::from_num(ROLL_DEGREE) * (T::from_num(input.roll) / T::from_num(i16::MAX)),
             pressure: Y::from_num(0),
         }
     }
-    pub fn calculate_rate_per_sec<W_T, W_Y>(
-        &self,
-        prev_sample: YawPitchRoll<T, Y>,
-        duration_in_sec: T,
-        rad_to_degree: W_T,
-    ) -> YawPitchRoll<W_T, W_Y>
-    where
-        T: FixedSigned,
-        Y: FixedSigned,
-        W_T: FixedSigned,
-        W_Y: FixedSigned,
-    {
-        YawPitchRoll::<W_T, W_Y> {
-            lift: W_T::from_num(0),
-            yaw: (rad_to_degree * W_T::from_num((self.yaw - prev_sample.yaw) / duration_in_sec)),
-            pitch: (rad_to_degree * W_T::from_num(self.pitch)),
-            roll: (rad_to_degree * W_T::from_num(self.roll)),
-            pressure: W_Y::from_num(0),
-        }
-    }
-
     pub fn mul_pid_values<Z>(&self, scalar: [Z; 4]) -> Self
     where
         Z: FixedSigned,

@@ -3,7 +3,6 @@ use crate::states::safe_mode::*;
 use crate::states::state_structures::state_context::StateContext;
 use alloc::boxed::Box;
 use my_hdlc::command::FSMState;
-use my_hdlc::pc_command::ManualInput;
 use my_hdlc::HdlcTransceiver;
 use tudelft_quadrupel::led::Led::Red;
 use tudelft_quadrupel::motor::*;

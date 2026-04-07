@@ -7,6 +7,56 @@ use serde::{Deserialize, Serialize};
 const THRESHOLD: f32 = 0.03;
 
 #[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+pub struct ManualDroneInput {
+    pub lift: i16,
+    pub roll: i16,
+    pub pitch: i16,
+    pub yaw: i16,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone, Default)]
+pub struct PIDValues {
+    pub p_value: f32,
+    pub i_value: f32,
+    pub d_value: f32,
+}
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, Clone)]
+pub enum ManualDroneTrimsEnums {
+    Lift(PIDValues),
+    Yaw(PIDValues),
+    Pitch(PIDValues),
+    Roll(PIDValues),
+}
+
+impl Default for ManualDroneTrimsEnums {
+    fn default() -> Self {
+        ManualDroneTrimsEnums::Lift(PIDValues::default())
+    }
+}
+
+impl From<ManualInput> for ManualDroneInput {
+    fn from(input: ManualInput) -> Self {
+        Self {
+            lift: (input.lift * i16::MAX as f32) as i16,
+            roll: (input.roll * i16::MAX as f32) as i16,
+            pitch: (input.pitch * i16::MAX as f32) as i16,
+            yaw: (input.yaw * i16::MAX as f32) as i16,
+        }
+    }
+}
+
+// impl From<ManualInput> for ManualDroneTrims {
+//     fn from(input: ManualInput) -> Self {
+//         Self {
+//             yaw_p_trim: (input.yaw_p_trim * i16::MAX as f32) as i16,
+//             roll_pitch_p_trim: (input.roll_pitch_p_trim * i16::MAX as f32) as i16,
+//             roll_pitch_d_trim: (input.roll_pitch_d_trim * i16::MAX as f32) as i16,
+//         }
+//     }
+// }
+
+#[derive(Debug, PartialEq, Clone, Default)]
 pub struct ManualInput {
     lift: f32,
     roll: f32,
@@ -20,19 +70,6 @@ pub struct ManualInput {
 }
 
 impl ManualInput {
-    pub fn zero() -> Self {
-        Self {
-            lift: 0.0,
-            roll: 0.0,
-            pitch: 0.0,
-            yaw: 0.0,
-
-            yaw_p_trim: 0f32,
-            roll_pitch_p_trim: 0f32,
-            roll_pitch_d_trim: 0f32,
-            enter_panic: false,
-        }
-    }
     pub fn new(
         lift: f32,
         roll: f32,
@@ -127,22 +164,5 @@ impl ManualInput {
             && self.roll.abs() < THRESHOLD
             && self.yaw.abs() < THRESHOLD
             && !self.enter_panic
-    }
-}
-
-impl fmt::Display for ManualInput {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // write!(
-        //     f,
-        //     "x: {}, y: {}, steps: {}",
-        //     (self.pos_x as i16 - self.starting_x as i16),
-        //     (self.pos_y as i16 - self.starting_y as i16),
-        //     self.step_count
-        // )
-        write!(
-            f,
-            "Pitch: {}, Roll: {}, Yaw: {}, Lift: {}, Enter Panic? :{}",
-            self.pitch, self.roll, self.yaw, self.lift, self.enter_panic
-        )
     }
 }

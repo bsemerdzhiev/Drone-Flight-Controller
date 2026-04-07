@@ -6,14 +6,17 @@ use std::os::unix::net::UnixStream;
 
 use crossterm::terminal::enable_raw_mode;
 use evdev::{enumerate, AbsoluteAxisCode, Device};
+use my_hdlc::command::DeviceCommand;
+use my_hdlc::pc_command::{ManualDroneInput, ManualDroneTrimsEnums};
 use my_hdlc::STUFFED_MESSAGE_SIZE;
-use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, HdlcTransceiver};
 use tudelft_serial_upload::serial2::SerialPort;
 
 use std::sync::Arc;
 use std::sync::Mutex;
 
 use crate::read_keyboard::send_transition;
+use crate::runner_context::RunnerContext;
 use crate::{
     read_joystick::{combine_inputs, read_joystick},
     read_keyboard::read_keyboard,
@@ -22,57 +25,50 @@ use my_hdlc::telemetry_data::TELEMETERY_DATA_SIZE;
 
 const DEBUG_BOARD_MODE: bool = true;
 
-pub fn downlink_main_loop(
-    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
-    serial_mut: &Arc<Mutex<SerialPort>>,
-    python_stream_mut: &Arc<Mutex<UnixStream>>,
-) {
-    let mut device: Option<Device> = None;
-
-    let mut keyboard_trim = ManualInput::zero();
-    let mut joystick_input = ManualInput::zero();
-
-    let mut joystick_disconnected = false;
-
+pub fn downlink_main_loop(ctx: &Arc<RunnerContext>) {
     if !DEBUG_BOARD_MODE {
-        device = Some(find_flight_stick().expect("Cannot find flight stick"));
+        ctx.with_device(|s| *s = Some(find_flight_stick().expect("Cannot find flight stick")))
     }
     enable_raw_mode().unwrap();
+
     loop {
         let dev_stat = find_flight_stick();
 
         if dev_stat.is_some() || DEBUG_BOARD_MODE {
-            if joystick_disconnected {
-                device = dev_stat;
-                joystick_disconnected = false;
-            }
-            read_joystick(&mut device, &mut joystick_input);
+            {
+                let mut joystick_disconnected = ctx.joystick_disconnected_mut.lock().unwrap();
+                let mut device = ctx.device_mut.lock().unwrap();
 
-            read_keyboard(&mut keyboard_trim, &mut joystick_input, rcv_mut, serial_mut);
+                if *joystick_disconnected {
+                    *device = dev_stat;
+                    *joystick_disconnected = false;
+                }
+            }
+
+            read_joystick(&ctx);
+
+            read_keyboard(&ctx);
         } else {
             println!("Joystick disconnected!\r");
-            joystick_disconnected = true;
+            ctx.with_joystick_disconnected(|s| *s = true);
         }
-        check_for_panic(
-            &mut joystick_input,
-            &mut keyboard_trim,
-            &mut joystick_disconnected,
-            rcv_mut,
-            serial_mut,
-        );
+        check_for_panic(ctx);
 
-        let cmd = combine_inputs(&keyboard_trim, &joystick_input);
+        let cmd = combine_inputs(ctx);
         let cmd_for_ui = cmd.clone();
 
         {
-            let mut rcv = rcv_mut.lock().unwrap();
-            let mut serial = serial_mut.lock().unwrap();
+            let mut rcv = ctx.rcv_mut.lock().unwrap();
 
-            let send_buffer = rcv.write_structure::<my_hdlc::command::DeviceCommand>(
-                &my_hdlc::command::DeviceCommand::ManualInput(cmd),
-            );
+            let send_buffer = {
+                rcv.write_structure::<DeviceCommand>(&DeviceCommand::ManualInput(
+                    ManualDroneInput::from(cmd),
+                ))
+            };
 
-            serial.write(&send_buffer.0[0..send_buffer.1]);
+            ctx.with_package_sender(|s| {
+                s.push_back(send_buffer.0[0..send_buffer.1].to_vec());
+            });
         }
 
         let json = serde_json::to_string(&serde_json::json!({
@@ -91,13 +87,13 @@ pub fn downlink_main_loop(
         .unwrap();
 
         {
-            let mut python_stream = python_stream_mut.lock().unwrap();
+            let mut python_stream = ctx.python_stream_mut.lock().unwrap();
 
             let _ = python_stream.write_all(json.as_bytes());
             let _ = python_stream.write_all(b"\n");
         }
 
-        sleep(Duration::from_millis(50));
+        sleep(Duration::from_millis(100));
     }
 }
 
@@ -115,16 +111,16 @@ fn find_flight_stick() -> Option<Device> {
     None
 }
 
-fn check_for_panic(
-    joy: &mut ManualInput,
-    keyboard: &mut ManualInput,
-    joystick_disconnected: &mut bool,
-    rcv_mut: &Arc<Mutex<HdlcTransceiver>>,
-    serial: &Arc<Mutex<SerialPort>>,
-) {
-    if joy.is_panic_triggered() | keyboard.is_panic_triggered() | *joystick_disconnected {
-        send_transition(FSMState::PanicMode, rcv_mut, serial);
-        joy.set_panic(false);
-        keyboard.set_panic(false);
+fn check_for_panic(ctx: &Arc<RunnerContext>) {
+    {
+        let mut joy = ctx.joystick_input_mut.lock().unwrap();
+        let mut keyboard = ctx.keyboard_trim_mut.lock().unwrap();
+        let joystick_disconnected = ctx.joystick_disconnected_mut.lock().unwrap();
+
+        if joy.is_panic_triggered() | keyboard.is_panic_triggered() | *joystick_disconnected {
+            send_transition(FSMState::PanicMode, ctx);
+            joy.set_panic(false);
+            keyboard.set_panic(false);
+        }
     }
 }

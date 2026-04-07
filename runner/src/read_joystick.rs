@@ -1,16 +1,18 @@
-use my_hdlc::pc_command::ManualInput;
-
 use evdev::*;
+use my_hdlc::pc_command::ManualInput;
+use std::sync::Arc;
 
-// defines the max rate values for each aerial maneuver
-// defined in degree per seconds
+use crate::runner_context::RunnerContext;
 
 //------------------------------------------------------
 
 const THRESHOLD: f32 = 60f32;
 //------------------------------------------------------
 
-pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInput) {
+pub fn read_joystick(ctx: &Arc<RunnerContext>) {
+    let mut joystick_input = ctx.joystick_input_mut.lock().unwrap();
+    let mut device = ctx.device_mut.lock().unwrap();
+
     if device.is_some() {
         if let Ok(events) = device.as_mut().unwrap().fetch_events() {
             for event in events {
@@ -51,8 +53,11 @@ pub fn read_joystick(device: &mut Option<Device>, joystick_input: &mut ManualInp
     }
 }
 
-pub fn combine_inputs(trim: &ManualInput, joy: &ManualInput) -> ManualInput {
+pub fn combine_inputs(ctx: &Arc<RunnerContext>) -> ManualInput {
     //Clamp to prevent values going outside range and crashing the drone
+
+    let trim = ctx.keyboard_trim_mut.lock().unwrap();
+    let joy = ctx.joystick_input_mut.lock().unwrap();
     ManualInput::new(
         (trim.get_lift() + joy.get_lift()).clamp(0.0, 1.0),
         (trim.get_roll() + joy.get_roll()).clamp(-1.0, 1.0),

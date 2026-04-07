@@ -24,13 +24,11 @@ use tudelft_quadrupel::led::Led::Yellow;
 use tudelft_quadrupel::motor::get_motors;
 use tudelft_quadrupel::mpu::{read_dmp_bytes, read_raw, structs::*};
 
-type ReturnType = (([u8; STUFFED_MESSAGE_SIZE], usize));
+pub type ReturnType = (([u8; STUFFED_MESSAGE_SIZE], usize));
 
 pub trait TelemetryRead {
     fn read_general_data(
         ctx: &mut StateContext,
-        dt: Duration,
-        cur_state: FSMState,
         logged_in_flash: bool,
         encoded: bool,
     ) -> ReturnType;
@@ -63,8 +61,6 @@ pub trait TelemetryRead {
 impl TelemetryRead for TelemetryData {
     fn read_general_data(
         ctx: &mut StateContext,
-        dt: Duration,
-        cur_state: FSMState,
         logged_in_flash: bool,
         encoded: bool,
     ) -> ReturnType {
@@ -72,11 +68,14 @@ impl TelemetryRead for TelemetryData {
 
         let data_to_send = DeviceCommand::Telemetry(TelemetryData::GeneralData(GeneralData {
             logged_in_flash: logged_in_flash,
-            dt: dt.as_millis() as u32,
+            dt: ctx.dt.as_millis() as u32,
             time_for_main_loop: ctx.time_for_main_loop,
 
+            com_mode: ctx.is_wireless,
+
             bat: bat,
-            cur_state: cur_state,
+            cur_state: ctx.curent_state,
+            is_wireless: ctx.is_wireless,
         }));
 
         if encoded {
@@ -112,14 +111,14 @@ impl TelemetryRead for TelemetryData {
 
         let kalman_pos = ctx.kalman_position.get_reading::<I16F16, I16F16>();
 
-        let mut ypr: YawPitchRoll<I8F24, I8F24> = if quaternion.is_ok() {
-            YawPitchRoll::<I8F24, I8F24>::from(quaternion.unwrap())
+        let mut ypr: YawPitchRoll<I16F16, I16F16> = if quaternion.is_ok() {
+            YawPitchRoll::<I16F16, I16F16>::from(quaternion.unwrap())
         } else {
             YawPitchRoll::new()
         };
-        ypr.pitch -= ctx.calibration_state.ypr_offset.pitch;
-        ypr.roll -= ctx.calibration_state.ypr_offset.roll;
-        ypr.yaw -= ctx.calibration_state.ypr_offset.yaw;
+        ypr.pitch -= I16F16::from_num(ctx.calibration_state.ypr_offset.pitch);
+        ypr.roll -= I16F16::from_num(ctx.calibration_state.ypr_offset.roll);
+        ypr.yaw -= I16F16::from_num(ctx.calibration_state.ypr_offset.yaw);
 
         // ypr.yaw -=
         // (ctx.calibration_state.gyro_offset.z as f32) * micromath::F32Ext::acos(-1.0) / 180.0;

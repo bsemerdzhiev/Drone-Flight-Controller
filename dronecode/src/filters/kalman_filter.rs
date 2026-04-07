@@ -13,12 +13,14 @@ use tudelft_quadrupel::barometer::read_pressure;
 use tudelft_quadrupel::mpu::{read_raw, structs::*};
 use tudelft_quadrupel::time::Instant;
 
-const C1: I16F16 = I16F16::lit("5");
-const C2: I16F16 = I16F16::lit("1e-4");
+const C1: I16F16 = I16F16::lit("2.5");
+const C2: I16F16 = I16F16::lit("1e-5");
 
 const ACCEL_SAMPLE_RATE: Duration = Duration::from_millis(1);
 
 const LSB_ACCEL_TO_GS: I16F16 = I16F16::lit("16384");
+const LSB_FOR_GYRO: I16F16 = I16F16::lit("16.4");
+
 const RAD_TO_DEGREE: I16F16 = I16F16::lit("57.2957");
 const DEGREE_TO_RAD: I16F16 = I16F16::lit("0.0174");
 
@@ -86,12 +88,12 @@ impl KalmanFilter {
         // self.yaw += self.reading.1.z * dt;
 
         // get the rate instead
-        self.yaw = self.reading.1.z * dt;
+        self.yaw = self.reading.1.z;
     }
 }
 
 const ALPHA: I16F16 = I16F16::lit("0.1");
-const ONE_MIS_ALPHA: I16F16 = I16F16::lit("0.9");
+const ONE_MINUS_ALPHA: I16F16 = I16F16::lit("0.9");
 
 impl ImuHandler for KalmanFilter {
     fn append_new_reading(&mut self) {
@@ -111,13 +113,13 @@ impl ImuHandler for KalmanFilter {
         parsed_raw_read.0.y = (parsed_raw_read.0.y - self.calibration_offset.0.y) / LSB_ACCEL_TO_GS;
         parsed_raw_read.0.z = (parsed_raw_read.0.z - self.calibration_offset.0.z) / LSB_ACCEL_TO_GS;
 
-        self.reading.0.x = (ALPHA * parsed_raw_read.0.x - ONE_MIS_ALPHA * self.reading.0.x);
-        self.reading.0.y = (ALPHA * parsed_raw_read.0.y - ONE_MIS_ALPHA * self.reading.0.y);
-        self.reading.0.z = (ALPHA * parsed_raw_read.0.z - ONE_MIS_ALPHA * self.reading.0.z);
+        self.reading.0.x = (ALPHA * parsed_raw_read.0.x + ONE_MINUS_ALPHA * self.reading.0.x);
+        self.reading.0.y = (ALPHA * parsed_raw_read.0.y + ONE_MINUS_ALPHA * self.reading.0.y);
+        self.reading.0.z = (ALPHA * parsed_raw_read.0.z + ONE_MINUS_ALPHA * self.reading.0.z);
 
-        self.reading.1.x = parsed_raw_read.1.x - self.calibration_offset.1.x;
-        self.reading.1.y = parsed_raw_read.1.y - self.calibration_offset.1.y;
-        self.reading.1.z = parsed_raw_read.1.z - self.calibration_offset.1.z;
+        self.reading.1.x = (parsed_raw_read.1.x - self.calibration_offset.1.x) / LSB_FOR_GYRO;
+        self.reading.1.y = (parsed_raw_read.1.y - self.calibration_offset.1.y) / LSB_FOR_GYRO;
+        self.reading.1.z = (parsed_raw_read.1.z - self.calibration_offset.1.z) / LSB_FOR_GYRO;
 
         let dt: I16F16 =
             (I16F16::from_num(cur_time.duration_since(self.last_read_time).as_micros() as u32)

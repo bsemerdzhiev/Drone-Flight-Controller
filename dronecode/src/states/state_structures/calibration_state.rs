@@ -28,6 +28,9 @@ const CALIBRATION_TIME: Duration = Duration::from_secs(5);
 
 const SAMPLE_COOL_DOWN: Duration = Duration::from_millis(2);
 
+const BARO_ALPHA: I26F6 = I26F6::lit("0.1");
+const BARO_BETA: I26F6 = I26F6::lit("0.9");
+
 #[derive(Copy, Clone, Debug)]
 pub struct CalibrationState<T, Y>
 where
@@ -46,6 +49,8 @@ where
 
     ypr_sum: Axis<I16F16>,
     pub ypr_offset: YawPitchRoll<T, Y>,
+
+    pub pressure_average: I26F6,
 
     last_read: Instant,
 }
@@ -69,6 +74,9 @@ where
             gyro_offset: Axis::<I16F16>::default(),
 
             ypr_offset: YawPitchRoll::<T, Y>::new(),
+
+            pressure_average: I26F6::from_num(0),
+
             last_read: Instant::now(),
         }
     }
@@ -98,6 +106,9 @@ where
         };
 
         self.sample_cnt += I16F16::from_num(1);
+
+        self.pressure_average =
+            self.pressure_average * BARO_BETA + I26F6::from_num(read_pressure()) * BARO_ALPHA;
     }
 
     pub fn finalize_calibration(&mut self) {

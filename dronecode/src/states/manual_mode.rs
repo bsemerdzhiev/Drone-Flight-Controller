@@ -1,14 +1,12 @@
 use crate::{
     states::state_structures::state_context::StateContext,
     util::{
-        rpm_calculator::{actuate_motors_with_direct_joystick_input, actuate_motors_with_rates},
-        yaw_pitch_roll::YawPitchRoll,
+        rpm_calculator::actuate_motors_with_direct_joystick_input, yaw_pitch_roll::YawPitchRoll,
     },
 };
 use alloc::boxed::Box;
 use my_hdlc::{
     command::{self, DebugRpms, DeviceCommand, FSMState},
-    pc_command::ManualInput,
     HdlcTransceiver,
 };
 use tudelft_quadrupel::{cortex_m::prelude::_embedded_hal_serial_Read, motor, uart};

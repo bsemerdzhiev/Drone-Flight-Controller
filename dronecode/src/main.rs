@@ -6,6 +6,7 @@
 extern crate alloc;
 
 use crate::main_loop::main_loop;
+// use crate::util::ble_communication::ble_init;
 
 use alloc::format;
 use core::alloc::Layout;
@@ -13,8 +14,9 @@ use core::mem::MaybeUninit;
 use core::panic::PanicInfo;
 use core::ptr::addr_of_mut;
 use tudelft_quadrupel::flash::flash_chip_erase;
+use tudelft_quadrupel::{cortex_m_rt, led, nrf51_hal};
 
-use tudelft_quadrupel::initialize::initialize;
+use tudelft_quadrupel::initialize::{export_evt_wait, initialize};
 use tudelft_quadrupel::led::Led::{Blue, Green, Red, Yellow};
 use tudelft_quadrupel::motor::{set_motor_max, set_motors};
 use tudelft_quadrupel::time::assembly_delay;
@@ -54,7 +56,7 @@ fn main() -> ! {
             initialize(addr_of_mut!(HEAP_MEMORY), true);
         }
     }
-
+    //;
     set_motor_max(800);
     // send_and_receive();
     // Ereasing Flash memory on boot
@@ -62,11 +64,11 @@ fn main() -> ! {
     _ = flash_chip_erase();
     Yellow.off();
 
+    // loop {}
     main_loop();
 }
 
 #[inline(never)]
-#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     // On panic:
