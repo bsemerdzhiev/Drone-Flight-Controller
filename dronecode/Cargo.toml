@@ -19,4 +19,3 @@ tudelft-quadrupel = "3"
 micromath = "2"
 my-hdlc = {path = "../my-hdlc/"}
 cortex-m = { version = "0.7", features = ["critical-section-single-core"] }
-nrf51-pac = "0.12.2"
