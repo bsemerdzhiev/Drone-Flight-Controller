@@ -1,5 +1,5 @@
 use alloc::boxed::Box;
-use my_hdlc::{command::FSMState, pc_command::ManualInput, HdlcTransceiver};
+use my_hdlc::{command::FSMState, HdlcTransceiver};
 
 use crate::states::state_structures::state_context::StateContext;
 

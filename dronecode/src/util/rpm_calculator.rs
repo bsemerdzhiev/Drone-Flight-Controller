@@ -1,86 +1,119 @@
+use fixed::types::{I16F16, I26F6, I28F4, I29F3, I32F0, I32F32, I3F29, I40F24, I4F28};
 use micromath::F32Ext;
 use my_hdlc::{
     command::{DebugRpms, DeviceCommand},
-    pc_command::ManualInput,
+    pc_command::ManualDroneInput,
 };
 use tudelft_quadrupel::{motor, uart::send_bytes};
 
-const THRUST_COEFFICIENT: f32 = 1e-3;
-const DRAG_COEFFICIENT: f32 = 1e-4;
+use crate::util::{approx_funcs::approx_sqrt, yaw_pitch_roll::YawPitchRoll};
 
-const MAX_BATTERY_VOLTAGE: i32 = 22;
-const MOTOR_K_V: i32 = 980;
+//------------------------------------------------------
 
-const LINEAR_FACTOR: u16 = 10;
+type OmegaType = I28F4;
+
+// chosen by trial and error in Desmos
 
 const MIN_PWM: u16 = 200;
 
-const THRESHOLD_LIFT: i32 = 100;
+// pub const THRESHOLD_LIFT: f32 = 0.05;
 
-fn map_rpm_square_to_pwm(
-    lift_raw_value: i32,
-    rpms_square: &mut [i32],
-    transceiver: &mut my_hdlc::HdlcTransceiver,
-) {
+pub const ThresholdLift: I16F16 = I16F16::lit("1.25");
+
+fn map_rpm_square_to_pwm(lift_raw_value: I16F16, rpms_square: &mut [OmegaType]) {
+    let MAX_RPMS: I16F16 = I16F16::from_num(980);
+
+    let cur_maxes = I16F16::from_num(motor::get_motor_max());
+
     let mut pwm_to_set: [u16; 4] = [0u16; 4];
-
-    let mut all_zero: bool = true;
 
     let mut k: usize = 0;
     for x in rpms_square {
-        let squared_number: u16 = f32::sqrt(*x as f32) as u16;
-        pwm_to_set[k] = squared_number;
+        let squared_number: I16F16 = I16F16::from_num(approx_sqrt(*x));
 
-        if pwm_to_set[k] != 0 {
-            all_zero = false;
-        }
+        let rpm_ratio = squared_number / MAX_RPMS;
+
+        pwm_to_set[k] = (cur_maxes * rpm_ratio).to_num::<u16>();
+
         k += 1;
     }
 
-    if lift_raw_value < THRESHOLD_LIFT {
+    //if lift is below threshold, then all motors are off
+    if lift_raw_value < ThresholdLift {
         for cur_motor_rpm in &mut pwm_to_set {
             *cur_motor_rpm = 0;
         }
-    } else if !all_zero {
+    } else {
         for cur_motor_rpm in &mut pwm_to_set {
             *cur_motor_rpm = MIN_PWM.max(*cur_motor_rpm);
         }
     }
-    // let to_write =
-    //     transceiver.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&pwm_to_set)));
-    // send_bytes(&to_write.0[0..to_write.1]);
 
     motor::set_motors(pwm_to_set);
 }
 
-pub fn actuate_motors_with_rates(
-    input_from_controller: &ManualInput,
-    my_hdlc: &mut my_hdlc::HdlcTransceiver,
+fn direct_pwm(lift_raw_value: I16F16, pwms: &mut [OmegaType]) {
+    let mut pwm_to_set: [u16; 4] = [0u16; 4];
+    let mut k: usize = 0;
+    for x in pwms {
+        pwm_to_set[k] = (*x).to_num::<u16>();
+
+        k += 1;
+    }
+
+    //if lift is below threshold, then all motors are off
+    if lift_raw_value < ThresholdLift {
+        for cur_motor_rpm in &mut pwm_to_set {
+            *cur_motor_rpm = 0;
+        }
+    } else {
+        for cur_motor_rpm in &mut pwm_to_set {
+            *cur_motor_rpm = MIN_PWM.max(*cur_motor_rpm);
+        }
+    }
+
+    motor::set_motors(pwm_to_set);
+}
+
+const THR_DIV: OmegaType = OmegaType::lit("3750");
+const DRG_DIV: OmegaType = OmegaType::lit("40000.286");
+
+pub fn actuate_motors_with_direct_joystick_input(
+    input_from_controller: &YawPitchRoll<I16F16, I16F16>,
+    raw_lift: I16F16,
 ) {
-    let Nb: f32 = input_from_controller.get_yaw() as f32 * THRUST_COEFFICIENT;
-    let Md: f32 = input_from_controller.get_pitch() as f32 * DRAG_COEFFICIENT;
-    let Zd: f32 = -input_from_controller.get_lift() as f32 * DRAG_COEFFICIENT;
-    let Ld: f32 = input_from_controller.get_roll() as f32 * DRAG_COEFFICIENT;
+    let N = OmegaType::from_num(input_from_controller.yaw) * 1;
+    let M = OmegaType::from_num(input_from_controller.pitch) * 4;
+    let Z = OmegaType::from_num(-input_from_controller.lift) * 40;
+    let L = OmegaType::from_num(input_from_controller.roll) * 4;
 
-    let four_times_bd: f32 = 4.0 * DRAG_COEFFICIENT * THRUST_COEFFICIENT;
+    let omega_one: OmegaType = (-Z + M + M - N).max(OmegaType::ZERO);
+    let omega_two: OmegaType = (-Z - L - L + N).max(OmegaType::ZERO);
+    let omega_three: OmegaType = (-Z - M - M - N).max(OmegaType::ZERO);
+    let omega_four: OmegaType = (-Z + L + L + N).max(OmegaType::ZERO);
 
-    let lift_is_zero: i32 = input_from_controller.get_lift();
-    let omega_one: i32 = (((-Nb - (2.0 * Md) - Zd) / (four_times_bd)) as i32).max(0);
-    let omega_two: i32 = (((Nb - (2.0 * Ld) - Zd) / (four_times_bd)) as i32).max(0);
-    let omega_three: i32 = (((-Nb + (2.0 * Md) - Zd) / (four_times_bd)) as i32).max(0);
-    let omega_four: i32 = (((Nb + (2.0 * Ld) - Zd) / (four_times_bd)) as i32).max(0);
+    direct_pwm(
+        raw_lift,
+        &mut [omega_one, omega_two, omega_three, omega_four],
+    );
+}
 
-    let to_write = my_hdlc.write_structure(&DeviceCommand::DebugRpms(DebugRpms::new(&[
-        omega_one,
-        omega_two,
-        omega_three,
-        omega_four,
-    ])));
-    send_bytes(&to_write.0[0..to_write.1]);
+// const THRUST_COEFFICIENT: OmegaType = OmegaType::lit("0.00000014");
+// const DRAG_COEFFICIENT: OmegaType = OmegaType::lit("0.000002");
+
+pub fn actuate_motors_with_rates(input: &YawPitchRoll<I16F16, I16F16>, raw_lift: I16F16) {
+    let n = OmegaType::from_num(input.yaw) * THR_DIV;
+    let m = OmegaType::from_num(input.pitch) * DRG_DIV;
+    let z = OmegaType::from_num(-input.lift) * DRG_DIV;
+    let l = OmegaType::from_num(input.roll) * DRG_DIV;
+
+    let omega_one = (m + m - n - z).max(OmegaType::ZERO);
+    let omega_two = (n - l - l - z).max(OmegaType::ZERO);
+    let omega_three = (-n - m - m - z).max(OmegaType::ZERO);
+    let omega_four = (n + l + l - z).max(OmegaType::ZERO);
 
     map_rpm_square_to_pwm(
-        lift_is_zero,
+        raw_lift,
         &mut [omega_one, omega_two, omega_three, omega_four],
-        my_hdlc,
     );
 }
