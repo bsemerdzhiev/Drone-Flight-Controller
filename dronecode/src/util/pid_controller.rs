@@ -26,7 +26,7 @@ pub enum ControllerFlags {
 // in kg
 // const DRONE_WEIGHT: ControllerValues = ControllerValues::lit("0.5");
 // const GRAVITY_CONSTANT: ControllerValues = ControllerValues::lit("9.8");
-const HOVER_FORCE: ControllerValues = ControllerValues::lit("10.5");
+const HOVER_FORCE: ControllerValues = ControllerValues::lit("7.5");
 const DRONE_WEIGHT: f32 = 2f32;
 
 pub struct PIDController<T, Y>

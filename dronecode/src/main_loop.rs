@@ -47,8 +47,8 @@ const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(1000);
 const DRONE_STATE_TIMER: [Duration; 2] = [Duration::from_millis(20), Duration::from_millis(5)];
 const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(100);
 
-const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
-const MIN_BAT_LEVEL: u16 = 1050;
+const SHOULD_CHECK_BATTERY_LEVEL: bool = true;
+const MIN_BAT_LEVEL: u16 = 700;
 
 const BATTERY_ALPHA: I16F16 = I16F16::lit("0.1");
 const BATTERY_BETA: I16F16 = I16F16::lit("0.9");

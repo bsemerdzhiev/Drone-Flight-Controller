@@ -33,7 +33,7 @@ impl FSMControl for FSMYaw {
             ControllerFlags::AddP as u8 | ControllerFlags::AddD as u8 | ControllerFlags::AddI as u8,
         );
 
-        target.yaw = correction.yaw;
+        target.yaw = -correction.yaw;
         target.roll = I16F16::from_num(0);
         target.pitch = I16F16::from_num(0);
 

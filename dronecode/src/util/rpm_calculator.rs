@@ -87,10 +87,10 @@ pub fn actuate_motors_with_direct_joystick_input(
     let Z = OmegaType::from_num(-input_from_controller.lift) * 40;
     let L = OmegaType::from_num(input_from_controller.roll) * 4;
 
-    let omega_one: OmegaType = (-Z + M + M - N).max(OmegaType::ZERO);
-    let omega_two: OmegaType = (-Z - L - L + N).max(OmegaType::ZERO);
-    let omega_three: OmegaType = (-Z - M - M - N).max(OmegaType::ZERO);
-    let omega_four: OmegaType = (-Z + L + L + N).max(OmegaType::ZERO);
+    let omega_one: OmegaType = (-Z + M + M + N).max(OmegaType::ZERO);
+    let omega_two: OmegaType = (-Z - L - L - N).max(OmegaType::ZERO);
+    let omega_three: OmegaType = (-Z - M - M + N).max(OmegaType::ZERO);
+    let omega_four: OmegaType = (-Z + L + L - N).max(OmegaType::ZERO);
 
     direct_pwm(
         raw_lift,
