@@ -148,20 +148,20 @@ pub fn read_keyboard(ctx: &Arc<RunnerContext>) {
                     keyboard_trim.set_panic(true);
                 }
                 // Lift trim
-                KeyCode::Char('a') => keyboard_trim.increment_lift(0.1), //throttle up
-                KeyCode::Char('z') => keyboard_trim.increment_lift(-0.1), //throttle down
+                KeyCode::Char('a') => keyboard_trim.increment_lift(0.01), //throttle up
+                KeyCode::Char('z') => keyboard_trim.increment_lift(-0.01), //throttle down
                 //
                 // // Roll trim
-                KeyCode::Right => keyboard_trim.increment_roll(0.1), //roll down  right arrow key
-                KeyCode::Left => keyboard_trim.increment_roll(-0.1), //roll up     left arrow key
+                KeyCode::Right => keyboard_trim.increment_roll(0.01), //roll down  right arrow key
+                KeyCode::Left => keyboard_trim.increment_roll(-0.01), //roll up     left arrow key
                 //
                 // // Pitch trim
-                KeyCode::Up => keyboard_trim.increment_pitch(-0.1), // pitch up  down arrow key
-                KeyCode::Down => keyboard_trim.increment_pitch(0.1), // pitch down up arrow key
+                KeyCode::Up => keyboard_trim.increment_pitch(-0.01), // pitch up  down arrow key
+                KeyCode::Down => keyboard_trim.increment_pitch(0.01), // pitch down up arrow key
                 //
                 // // Yaw trim
-                KeyCode::Char('q') => keyboard_trim.increment_yaw(-0.1), //yaw down
-                KeyCode::Char('w') => keyboard_trim.increment_yaw(0.1),  //yaw up
+                KeyCode::Char('q') => keyboard_trim.increment_yaw(-0.01), //yaw down
+                KeyCode::Char('w') => keyboard_trim.increment_yaw(0.01),  //yaw up
                 //
                 //NOTE:
                 //The values below are not used anymore

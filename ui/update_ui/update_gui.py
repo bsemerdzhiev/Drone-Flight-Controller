@@ -57,7 +57,7 @@ def update_joystick():
         return
 
     cx = 100 + (stored_data.joystick["roll"][-1]) * 90
-    cy = 100 - (stored_data.joystick["pitch"][-1]) * 90
+    cy = 100 + (stored_data.joystick["pitch"][-1]) * 90
     dpg.configure_item("joystick_dot", center=[cx, cy])
 
     # lift bar — lift normalized 0-1

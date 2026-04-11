@@ -6,7 +6,7 @@ use crate::runner_context::RunnerContext;
 
 //------------------------------------------------------
 
-const THRESHOLD: f32 = 60f32;
+const THRESHOLD: f32 = 30f32;
 //------------------------------------------------------
 
 pub fn read_joystick(ctx: &Arc<RunnerContext>) {

@@ -47,8 +47,11 @@ const WATCHDOG_TIMER_FOR_PANICKING: Duration = Duration::from_millis(1000);
 const DRONE_STATE_TIMER: [Duration; 2] = [Duration::from_millis(20), Duration::from_millis(5)];
 const SAVE_TO_LOG_TIMER: Duration = Duration::from_millis(100);
 
-const SHOULD_CHECK_BATTERY_LEVEL: bool = false;
-const MIN_BAT_LEVEL: u16 = 1050;
+const SHOULD_CHECK_BATTERY_LEVEL: bool = true;
+const MIN_BAT_LEVEL: u16 = 700;
+
+const BATTERY_ALPHA: I16F16 = I16F16::lit("0.1");
+const BATTERY_BETA: I16F16 = I16F16::lit("0.9");
 
 // -------------------------------------------------------------------------
 
@@ -135,12 +138,14 @@ pub fn main_loop() -> ! {
 
     let mut time_previous_loop = Instant::now();
 
+    let mut bat_level = I16F16::from_num(read_battery());
+
     // -------------------------------------------------------------------------
     for i in 0.. {
         let _ = Blue.toggle();
         // -------------------------------------------------------------------------
         // Check battery level and switch to panic
-        let bat_level = read_battery();
+        bat_level = BATTERY_ALPHA * I16F16::from_num(read_battery()) + BATTERY_BETA * bat_level;
         if SHOULD_CHECK_BATTERY_LEVEL && bat_level < MIN_BAT_LEVEL {
             current_state = current_state.step(command::FSMState::PanicMode, &mut ctx);
         }
@@ -209,8 +214,6 @@ pub fn main_loop() -> ! {
             .update_readings(&mut ctx.kalman_position);
 
         // run the loop of the state
-
-        // need to send atleast one message on UART before transitioning to wireless
         current_state = current_state.run_state_loop(&mut ctx);
 
         let time_end = Instant::now();

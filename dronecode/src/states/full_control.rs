@@ -35,7 +35,7 @@ impl FSMControl for FSMFullControl {
         );
 
         // add to current input
-        target.yaw = correction.yaw;
+        target.yaw = -correction.yaw;
         target.roll = correction.roll;
         target.pitch = correction.pitch;
 

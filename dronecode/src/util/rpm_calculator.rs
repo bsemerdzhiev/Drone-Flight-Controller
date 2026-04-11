@@ -14,11 +14,11 @@ type OmegaType = I28F4;
 
 // chosen by trial and error in Desmos
 
-const MIN_PWM: u16 = 200;
+const MIN_PWM: u16 = 300;
 
 // pub const THRESHOLD_LIFT: f32 = 0.05;
 
-pub const ThresholdLift: I16F16 = I16F16::lit("1.25");
+pub const ThresholdLift: I16F16 = I16F16::lit("2.5");
 
 fn map_rpm_square_to_pwm(lift_raw_value: I16F16, rpms_square: &mut [OmegaType]) {
     let MAX_RPMS: I16F16 = I16F16::from_num(980);
@@ -87,10 +87,10 @@ pub fn actuate_motors_with_direct_joystick_input(
     let Z = OmegaType::from_num(-input_from_controller.lift) * 40;
     let L = OmegaType::from_num(input_from_controller.roll) * 4;
 
-    let omega_one: OmegaType = (-Z + M + M - N).max(OmegaType::ZERO);
-    let omega_two: OmegaType = (-Z - L - L + N).max(OmegaType::ZERO);
-    let omega_three: OmegaType = (-Z - M - M - N).max(OmegaType::ZERO);
-    let omega_four: OmegaType = (-Z + L + L + N).max(OmegaType::ZERO);
+    let omega_one: OmegaType = (-Z + M + M + N).max(OmegaType::ZERO);
+    let omega_two: OmegaType = (-Z - L - L - N).max(OmegaType::ZERO);
+    let omega_three: OmegaType = (-Z - M - M + N).max(OmegaType::ZERO);
+    let omega_four: OmegaType = (-Z + L + L - N).max(OmegaType::ZERO);
 
     direct_pwm(
         raw_lift,
