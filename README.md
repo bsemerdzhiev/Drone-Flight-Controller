@@ -163,7 +163,7 @@ Saved gain presets are stored in `pid_values.json`. The ground station UI allows
 Relevant axes and loops:
 
 | Axis | (Values) |
-|---|---|---|
+|---|---|
 | Roll | Kp, Ki, Kd |
 | Pitch | Kp, Ki, Kd |
 | Yaw | Kp, —, — |
