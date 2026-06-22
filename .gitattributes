@@ -1,2 +1,4 @@
 # exclude from language statistics
-ble_setup/** linguist-vendored=true
+ble_setup/ble_app_uart/** linguist-vendored=true
+ble_setup/bsp/** linguist-vendored=true
+ble_setup/components/** linguist-vendored=true
