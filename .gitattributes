@@ -1,0 +1,2 @@
+# exclude from language statistics
+ble_setup/** linguist-vendored=true
